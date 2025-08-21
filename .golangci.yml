@@ -15,7 +15,6 @@ linters:
     - gocyclo
     - goprintffuncname
     - gosec
-    - lll
     - misspell
     - mnd
     - nakedret
@@ -47,8 +46,6 @@ linters:
         - style
     gocyclo:
       min-complexity: 15
-    lll:
-      line-length: 140
     misspell:
       locale: US
   exclusions:

@@ -1,3 +1,4 @@
+// Package aegis provides a framework for building authentication systems.
 package aegis
 
 import "fmt"

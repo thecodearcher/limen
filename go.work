@@ -2,4 +2,10 @@ go 1.21
 
 use (
 	.
+	./adapters/ent
+	./adapters/gorm
+	./adapters/sql
+	./examples/basic
+	./plugins/email-password
+	./plugins/oauth-google
 )
