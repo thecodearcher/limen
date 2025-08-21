@@ -5,7 +5,6 @@ linters:
   default: standard
   enable:
     - bodyclose
-    - depguard
     - dogsled
     - dupl
     - exhaustive

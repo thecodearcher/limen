@@ -87,6 +87,7 @@ mod-download: ## Download go modules
 install-tools: ## Install development tools
 	@echo "Installing development tools..."
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/golang/mock/mockgen@latest
 
 # Clean targets
 clean: ## Clean build artifacts
