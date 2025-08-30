@@ -17,9 +17,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "valid configuration",
 			config: &Config{
-				Database: DatabaseConfig{
-					Adapter: NewMockDatabaseAdapter(gomock.NewController(t)),
-				},
+				Database: NewMockDatabaseAdapter(gomock.NewController(t)),
 			},
 			wantErr: false,
 		},
@@ -32,9 +30,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "configuration with nil adapter",
 			config: &Config{
-				Database: DatabaseConfig{
-					Adapter: nil,
-				},
+				Database: nil,
 			},
 			wantErr: true,
 			errMsg:  "invalid configuration: database adapter is required",
@@ -54,7 +50,7 @@ func TestNew(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "New() unexpected error")
 				assert.NotNil(t, aegis, "Expected Aegis instance but got nil")
-				assert.Equal(t, tt.config, aegis.config, "Config should match")
+				assert.Equal(t, tt.config, aegis, "Config should match")
 			}
 		})
 	}

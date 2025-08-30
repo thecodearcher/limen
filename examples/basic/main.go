@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/thecodearcher/aegis"
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
+	emailpassword "github.com/thecodearcher/aegis/features/email-password"
 )
 
 // Example showing basic usage of the aegis library
@@ -26,10 +28,13 @@ func main() {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 
+	defaultConfig := emailpassword.DefaultConfig()
+	defaultConfig.PasswordHasherConfig.Parallel = 4
 	// Create configuration
 	config := &aegis.Config{
-		Database: aegis.DatabaseConfig{
-			Adapter: adapter.New(db),
+		Database: adapter.New(db),
+		Features: []aegis.Feature{
+			emailpassword.New(defaultConfig),
 		},
 	}
 
@@ -40,4 +45,18 @@ func main() {
 
 	fmt.Printf("%+v\n", aegis)
 	fmt.Println("Aegis instance created successfully!")
+
+	response, err := aegis.EmailPassword.SignInWithEmailAndPassword(context.Background(), "johndoe@gmail.com", "SecurePassword123@")
+	if err != nil {
+		log.Fatalf("Failed to sign in: %v", err)
+	}
+	fmt.Printf("Sign in response: %+v\n", response)
+
+	// aegis.signIn.WithEmailAndPassword(ctx, "test@test.com", "password")
+
+	// aegis.Email.WithPassword()
+
+	// emailPasswordPlugin := aegis.RegisterPlugin(emailpassword.New())
+	// emailPasswordPlugin.WithPassword('sdjnndsccd')
+
 }

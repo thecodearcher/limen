@@ -35,7 +35,7 @@ func (m *MockDatabaseAdapter) EXPECT() *MockDatabaseAdapterMockRecorder {
 }
 
 // Count mocks base method.
-func (m *MockDatabaseAdapter) Count(ctx context.Context, tableName string, conditions []Where) (int64, error) {
+func (m *MockDatabaseAdapter) Count(ctx context.Context, tableName SchemaTableName, conditions []Where) (int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Count", ctx, tableName, conditions)
 	ret0, _ := ret[0].(int64)
@@ -50,7 +50,7 @@ func (mr *MockDatabaseAdapterMockRecorder) Count(ctx, tableName, conditions inte
 }
 
 // Create mocks base method.
-func (m *MockDatabaseAdapter) Create(ctx context.Context, tableName string, data map[string]any) error {
+func (m *MockDatabaseAdapter) Create(ctx context.Context, tableName SchemaTableName, data map[string]any) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, tableName, data)
 	ret0, _ := ret[0].(error)
@@ -64,7 +64,7 @@ func (mr *MockDatabaseAdapterMockRecorder) Create(ctx, tableName, data interface
 }
 
 // Delete mocks base method.
-func (m *MockDatabaseAdapter) Delete(ctx context.Context, tableName string, conditions []Where) error {
+func (m *MockDatabaseAdapter) Delete(ctx context.Context, tableName SchemaTableName, conditions []Where) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", ctx, tableName, conditions)
 	ret0, _ := ret[0].(error)
@@ -78,7 +78,7 @@ func (mr *MockDatabaseAdapterMockRecorder) Delete(ctx, tableName, conditions int
 }
 
 // Exists mocks base method.
-func (m *MockDatabaseAdapter) Exists(ctx context.Context, tableName string, conditions []Where) (bool, error) {
+func (m *MockDatabaseAdapter) Exists(ctx context.Context, tableName SchemaTableName, conditions []Where) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exists", ctx, tableName, conditions)
 	ret0, _ := ret[0].(bool)
@@ -93,7 +93,7 @@ func (mr *MockDatabaseAdapterMockRecorder) Exists(ctx, tableName, conditions int
 }
 
 // FindMany mocks base method.
-func (m *MockDatabaseAdapter) FindMany(ctx context.Context, tableName string, conditions []Where, options *QueryOptions) ([]map[string]any, error) {
+func (m *MockDatabaseAdapter) FindMany(ctx context.Context, tableName SchemaTableName, conditions []Where, options *QueryOptions) ([]map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindMany", ctx, tableName, conditions, options)
 	ret0, _ := ret[0].([]map[string]any)
@@ -108,7 +108,7 @@ func (mr *MockDatabaseAdapterMockRecorder) FindMany(ctx, tableName, conditions, 
 }
 
 // FindOne mocks base method.
-func (m *MockDatabaseAdapter) FindOne(ctx context.Context, tableName string, conditions []Where) (map[string]any, error) {
+func (m *MockDatabaseAdapter) FindOne(ctx context.Context, tableName SchemaTableName, conditions []Where) (map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindOne", ctx, tableName, conditions)
 	ret0, _ := ret[0].(map[string]any)
@@ -123,7 +123,7 @@ func (mr *MockDatabaseAdapterMockRecorder) FindOne(ctx, tableName, conditions in
 }
 
 // Update mocks base method.
-func (m *MockDatabaseAdapter) Update(ctx context.Context, tableName string, conditions []Where, updates map[string]any) error {
+func (m *MockDatabaseAdapter) Update(ctx context.Context, tableName SchemaTableName, conditions []Where, updates map[string]any) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, tableName, conditions, updates)
 	ret0, _ := ret[0].(error)
@@ -174,7 +174,7 @@ func (mr *MockDatabaseTxMockRecorder) Commit() *gomock.Call {
 }
 
 // Count mocks base method.
-func (m *MockDatabaseTx) Count(ctx context.Context, tableName string, conditions []Where) (int64, error) {
+func (m *MockDatabaseTx) Count(ctx context.Context, tableName SchemaTableName, conditions []Where) (int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Count", ctx, tableName, conditions)
 	ret0, _ := ret[0].(int64)
@@ -189,7 +189,7 @@ func (mr *MockDatabaseTxMockRecorder) Count(ctx, tableName, conditions interface
 }
 
 // Create mocks base method.
-func (m *MockDatabaseTx) Create(ctx context.Context, tableName string, data map[string]any) error {
+func (m *MockDatabaseTx) Create(ctx context.Context, tableName SchemaTableName, data map[string]any) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, tableName, data)
 	ret0, _ := ret[0].(error)
@@ -203,7 +203,7 @@ func (mr *MockDatabaseTxMockRecorder) Create(ctx, tableName, data interface{}) *
 }
 
 // Delete mocks base method.
-func (m *MockDatabaseTx) Delete(ctx context.Context, tableName string, conditions []Where) error {
+func (m *MockDatabaseTx) Delete(ctx context.Context, tableName SchemaTableName, conditions []Where) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", ctx, tableName, conditions)
 	ret0, _ := ret[0].(error)
@@ -217,7 +217,7 @@ func (mr *MockDatabaseTxMockRecorder) Delete(ctx, tableName, conditions interfac
 }
 
 // Exists mocks base method.
-func (m *MockDatabaseTx) Exists(ctx context.Context, tableName string, conditions []Where) (bool, error) {
+func (m *MockDatabaseTx) Exists(ctx context.Context, tableName SchemaTableName, conditions []Where) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exists", ctx, tableName, conditions)
 	ret0, _ := ret[0].(bool)
@@ -232,7 +232,7 @@ func (mr *MockDatabaseTxMockRecorder) Exists(ctx, tableName, conditions interfac
 }
 
 // FindMany mocks base method.
-func (m *MockDatabaseTx) FindMany(ctx context.Context, tableName string, conditions []Where, options *QueryOptions) ([]map[string]any, error) {
+func (m *MockDatabaseTx) FindMany(ctx context.Context, tableName SchemaTableName, conditions []Where, options *QueryOptions) ([]map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindMany", ctx, tableName, conditions, options)
 	ret0, _ := ret[0].([]map[string]any)
@@ -247,7 +247,7 @@ func (mr *MockDatabaseTxMockRecorder) FindMany(ctx, tableName, conditions, optio
 }
 
 // FindOne mocks base method.
-func (m *MockDatabaseTx) FindOne(ctx context.Context, tableName string, conditions []Where) (map[string]any, error) {
+func (m *MockDatabaseTx) FindOne(ctx context.Context, tableName SchemaTableName, conditions []Where) (map[string]any, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FindOne", ctx, tableName, conditions)
 	ret0, _ := ret[0].(map[string]any)
@@ -276,7 +276,7 @@ func (mr *MockDatabaseTxMockRecorder) Rollback() *gomock.Call {
 }
 
 // Update mocks base method.
-func (m *MockDatabaseTx) Update(ctx context.Context, tableName string, conditions []Where, updates map[string]any) error {
+func (m *MockDatabaseTx) Update(ctx context.Context, tableName SchemaTableName, conditions []Where, updates map[string]any) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", ctx, tableName, conditions, updates)
 	ret0, _ := ret[0].(error)

@@ -2,15 +2,17 @@ package aegis
 
 // Config is the main configuration struct for the aegis library
 type Config struct {
-	Database DatabaseConfig
+	Database DatabaseAdapter
+	Features []Feature
+	Schema   SchemaConfig
 }
 
-type DatabaseConfig struct {
-	Adapter DatabaseAdapter
+type SchemaConfig struct {
+	User UserSchema
 }
 
 func (c *Config) Validate() error {
-	if c.Database.Adapter == nil {
+	if c.Database == nil {
 		return ErrDatabaseAdapterRequired
 	}
 

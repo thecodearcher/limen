@@ -18,23 +18,23 @@ func New(db *gorm.DB) *Adapter {
 	return &Adapter{db: db}
 }
 
-func (a *Adapter) Create(ctx context.Context, tableName string, data map[string]any) error {
-	return a.db.WithContext(ctx).Table(tableName).Create(data).Error
+func (a *Adapter) Create(ctx context.Context, tableName aegis.SchemaTableName, data map[string]any) error {
+	return a.db.WithContext(ctx).Table(string(tableName)).Create(data).Error
 }
 
-func (a *Adapter) FindOne(ctx context.Context, tableName string, conditions []aegis.Where) (map[string]any, error) {
+func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (map[string]any, error) {
 	var result map[string]any
-	query := a.db.WithContext(ctx).Table(tableName)
+	query := a.db.WithContext(ctx).Table(string(tableName))
 
 	query = a.applyConditions(query, conditions)
 
-	err := query.First(&result).Error
+	err := query.Take(&result).Error
 	return result, err
 }
 
-func (a *Adapter) FindMany(ctx context.Context, tableName string, conditions []aegis.Where, options *aegis.QueryOptions) ([]map[string]any, error) {
+func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, options *aegis.QueryOptions) ([]map[string]any, error) {
 	var results []map[string]any
-	query := a.db.WithContext(ctx).Table(tableName)
+	query := a.db.WithContext(ctx).Table(string(tableName))
 
 	query = a.applyConditions(query, conditions)
 
@@ -54,29 +54,29 @@ func (a *Adapter) FindMany(ctx context.Context, tableName string, conditions []a
 	return results, err
 }
 
-func (a *Adapter) Update(ctx context.Context, tableName string, conditions []aegis.Where, updates map[string]any) error {
-	query := a.db.WithContext(ctx).Table(tableName)
+func (a *Adapter) Update(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, updates map[string]any) error {
+	query := a.db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	return query.Updates(updates).Error
 }
 
-func (a *Adapter) Delete(ctx context.Context, tableName string, conditions []aegis.Where) error {
-	query := a.db.WithContext(ctx).Table(tableName)
+func (a *Adapter) Delete(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) error {
+	query := a.db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	return query.Delete(nil).Error
 }
 
-func (a *Adapter) Exists(ctx context.Context, tableName string, conditions []aegis.Where) (bool, error) {
+func (a *Adapter) Exists(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (bool, error) {
 	var count int64
-	query := a.db.WithContext(ctx).Table(tableName)
+	query := a.db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	err := query.Count(&count).Error
 	return count > 0, err
 }
 
-func (a *Adapter) Count(ctx context.Context, tableName string, conditions []aegis.Where) (int64, error) {
+func (a *Adapter) Count(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (int64, error) {
 	var count int64
-	query := a.db.WithContext(ctx).Table(tableName)
+	query := a.db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	err := query.Count(&count).Error
 	return count, err
