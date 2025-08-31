@@ -31,11 +31,16 @@ func main() {
 	defaultConfig := emailpassword.DefaultConfig()
 	defaultConfig.PasswordHasherConfig.Parallel = 4
 	// Create configuration
+
 	config := &aegis.Config{
 		Database: adapter.New(db),
 		Features: []aegis.Feature{
 			emailpassword.New(defaultConfig),
 		},
+		JWT: aegis.NewDefaultJWTConfig(
+			aegis.WithJWTSecret("test-secret"),
+			aegis.WithClaimsSubjectField("uuid"),
+		),
 	}
 
 	aegis, err := aegis.New(config)
@@ -50,8 +55,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to sign in: %v", err)
 	}
-	fmt.Printf("Sign in response: %+v\n", response)
 
+	fmt.Printf("Sign in response: %+v\n", response)
+	validatedToken, err := aegis.JWT.VerifyToken(response.AccessToken)
+	if err != nil {
+		log.Fatalf("Failed to verify token: %v", err)
+	}
+	fmt.Printf("Validated token: %+v\n", validatedToken)
 	// aegis.signIn.WithEmailAndPassword(ctx, "test@test.com", "password")
 
 	// aegis.Email.WithPassword()

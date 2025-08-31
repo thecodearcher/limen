@@ -18,5 +18,5 @@ type Feature interface {
 }
 
 type EmailPasswordFeature interface {
-	SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*User, error)
+	SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*AuthenticationResult, error)
 }

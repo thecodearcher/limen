@@ -14,7 +14,10 @@ type UserSchema struct {
 }
 
 type Model interface {
+	// Name returns the table name of the model
 	Name() string
+	// Raw returns the model raw data as returned from the database
+	Raw() map[string]any
 }
 
 type User struct {
@@ -23,6 +26,16 @@ type User struct {
 	LastName  string
 	Email     string
 	Password  string
+	raw       map[string]any
+}
+
+// Raw returns the user raw data as returned from the database
+func (u User) Raw() map[string]any {
+	return u.raw
+}
+
+func (c User) Name() string {
+	return string(UserSchemaTableName)
 }
 
 type UserFields struct {
@@ -31,10 +44,6 @@ type UserFields struct {
 	LastName  string
 	Email     string
 	Password  string
-}
-
-func (c User) Name() string {
-	return string(UserSchemaTableName)
 }
 
 func (c *UserSchema) GetTableName() SchemaTableName {
@@ -86,5 +95,6 @@ func (c *UserSchema) FromStorage(data map[string]any) User {
 		FirstName: data[c.GetFirstNameField()].(string),
 		LastName:  data[c.GetLastNameField()].(string),
 		Password:  data[c.GetPasswordField()].(string),
+		raw:       data,
 	}
 }

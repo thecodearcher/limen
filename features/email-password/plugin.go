@@ -70,7 +70,7 @@ func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	return nil
 }
 
-func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*aegis.User, error) {
+func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*aegis.AuthenticationResult, error) {
 	user, err := database.FindOne(ctx, p.core.DB, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), email)})
 	if err != nil {
 		return nil, ErrEmailNotFound
@@ -84,8 +84,16 @@ func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, e
 	if !isValid {
 		return nil, ErrInvalidPassword
 	}
+	fmt.Printf("user: %+v\n", user.Raw())
+	accessToken, err := p.core.JWT.GenerateAccessToken(user)
+	if err != nil {
+		return nil, err
+	}
 
-	return user, nil
+	return &aegis.AuthenticationResult{
+		User:        user,
+		AccessToken: accessToken,
+	}, nil
 }
 
 func (p *emailPasswordFeature) hashPassword(password string) (string, error) {

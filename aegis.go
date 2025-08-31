@@ -7,11 +7,13 @@ import (
 
 type Aegis struct {
 	EmailPassword EmailPasswordFeature
+	JWT           TokenGenerator
 }
 
 type AegisCore struct {
 	DB     DatabaseAdapter
 	Schema SchemaConfig
+	JWT    *JwtHandler
 }
 
 func New(config *Config) (*Aegis, error) {
@@ -19,14 +21,22 @@ func New(config *Config) (*Aegis, error) {
 		return nil, fmt.Errorf("missing configuration")
 	}
 
-	if err := config.Validate(); err != nil {
+	if err := config.validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	aegis := &Aegis{}
+	jwtHandler, err := newJwtHandler(config.JWT)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create jwt handler: %w", err)
+	}
+
+	aegis := &Aegis{
+		JWT: jwtHandler,
+	}
 	core := &AegisCore{
 		DB:     config.Database,
 		Schema: config.Schema,
+		JWT:    jwtHandler,
 	}
 
 	for _, feature := range config.Features {
