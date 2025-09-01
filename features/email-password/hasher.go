@@ -12,18 +12,18 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
-// PasswordHasherConfig defines the configuration parameters for Argon2id hashing.
-type PasswordHasherConfig struct {
-	Time      uint32 // Number of iterations (t parameter)
-	MemoryKiB uint32 // Memory usage in KiB (m parameter)
+// passwordHasherConfig defines the configuration parameters for Argon2id hashing.
+type passwordHasherConfig struct {
+	time      uint32 // Number of iterations (t parameter)
+	memoryKiB uint32 // Memory usage in KiB (m parameter)
 	Parallel  uint8  // Number of parallel threads (p parameter)
-	SaltLen   uint32 // Salt length in bytes
-	KeyLen    uint32 // Output key length in bytes
+	saltLen   uint32 // Salt length in bytes
+	keyLen    uint32 // Output key length in bytes
 }
 
 // passwordHasher handles the hashing and verification of passwords.
 type passwordHasher struct {
-	PasswordHasherConfig
+	passwordHasherConfig
 }
 
 // hashInfo contains the parsed components of a PHC-formatted hash.
@@ -42,16 +42,15 @@ type hashInfo struct {
 //
 // Security notes:
 // - ASVS/RFC9106-second recommendation: t=3 ⇒ m ≥ 64MiB, p=1
-// - These parameters provide a good balance between security and performance
-func newPasswordHasher(c PasswordHasherConfig) *passwordHasher {
+func newPasswordHasher(c passwordHasherConfig) *passwordHasher {
 	return &passwordHasher{
-		PasswordHasherConfig: c,
+		passwordHasherConfig: c,
 	}
 }
 
 // hashPassword creates a Argon2id hash from a password.
 func (p *passwordHasher) hashPassword(password []byte) (string, error) {
-	salt := make([]byte, p.SaltLen)
+	salt := make([]byte, p.saltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return "", fmt.Errorf("failed to generate salt: %w", err)
 	}
@@ -64,8 +63,8 @@ func (p *passwordHasher) hashPassword(password []byte) (string, error) {
 
 	phcString := fmt.Sprintf(
 		"$argon2id$v=19$m=%d,t=%d,p=%d$%s$%s",
-		p.MemoryKiB,
-		p.Time,
+		p.memoryKiB,
+		p.time,
 		p.Parallel,
 		saltB64,
 		hashB64,
@@ -98,10 +97,10 @@ func (p *passwordHasher) hash(password []byte, salt []byte) []byte {
 	return argon2.IDKey(
 		password,
 		salt,
-		p.Time,
-		p.MemoryKiB,
+		p.time,
+		p.memoryKiB,
 		p.Parallel,
-		p.KeyLen,
+		p.keyLen,
 	)
 }
 
@@ -184,4 +183,64 @@ func (p *passwordHasher) parseParams(paramsStr string, hashInfo *hashInfo) error
 	}
 
 	return nil
+}
+
+type PasswordHasherConfigOption func(*passwordHasherConfig)
+
+// DefaultPasswordHasherConfig creates a new password hasher configuration with default values
+// the default configuration follows the RFC9106-second recommendation:
+// t=3 iterations, m ≥ 64MiB memory, p=4 lanes, s=128-bits salt and k=256-bits tag size.
+//
+// @see https://datatracker.ietf.org/doc/html/rfc9106#section-7.4
+//
+// These parameters provide a good balance between security and performance.
+func DefaultPasswordHasherConfig(opts ...PasswordHasherConfigOption) passwordHasherConfig {
+	config := passwordHasherConfig{
+		time:      3,
+		memoryKiB: 64 * 1024,
+		Parallel:  4,
+		saltLen:   16,
+		keyLen:    32,
+	}
+
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	return config
+}
+
+// WithPasswordHasherTime sets the number of iterations (t parameter)
+func WithPasswordHasherTime(time uint32) PasswordHasherConfigOption {
+	return func(c *passwordHasherConfig) {
+		c.time = time
+	}
+}
+
+// WithPasswordHasherMemoryKiB sets the memory usage in KiB (m parameter)
+func WithPasswordHasherMemoryKiB(memoryKiB uint32) PasswordHasherConfigOption {
+	return func(c *passwordHasherConfig) {
+		c.memoryKiB = memoryKiB
+	}
+}
+
+// WithPasswordHasherParallel sets the number of parallel threads (p parameter)
+func WithPasswordHasherParallel(parallel uint8) PasswordHasherConfigOption {
+	return func(c *passwordHasherConfig) {
+		c.Parallel = parallel
+	}
+}
+
+// WithPasswordHasherSaltLen sets the salt length in bytes
+func WithPasswordHasherSaltLen(saltLen uint32) PasswordHasherConfigOption {
+	return func(c *passwordHasherConfig) {
+		c.saltLen = saltLen
+	}
+}
+
+// WithPasswordHasherKeyLen sets the output key length in bytes
+func WithPasswordHasherKeyLen(keyLen uint32) PasswordHasherConfigOption {
+	return func(c *passwordHasherConfig) {
+		c.keyLen = keyLen
+	}
 }

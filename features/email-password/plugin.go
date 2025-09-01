@@ -11,43 +11,38 @@ import (
 
 type emailPasswordFeature struct {
 	core       *aegis.AegisCore
-	config     *Config
+	config     *config
 	userSchema *aegis.UserSchema
 }
 
 // Config defines the configuration for the email password feature.
-type Config struct {
-	PasswordMinLength        int                                              // Minimum length of the password
-	PasswordRequireUppercase bool                                             // Require uppercase letters in the password
-	PasswordRequireNumbers   bool                                             // Require numbers in the password
-	PasswordRequireSymbols   bool                                             // Require symbols in the password
-	HashFn                   func(password string) (string, error)            // Custom function to hash the password
-	CompareFn                func(password string, hash string) (bool, error) // Custom function to compare the password and the hash
-	PasswordHasherConfig     PasswordHasherConfig                             // Custom Argon2id configuration for the password hasher
+type config struct {
+	passwordMinLength        int                                              // Minimum length of the password
+	passwordRequireUppercase bool                                             // Require uppercase letters in the password
+	passwordRequireNumbers   bool                                             // Require numbers in the password
+	passwordRequireSymbols   bool                                             // Require symbols in the password
+	hashFn                   func(password string) (string, error)            // Custom function to hash the password
+	compareFn                func(password string, hash string) (bool, error) // Custom function to compare the password and the hash
+	passwordHasherConfig     passwordHasherConfig                             // Custom Argon2id configuration for the password hasher
 }
 
-// New creates a new email-password feature instance with the given configuration.
-func New(config *Config) *emailPasswordFeature {
+// New returns a new config with the default values.
+// ConfigOptions can be provided to customize the configuration.
+func New(opts ...ConfigOption) *emailPasswordFeature {
+	config := &config{
+		passwordMinLength:        defaultMinPasswordLength,
+		passwordRequireUppercase: defaultPasswordRequireUppercase,
+		passwordRequireNumbers:   defaultPasswordRequireNumbers,
+		passwordRequireSymbols:   defaultPasswordRequireSymbols,
+		passwordHasherConfig:     DefaultPasswordHasherConfig(),
+	}
+
+	for _, opt := range opts {
+		opt(config)
+	}
+
 	return &emailPasswordFeature{
 		config: config,
-	}
-}
-
-// DefaultConfig returns a new Config with the default values.
-func DefaultConfig() *Config {
-	return &Config{
-		PasswordMinLength:        defaultMinPasswordLength,
-		PasswordRequireUppercase: defaultPasswordRequireUppercase,
-		PasswordRequireNumbers:   defaultPasswordRequireNumbers,
-		PasswordRequireSymbols:   defaultPasswordRequireSymbols,
-		PasswordHasherConfig:     DefaultPasswordHasherConfig,
-	}
-}
-
-// Defaults returns a new EmailPasswordFeature with the default configuration.
-func Defaults() *emailPasswordFeature {
-	return &emailPasswordFeature{
-		config: DefaultConfig(),
 	}
 }
 
@@ -63,7 +58,7 @@ func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 		return fmt.Errorf("config is required")
 	}
 
-	if p.config.PasswordMinLength < defaultMinPasswordLength {
+	if p.config.passwordMinLength < defaultMinPasswordLength {
 		return fmt.Errorf("password min length must be at least 4")
 	}
 
@@ -97,17 +92,17 @@ func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, e
 }
 
 func (p *emailPasswordFeature) hashPassword(password string) (string, error) {
-	if p.config.HashFn != nil {
-		return p.config.HashFn(password)
+	if p.config.hashFn != nil {
+		return p.config.hashFn(password)
 	}
 
-	return newPasswordHasher(p.config.PasswordHasherConfig).hashPassword([]byte(password))
+	return newPasswordHasher(p.config.passwordHasherConfig).hashPassword([]byte(password))
 }
 
 func (p *emailPasswordFeature) comparePassword(password string, hash string) (bool, error) {
-	if p.config.CompareFn != nil {
-		return p.config.CompareFn(password, hash)
+	if p.config.compareFn != nil {
+		return p.config.compareFn(password, hash)
 	}
 
-	return newPasswordHasher(p.config.PasswordHasherConfig).verifyPassword([]byte(password), hash)
+	return newPasswordHasher(p.config.passwordHasherConfig).verifyPassword([]byte(password), hash)
 }

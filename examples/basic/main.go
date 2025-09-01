@@ -28,14 +28,10 @@ func main() {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 
-	defaultConfig := emailpassword.DefaultConfig()
-	defaultConfig.PasswordHasherConfig.Parallel = 4
-	// Create configuration
-
 	config := &aegis.Config{
 		Database: adapter.New(db),
 		Features: []aegis.Feature{
-			emailpassword.New(defaultConfig),
+			emailpassword.New(),
 		},
 		JWT: aegis.NewDefaultJWTConfig(
 			aegis.WithJWTSecret("test-secret"),
