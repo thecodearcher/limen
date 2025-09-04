@@ -116,7 +116,7 @@ func (p *emailPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, u
 		return nil, err
 	}
 
-	err = p.dbAction.CreateUser(ctx, schemas.User{
+	err = p.dbAction.CreateUser(ctx, &schemas.User{
 		Email:    user.Email,
 		Password: hashedPassword,
 	}, additionalFields)
@@ -187,7 +187,7 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 		return err
 	}
 
-	err = p.dbAction.UpdateUser(ctx, schemas.User{Password: hashedPassword}, []aegis.Where{
+	err = p.dbAction.UpdateUser(ctx, &schemas.User{Password: hashedPassword}, []aegis.Where{
 		aegis.Eq(p.userSchema.GetEmailField(), identifier),
 	})
 	if err != nil {

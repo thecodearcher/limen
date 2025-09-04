@@ -30,7 +30,7 @@ func NewCommonDatabaseActionsHelper(core *aegis.AegisCore) *DatabaseActionHelper
 	return databaseActions
 }
 
-func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data schemas.User, additionalFields map[string]any) error {
+func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data *schemas.User, additionalFields map[string]any) error {
 	if err := Create[schemas.User](ctx, i.core, &i.core.Schema.User, data, additionalFields); err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 	fmt.Printf("expiresAt: %v\n", i)
 	verificationSchema := i.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
-	if err := Create[schemas.Verification](ctx, i.core, &verificationSchema, schemas.Verification{
+	if err := Create[schemas.Verification](ctx, i.core, &verificationSchema, &schemas.Verification{
 		Subject:   actionValue,
 		Value:     token,
 		ExpiresAt: time.Now().Add(expiresAt).UTC(),
@@ -88,7 +88,7 @@ func (i *DatabaseActionHelper) DeleteExpiredVerifications(ctx context.Context) e
 	})
 }
 
-func (i *DatabaseActionHelper) UpdateUser(ctx context.Context, data schemas.User, conditions []aegis.Where) error {
+func (i *DatabaseActionHelper) UpdateUser(ctx context.Context, data *schemas.User, conditions []aegis.Where) error {
 	if err := Update[schemas.User](ctx, i.core.DB, &i.core.Schema.User, data, conditions); err != nil {
 		return err
 	}

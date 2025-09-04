@@ -70,8 +70,8 @@ func (c *UserSchema) GetAdditionalFields() AdditionalFieldsFunc {
 	return c.AdditionalFields
 }
 
-func (c *UserSchema) FromStorage(data map[string]any) User {
-	return User{
+func (c *UserSchema) FromStorage(data map[string]any) *User {
+	return &User{
 		ID:       data[c.GetIDField()],
 		Email:    data[c.GetEmailField()].(string),
 		Password: data[c.GetPasswordField()].(string),
@@ -79,7 +79,7 @@ func (c *UserSchema) FromStorage(data map[string]any) User {
 	}
 }
 
-func (c *UserSchema) ToStorage(data User) map[string]any {
+func (c *UserSchema) ToStorage(data *User) map[string]any {
 	return map[string]any{
 		c.GetEmailField():    data.Email,
 		c.GetPasswordField(): data.Password,

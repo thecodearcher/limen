@@ -21,10 +21,10 @@ func FindOne[T schemas.Model](ctx context.Context, db aegis.DatabaseAdapter, sch
 	}
 
 	model := schema.FromStorage(result)
-	return &model, nil
+	return model, nil
 }
 
-func Create[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], data T, additionalFields map[string]any) error {
+func Create[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], data *T, additionalFields map[string]any) error {
 	payload := make(map[string]any)
 	// the order of the copy of the fields is important here!
 	// global -> schema -> additional fields -> data
@@ -70,7 +70,7 @@ func ParseVerificationAction(action string) (string, string) {
 	return parts[0], parts[1]
 }
 
-func Update[T schemas.Model](ctx context.Context, db aegis.DatabaseAdapter, schema schemas.Schema[T], data T, conditions []aegis.Where) error {
+func Update[T schemas.Model](ctx context.Context, db aegis.DatabaseAdapter, schema schemas.Schema[T], data *T, conditions []aegis.Where) error {
 	payload := make(map[string]any)
 	maps.Copy(payload, schema.ToStorage(data))
 

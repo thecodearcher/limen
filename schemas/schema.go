@@ -33,8 +33,8 @@ type AdditionalFieldsFunc func(ctx context.Context) map[string]any
 
 type Schema[T Model] interface {
 	GetTableName() TableName
-	ToStorage(data T) map[string]any
-	FromStorage(data map[string]any) T
+	ToStorage(data *T) map[string]any
+	FromStorage(data map[string]any) *T
 	GetSoftDeleteField() SchemaField
 	GetAdditionalFields() AdditionalFieldsFunc
 }

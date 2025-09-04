@@ -12,7 +12,7 @@ type Verification struct {
 }
 
 func (v Verification) TableName() string {
-	return "verifications"
+	return string(VerificationSchemaTableName)
 }
 
 func (v Verification) Raw() map[string]any {
@@ -73,8 +73,8 @@ func (c *VerificationSchema) GetSoftDeleteField() SchemaField {
 	return ""
 }
 
-func (c *VerificationSchema) FromStorage(data map[string]any) Verification {
-	return Verification{
+func (c *VerificationSchema) FromStorage(data map[string]any) *Verification {
+	return &Verification{
 		Subject:   data[c.GetSubjectField()].(string),
 		Value:     data[c.GetValueField()].(string),
 		ExpiresAt: data[c.GetExpiresAtField()].(time.Time),
@@ -84,7 +84,7 @@ func (c *VerificationSchema) FromStorage(data map[string]any) Verification {
 	}
 }
 
-func (c *VerificationSchema) ToStorage(data Verification) map[string]any {
+func (c *VerificationSchema) ToStorage(data *Verification) map[string]any {
 	return map[string]any{
 		c.GetSubjectField():   data.Subject,
 		c.GetValueField():     data.Value,
