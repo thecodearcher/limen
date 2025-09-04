@@ -30,7 +30,7 @@ type refreshTokenConfig struct {
 
 // signingConfig configures token signing
 type signingConfig struct {
-	algorithm string // HS256, HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512
+	algorithm JWTAlgorithm // HS256, HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512
 
 	// HMAC configuration
 	secret string
@@ -160,20 +160,20 @@ func (c *jWTConfig) validateAsymmetricAlgorithm() error {
 }
 
 // Helper functions for algorithm validation
-func isHMACAlgorithm(algorithm string) bool {
-	return algorithm == "HS256" || algorithm == "HS384" || algorithm == "HS512"
+func isHMACAlgorithm(algorithm JWTAlgorithm) bool {
+	return algorithm == JWTAlgorithmHS256 || algorithm == JWTAlgorithmHS384 || algorithm == JWTAlgorithmHS512
 }
 
-func isAsymmetricAlgorithm(algorithm string) bool {
+func isAsymmetricAlgorithm(algorithm JWTAlgorithm) bool {
 	return isRSAAlgorithm(algorithm) || isECDSAAlgorithm(algorithm)
 }
 
-func isRSAAlgorithm(algorithm string) bool {
-	return algorithm == "RS256" || algorithm == "RS384" || algorithm == "RS512"
+func isRSAAlgorithm(algorithm JWTAlgorithm) bool {
+	return algorithm == JWTAlgorithmRS256 || algorithm == JWTAlgorithmRS384 || algorithm == JWTAlgorithmRS512
 }
 
-func isECDSAAlgorithm(algorithm string) bool {
-	return algorithm == "ES256" || algorithm == "ES384" || algorithm == "ES512"
+func isECDSAAlgorithm(algorithm JWTAlgorithm) bool {
+	return algorithm == JWTAlgorithmES256 || algorithm == JWTAlgorithmES384 || algorithm == JWTAlgorithmES512
 }
 
 type jWTConfigOption func(*jWTConfig)
@@ -230,7 +230,7 @@ func WithJWTSecret(secret string) jWTConfigOption {
 }
 
 // WithJWTAlgorithm sets the algorithm of the JWT (HS256, HS384, HS512, RS256, RS384, RS512, ES256, ES384, ES512)
-func WithJWTAlgorithm(algorithm string) jWTConfigOption {
+func WithJWTAlgorithm(algorithm JWTAlgorithm) jWTConfigOption {
 	return func(c *jWTConfig) {
 		c.signing.algorithm = algorithm
 	}

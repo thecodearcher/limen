@@ -12,14 +12,14 @@ import (
 type jWTKeyProvider interface {
 	getSigningKey() (any, error)         // Returns signing key ([]byte for HMAC, *rsa.PrivateKey, *ecdsa.PrivateKey)
 	getVerificationKey() (any, error)    // Returns verification key (same as signing for HMAC, public key for RSA/ECDSA)
-	getAlgorithm() string                // Returns algorithm name (HS256, RS256, ES256, etc.)
+	getAlgorithm() JWTAlgorithm          // Returns algorithm name (HS256, RS256, ES256, etc.)
 	getSigningMethod() jwt.SigningMethod // Returns the JWT signing method
 }
 
 // HMACKeyProvider implements JWTKeyProvider for HMAC algorithms
 type hmacKeyProvider struct {
 	secret    []byte
-	algorithm string
+	algorithm JWTAlgorithm
 }
 
 // NewHMACKeyProvider creates a new HMAC key provider
@@ -38,7 +38,7 @@ func (h *hmacKeyProvider) getVerificationKey() (any, error) {
 	return h.getSigningKey()
 }
 
-func (h *hmacKeyProvider) getAlgorithm() string {
+func (h *hmacKeyProvider) getAlgorithm() JWTAlgorithm {
 	return h.algorithm
 }
 
@@ -59,7 +59,7 @@ func (h *hmacKeyProvider) getSigningMethod() jwt.SigningMethod {
 type asymmetricKeyProvider[T, U any] struct {
 	privateKey T
 	publicKey  U
-	algorithm  string
+	algorithm  JWTAlgorithm
 }
 
 // NewRSAKeyProvider creates a new RSA key provider
@@ -110,7 +110,7 @@ func (r *asymmetricKeyProvider[T, U]) getVerificationKey() (any, error) {
 	return r.publicKey, nil
 }
 
-func (r *asymmetricKeyProvider[T, U]) getAlgorithm() string {
+func (r *asymmetricKeyProvider[T, U]) getAlgorithm() JWTAlgorithm {
 	return r.algorithm
 }
 
