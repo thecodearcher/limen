@@ -1,15 +1,15 @@
 package aegis
 
+import (
+	"github.com/thecodearcher/aegis/schemas"
+)
+
 // Config is the main configuration struct for the aegis library
 type Config struct {
 	Database DatabaseAdapter
 	Features []Feature
-	Schema   SchemaConfig
+	Schema   schemas.Config
 	JWT      *jWTConfig
-}
-
-type SchemaConfig struct {
-	User UserSchema
 }
 
 func (c *Config) validate() error {

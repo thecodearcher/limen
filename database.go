@@ -2,16 +2,18 @@ package aegis
 
 import (
 	"context"
+
+	"github.com/thecodearcher/aegis/schemas"
 )
 
 type DatabaseAdapter interface {
-	Create(ctx context.Context, tableName SchemaTableName, data map[string]any) error
-	FindOne(ctx context.Context, tableName SchemaTableName, conditions []Where) (map[string]any, error)
-	FindMany(ctx context.Context, tableName SchemaTableName, conditions []Where, options *QueryOptions) ([]map[string]any, error)
-	Update(ctx context.Context, tableName SchemaTableName, conditions []Where, updates map[string]any) error
-	Delete(ctx context.Context, tableName SchemaTableName, conditions []Where) error
-	Exists(ctx context.Context, tableName SchemaTableName, conditions []Where) (bool, error)
-	Count(ctx context.Context, tableName SchemaTableName, conditions []Where) (int64, error)
+	Create(ctx context.Context, tableName schemas.TableName, data map[string]any) error
+	FindOne(ctx context.Context, tableName schemas.TableName, conditions []Where, orderBy []OrderBy) (map[string]any, error)
+	FindMany(ctx context.Context, tableName schemas.TableName, conditions []Where, options *QueryOptions) ([]map[string]any, error)
+	Update(ctx context.Context, tableName schemas.TableName, conditions []Where, updates map[string]any) error
+	Delete(ctx context.Context, tableName schemas.TableName, conditions []Where) error
+	Exists(ctx context.Context, tableName schemas.TableName, conditions []Where) (bool, error)
+	Count(ctx context.Context, tableName schemas.TableName, conditions []Where) (int64, error)
 }
 
 // DatabaseTx represents a database transaction
@@ -56,11 +58,23 @@ const (
 	ConnectorOr  Connector = "OR"
 )
 
+type OrderByDirection string
+
+const (
+	OrderByAsc  OrderByDirection = "ASC"  // order by ascending i.e oldest at top
+	OrderByDesc OrderByDirection = "DESC" // order by descending i.e newest at top
+)
+
+type OrderBy struct {
+	Column    string
+	Direction OrderByDirection
+}
+
 // QueryOptions for additional query parameters
 type QueryOptions struct {
-	Limit   int      `json:"limit,omitempty"`
-	Offset  int      `json:"offset,omitempty"`
-	OrderBy []string `json:"orderBy,omitempty"` // ["field ASC", "other_field DESC"]
+	Limit   int
+	Offset  int
+	OrderBy []OrderBy
 }
 
 // Helper functions for building conditions

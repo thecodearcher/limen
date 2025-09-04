@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+
+	"github.com/google/uuid"
 
 	"github.com/thecodearcher/aegis"
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
@@ -23,7 +27,7 @@ func main() {
 		"aegis",
 		"5432",
 	)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
@@ -31,38 +35,53 @@ func main() {
 	config := &aegis.Config{
 		Database: adapter.New(db),
 		Features: []aegis.Feature{
-			emailpassword.New(),
+			emailpassword.New(
+				emailpassword.WithResetTokenExpiration(1*time.Minute),
+				emailpassword.WithRemoveExpiredVerifications(false),
+			),
 		},
 		JWT: aegis.NewDefaultJWTConfig(
 			aegis.WithJWTSecret("test-secret"),
 			aegis.WithClaimsSubjectField("uuid"),
 		),
+		Schema: aegis.SchemaConfig{
+			SoftDeleteField: "soft_delete",
+			AdditionalFields: func(ctx context.Context) map[string]any {
+				return map[string]any{
+					"uuid":       uuid.New().String(),
+					"created_at": time.Now(),
+					"updated_at": time.Now(),
+				}
+			},
+		},
 	}
 
-	aegis, err := aegis.New(config)
+	auth, err := aegis.New(config)
 	if err != nil {
 		log.Fatalf("Failed to create aegis: %v", err)
 	}
 
-	fmt.Printf("%+v\n", aegis)
+	fmt.Printf("%+v\n", auth)
 	fmt.Println("Aegis instance created successfully!")
-
-	response, err := aegis.EmailPassword.SignInWithEmailAndPassword(context.Background(), "johndoe@gmail.com", "SecurePassword123@")
+	uuid := uuid.New().String()
+	fmt.Printf("UUID: %s\n", uuid)
+	response, err := auth.EmailPassword.SignInWithEmailAndPassword(context.Background(), "johndoe4@gmail.com", "SecurePassword123@")
 	if err != nil {
 		log.Fatalf("Failed to sign in: %v", err)
 	}
 
-	fmt.Printf("Sign in response: %+v\n", response)
-	validatedToken, err := aegis.JWT.VerifyToken(response.AccessToken)
+	fmt.Printf("User: %+v\n", response.User)
+
+	verification, err := auth.EmailPassword.RequestPasswordReset(context.Background(), "johndoe4@gmail.com")
 	if err != nil {
-		log.Fatalf("Failed to verify token: %v", err)
+		log.Fatalf("Failed to request password reset: %v", err)
 	}
-	fmt.Printf("Validated token: %+v\n", validatedToken)
-	// aegis.signIn.WithEmailAndPassword(ctx, "test@test.com", "password")
 
-	// aegis.Email.WithPassword()
+	err = auth.EmailPassword.ResetPassword(context.Background(), verification.Value, "SecurePassword123@")
+	if err != nil {
+		log.Fatalf("Failed to reset password: %v", err)
+	}
 
-	// emailPasswordPlugin := aegis.RegisterPlugin(emailpassword.New())
-	// emailPasswordPlugin.WithPassword('sdjnndsccd')
+	fmt.Printf("Password reset: %+v\n", verification)
 
 }

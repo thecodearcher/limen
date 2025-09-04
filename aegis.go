@@ -3,6 +3,8 @@ package aegis
 
 import (
 	"fmt"
+
+	"github.com/thecodearcher/aegis/schemas"
 )
 
 type Aegis struct {
@@ -12,7 +14,7 @@ type Aegis struct {
 
 type AegisCore struct {
 	DB     DatabaseAdapter
-	Schema SchemaConfig
+	Schema schemas.Config
 	JWT    *JwtHandler
 }
 

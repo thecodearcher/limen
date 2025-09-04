@@ -10,6 +10,19 @@ const (
 )
 
 var (
-	ErrInvalidPassword = errors.New("invalid password")
-	ErrEmailNotFound   = errors.New("email not found")
+	ErrInvalidPassword           = errors.New("invalid password")
+	ErrEmailNotFound             = errors.New("email not found")
+	ErrEmailRequired             = errors.New("email is required")
+	ErrPasswordRequired          = errors.New("password is required")
+	ErrEmailAlreadyExists        = errors.New("email already exists")
+	ErrPasswordTooShort          = errors.New("password is too short")
+	ErrPasswordRequiresUppercase = errors.New("password requires uppercase letters")
+	ErrPasswordRequiresNumbers   = errors.New("password requires numbers")
+	ErrPasswordRequiresSymbols   = errors.New("password requires symbols")
+	ErrResetTokenRequired        = errors.New("reset token is required")
+	ErrResetTokenInvalid         = errors.New("invalid or expired reset token")
+)
+
+const (
+	PasswordResetAction = "password_reset"
 )

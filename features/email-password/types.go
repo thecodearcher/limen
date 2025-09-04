@@ -1,5 +1,11 @@
 package emailpassword
 
+import (
+	"time"
+
+	"github.com/thecodearcher/aegis"
+)
+
 type ConfigOption func(*config)
 
 // WithPasswordMinLength sets the minimum length of the password
@@ -48,5 +54,26 @@ func WithCompareFn(compareFn func(password string, hash string) (bool, error)) C
 func WithPasswordHasherConfigOptions(opts ...PasswordHasherConfigOption) ConfigOption {
 	return func(c *config) {
 		c.passwordHasherConfig = DefaultPasswordHasherConfig(opts...)
+	}
+}
+
+// WithResetTokenExpiration sets the expiration duration for the reset token
+func WithResetTokenExpiration(resetTokenExpiration time.Duration) ConfigOption {
+	return func(c *config) {
+		c.resetTokenExpiration = resetTokenExpiration
+	}
+}
+
+// WithGenerateResetToken sets the function to generate the reset token
+func WithGenerateResetToken(generateResetToken func(*aegis.User) (string, error)) ConfigOption {
+	return func(c *config) {
+		c.generateResetToken = generateResetToken
+	}
+}
+
+// WithRemoveExpiredVerifications sets whether to remove expired verifications after reset password
+func WithRemoveExpiredVerifications(removeExpiredVerifications bool) ConfigOption {
+	return func(c *config) {
+		c.removeExpiredVerifications = removeExpiredVerifications
 	}
 }

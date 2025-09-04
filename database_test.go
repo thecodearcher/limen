@@ -90,9 +90,19 @@ func TestOrModifier(t *testing.T) {
 
 func TestQueryOptions(t *testing.T) {
 	options := &QueryOptions{
-		Limit:   10,
-		Offset:  20,
-		OrderBy: []string{"created_at DESC", "name ASC"},
+		Limit:  10,
+		Offset: 20,
+		OrderBy: []OrderBy{
+			{
+				Column:    "created_at",
+				Direction: OrderByDesc,
+			},
+			{},
+			{
+				Column:    "name",
+				Direction: OrderByAsc,
+			},
+		},
 	}
 
 	if options.Limit != 10 {
@@ -107,7 +117,7 @@ func TestQueryOptions(t *testing.T) {
 		t.Errorf("Expected 2 order by clauses, got %d", len(options.OrderBy))
 	}
 
-	if options.OrderBy[0] != "created_at DESC" {
+	if options.OrderBy[0].Column != "created_at" || options.OrderBy[0].Direction != OrderByDesc {
 		t.Errorf("Expected first order by to be 'created_at DESC', got %s", options.OrderBy[0])
 	}
 }
