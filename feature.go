@@ -48,4 +48,7 @@ type EmailPasswordFeature interface {
 
 	// ResetPassword resets the password using the given token and new password.
 	ResetPassword(ctx context.Context, token string, newPassword string) error
+
+	// UpdatePassword updates the password for the given user.
+	UpdatePassword(ctx context.Context, user *schemas.User, currentPassword string, newPassword string) error
 }

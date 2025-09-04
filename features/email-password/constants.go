@@ -21,6 +21,7 @@ var (
 	ErrPasswordRequiresSymbols   = errors.New("password requires symbols")
 	ErrResetTokenRequired        = errors.New("reset token is required")
 	ErrResetTokenInvalid         = errors.New("invalid or expired reset token")
+	ErrInvalidCurrentPassword    = errors.New("current password is invalid")
 )
 
 const (

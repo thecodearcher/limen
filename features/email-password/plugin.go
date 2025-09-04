@@ -204,6 +204,34 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 	return nil
 }
 
+func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.User, currentPassword string, newPassword string) error {
+	if err := p.validatePassword(newPassword); err != nil {
+		return err
+	}
+
+	hashedPassword, err := p.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	isValid, err := p.ComparePassword(currentPassword, user.Password)
+	if err != nil {
+		return err
+	}
+
+	if !isValid {
+		return ErrInvalidCurrentPassword
+	}
+
+	err = p.dbAction.UpdateUser(ctx, &schemas.User{Password: hashedPassword}, []aegis.Where{
+		aegis.Eq(p.userSchema.GetIDField(), user.ID),
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *emailPasswordFeature) generateResetToken(user *aegis.User) (string, error) {
 	if p.config.generateResetToken != nil {
 		return p.config.generateResetToken(user)
@@ -217,6 +245,25 @@ func (p *emailPasswordFeature) generateResetToken(user *aegis.User) (string, err
 	return base64.URLEncoding.EncodeToString(tokenBytes), nil
 }
 
+func (p *emailPasswordFeature) validatePassword(password string) error {
+	if password == "" {
+		return ErrPasswordRequired
+	}
+	if len(password) < p.config.passwordMinLength {
+		return ErrPasswordTooShort
+	}
+	if p.config.passwordRequireUppercase && !strings.ContainsAny(password, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+		return ErrPasswordRequiresUppercase
+	}
+	if p.config.passwordRequireNumbers && !strings.ContainsAny(password, "0123456789") {
+		return ErrPasswordRequiresNumbers
+	}
+	if p.config.passwordRequireSymbols && !strings.ContainsAny(password, "!@#$%^&*()_+-=[]{}|;:,.<>?") {
+		return ErrPasswordRequiresSymbols
+	}
+	return nil
+}
+
 func (p *emailPasswordFeature) validateUser(user *aegis.User) error {
 	if user.Email == "" {
 		return ErrEmailRequired
@@ -224,17 +271,8 @@ func (p *emailPasswordFeature) validateUser(user *aegis.User) error {
 	if user.Password == "" {
 		return ErrPasswordRequired
 	}
-	if len(user.Password) < p.config.passwordMinLength {
-		return ErrPasswordTooShort
-	}
-	if p.config.passwordRequireUppercase && !strings.ContainsAny(user.Password, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		return ErrPasswordRequiresUppercase
-	}
-	if p.config.passwordRequireNumbers && !strings.ContainsAny(user.Password, "0123456789") {
-		return ErrPasswordRequiresNumbers
-	}
-	if p.config.passwordRequireSymbols && !strings.ContainsAny(user.Password, "!@#$%^&*()_+-=[]{}|;:,.<>?") {
-		return ErrPasswordRequiresSymbols
+	if err := p.validatePassword(user.Password); err != nil {
+		return err
 	}
 	return nil
 }
