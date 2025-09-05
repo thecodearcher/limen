@@ -51,4 +51,10 @@ type EmailPasswordFeature interface {
 
 	// UpdatePassword updates the password for the given user.
 	UpdatePassword(ctx context.Context, user *schemas.User, currentPassword string, newPassword string) error
+
+	// RequestEmailVerification requests an email verification for the given user.
+	RequestEmailVerification(ctx context.Context, user *schemas.User) (*schemas.Verification, error)
+
+	// VerifyEmail verifies the email using the given token.
+	VerifyEmail(ctx context.Context, token string) error
 }

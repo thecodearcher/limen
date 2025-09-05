@@ -1,6 +1,8 @@
 package schemas
 
-import "context"
+import (
+	"context"
+)
 
 type SchemaField string
 type TableName string
@@ -13,14 +15,13 @@ const (
 
 // defaults for schemas fields
 const (
-	SchemaIDField             SchemaField = "id"
-	UserSchemaEmailField      SchemaField = "email"
-	UserSchemaFirstNameField  SchemaField = "first_name"
-	UserSchemaLastNameField   SchemaField = "last_name"
-	UserSchemaPasswordField   SchemaField = "password"
-	UserSchemaCreatedAtField  SchemaField = "created_at"
-	UserSchemaUpdatedAtField  SchemaField = "updated_at"
-	UserSchemaSoftDeleteField SchemaField = "deleted_at"
+	SchemaIDField                  SchemaField = "id"
+	UserSchemaEmailField           SchemaField = "email"
+	UserSchemaPasswordField        SchemaField = "password"
+	UserSchemaEmailVerifiedAtField SchemaField = "email_verified_at"
+	UserSchemaCreatedAtField       SchemaField = "created_at"
+	UserSchemaUpdatedAtField       SchemaField = "updated_at"
+	UserSchemaSoftDeleteField      SchemaField = "deleted_at"
 
 	VerificationSchemaSubjectField   SchemaField = "subject"
 	VerificationSchemaValueField     SchemaField = "value"
@@ -51,4 +52,12 @@ func getFieldOrDefault(fieldValue string, defaultValue SchemaField) string {
 		return string(defaultValue)
 	}
 	return fieldValue
+}
+
+func getNullableValue[T any](value any) *T {
+	if value == nil {
+		return nil
+	}
+	v := value.(T)
+	return &v
 }

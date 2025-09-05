@@ -20,10 +20,12 @@ var (
 	ErrPasswordRequiresNumbers   = errors.New("password requires numbers")
 	ErrPasswordRequiresSymbols   = errors.New("password requires symbols")
 	ErrResetTokenRequired        = errors.New("reset token is required")
-	ErrResetTokenInvalid         = errors.New("invalid or expired reset token")
+	ErrResetTokenInvalid         = errors.New("invalid or expired token. Please request a new one.")
 	ErrInvalidCurrentPassword    = errors.New("current password is invalid")
+	ErrEmailAlreadyVerified      = errors.New("email already verified")
 )
 
 const (
-	PasswordResetAction = "password_reset"
+	PasswordResetAction     = "password_reset"
+	EmailVerificationAction = "email_verification"
 )

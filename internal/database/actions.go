@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
 	"sync"
@@ -30,6 +30,12 @@ func NewCommonDatabaseActionsHelper(core *aegis.AegisCore) *DatabaseActionHelper
 	return databaseActions
 }
 
+func (i *DatabaseActionHelper) FindUserByEmail(ctx context.Context, email string) (*schemas.User, error) {
+	return FindOne[schemas.User](ctx, i.core.DB, &i.core.Schema.User, []aegis.Where{
+		aegis.Eq(i.core.Schema.User.GetEmailField(), email),
+	}, nil)
+}
+
 func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data *schemas.User, additionalFields map[string]any) error {
 	if err := Create[schemas.User](ctx, i.core, &i.core.Schema.User, data, additionalFields); err != nil {
 		return err
@@ -38,7 +44,9 @@ func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data *schemas.Use
 }
 
 func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action string, identifier string, token string, expiresAt time.Duration) (*schemas.Verification, error) {
-	fmt.Printf("expiresAt: %v\n", i)
+	if identifier == "" {
+		return nil, errors.New("identifier is required")
+	}
 	verificationSchema := i.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
 	if err := Create[schemas.Verification](ctx, i.core, &verificationSchema, &schemas.Verification{

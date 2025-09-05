@@ -154,7 +154,7 @@ func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email s
 		return nil, err
 	}
 
-	token, err := p.generateResetToken(user)
+	token, err := p.generateVerificationToken(user)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,54 @@ func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.U
 	return nil
 }
 
-func (p *emailPasswordFeature) generateResetToken(user *aegis.User) (string, error) {
+func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, email string) (*schemas.Verification, error) {
+	user, err := p.dbAction.FindUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.EmailVerifiedAt != nil {
+		return nil, ErrEmailAlreadyVerified
+	}
+
+	token, err := p.generateVerificationToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	verification, err := p.dbAction.CreateVerification(ctx, EmailVerificationAction, user.Email, token, p.config.resetTokenExpiration)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.config.removeExpiredVerifications {
+		err = p.dbAction.DeleteExpiredVerifications(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return verification, nil
+}
+
+func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) error {
+	verification, err := p.dbAction.FindVerificationByToken(ctx, token)
+	if err != nil {
+		return err
+	}
+
+	action, identifier := database.ParseVerificationAction(verification.Subject)
+	if action != EmailVerificationAction {
+		return ErrResetTokenInvalid
+	}
+
+	now := time.Now()
+	return p.dbAction.UpdateUser(ctx, &schemas.User{EmailVerifiedAt: &now}, []aegis.Where{
+		aegis.Eq(p.userSchema.GetEmailField(), identifier),
+	})
+}
+
+func (p *emailPasswordFeature) generateVerificationToken(user *aegis.User) (string, error) {
 	if p.config.generateResetToken != nil {
 		return p.config.generateResetToken(user)
 	}

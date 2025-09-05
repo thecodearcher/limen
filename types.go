@@ -28,3 +28,8 @@ type AuthenticationResult struct {
 // alias for the user model
 type User = schemas.User
 type SchemaConfig = schemas.Config
+
+type UserSchema = schemas.UserSchema
+type UserFields = schemas.UserFields
+type VerificationSchema = schemas.VerificationSchema
+type VerificationFields = schemas.VerificationFields

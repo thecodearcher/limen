@@ -1,10 +1,15 @@
 package schemas
 
+import (
+	"time"
+)
+
 type User struct {
-	ID       any
-	Email    string
-	Password string
-	raw      map[string]any
+	ID              any
+	Email           string
+	Password        string
+	EmailVerifiedAt *time.Time
+	raw             map[string]any
 }
 
 // Raw returns the user raw data as returned from the database
@@ -36,11 +41,12 @@ type UserSchema struct {
 }
 
 type UserFields struct {
-	ID        string
-	FirstName string
-	LastName  string
-	Email     string
-	Password  string
+	ID              string
+	FirstName       string
+	LastName        string
+	Email           string
+	Password        string
+	EmailVerifiedAt string
 }
 
 func (c *UserSchema) GetTableName() TableName {
@@ -66,22 +72,28 @@ func (c *UserSchema) GetPasswordField() string {
 	return getFieldOrDefault(c.Fields.Password, UserSchemaPasswordField)
 }
 
+func (c *UserSchema) GetEmailVerifiedAtField() string {
+	return getFieldOrDefault(c.Fields.EmailVerifiedAt, UserSchemaEmailVerifiedAtField)
+}
+
 func (c *UserSchema) GetAdditionalFields() AdditionalFieldsFunc {
 	return c.AdditionalFields
 }
 
 func (c *UserSchema) FromStorage(data map[string]any) *User {
 	return &User{
-		ID:       data[c.GetIDField()],
-		Email:    data[c.GetEmailField()].(string),
-		Password: data[c.GetPasswordField()].(string),
-		raw:      data,
+		ID:              data[c.GetIDField()],
+		Email:           data[c.GetEmailField()].(string),
+		Password:        data[c.GetPasswordField()].(string),
+		EmailVerifiedAt: getNullableValue[time.Time](data[c.GetEmailVerifiedAtField()]),
+		raw:             data,
 	}
 }
 
 func (c *UserSchema) ToStorage(data *User) map[string]any {
 	return map[string]any{
-		c.GetEmailField():    data.Email,
-		c.GetPasswordField(): data.Password,
+		c.GetEmailField():           data.Email,
+		c.GetPasswordField():        data.Password,
+		c.GetEmailVerifiedAtField(): data.EmailVerifiedAt,
 	}
 }
