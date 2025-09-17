@@ -1,6 +1,6 @@
 module github.com/thecodearcher/aegis
 
-go 1.21
+go 1.23
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.0

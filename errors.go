@@ -24,4 +24,12 @@ var (
 	ErrJWTInvalidIssuer             = errors.New("JWT issuer is required")
 	ErrJWTInvalidPrivateKeyConflict = errors.New("either private key path or PEM can be provided, not both")
 	ErrJWTInvalidPublicKeyConflict  = errors.New("either public key path or PEM can be provided, not both")
+	ErrJWTSubjectFieldConflict      = errors.New("subject field and subject value cannot be provided at the same time")
+)
+
+// Session-specific errors
+var (
+	ErrSessionNotFound = errors.New("session not found")
+	ErrSessionExpired  = errors.New("session has expired")
+	ErrSessionInvalid  = errors.New("session is invalid")
 )

@@ -80,22 +80,40 @@ func (s *JwtHandler) VerifyToken(tokenString string) (map[string]any, error) {
 }
 
 // GenerateAccessToken generates an access token with the configured duration and claims
-// rawUserData is the raw user data as returned from the database
-func (s *JwtHandler) GenerateAccessToken(user *User) (string, error) {
+func (s *JwtHandler) GenerateAccessToken(sessionID string, user *User) (string, string, error) {
 	rawUserData := user.Raw()
 	claims := map[string]any{
-		"sub": rawUserData[s.config.claims.subjectField],
+		"jti": sessionID,
 	}
-	for _, claim := range s.config.claims.customClaims {
-		claims[claim] = rawUserData[claim]
+	if s.config.claims.subjectValue != nil {
+		claims["sub"] = s.config.claims.subjectValue(user)
+	} else {
+		claims["sub"] = rawUserData[s.config.claims.subjectField]
 	}
-	return s.GenerateToken(claims, s.config.accessToken.duration)
+
+	if s.config.claims.customClaims != nil {
+		customClaims := s.config.claims.customClaims(user)
+		maps.Copy(claims, customClaims)
+	}
+	accessToken, err := s.GenerateToken(claims, s.config.accessToken.duration)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	if s.config.refreshToken.enabled {
+		refreshClaims := claims
+		refreshClaims["jti"] = sessionID + "_refresh"
+
+		refreshToken, err := s.GenerateToken(refreshClaims, s.config.refreshToken.duration)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
+		}
+		return accessToken, refreshToken, nil
+	}
+
+	return accessToken, "", nil
 }
 
-// GenerateRefreshToken generates a refresh token with the configured duration
-func (s *JwtHandler) GenerateRefreshToken(claims map[string]any) (string, error) {
-	if !s.config.refreshToken.enabled {
-		return "", errors.New("refresh tokens are not enabled")
-	}
-	return s.GenerateToken(claims, s.config.refreshToken.duration)
+func (s *JwtHandler) CustomUserFromSubjectFn() func(string) (*User, error) {
+	return s.config.claims.userFromSubject
 }

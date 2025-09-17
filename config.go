@@ -10,6 +10,7 @@ type Config struct {
 	Features []Feature
 	Schema   schemas.Config
 	JWT      *jWTConfig
+	Session  *SessionConfig
 }
 
 func (c *Config) validate() error {
@@ -19,6 +20,14 @@ func (c *Config) validate() error {
 
 	if c.JWT == nil {
 		c.JWT = NewDefaultJWTConfig()
+	}
+
+	if c.Session == nil {
+		c.Session = NewDefaultSessionConfig()
+	}
+
+	if err := c.Session.validate(); err != nil {
+		return err
 	}
 
 	if err := c.JWT.validate(); err != nil {

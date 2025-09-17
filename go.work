@@ -1,8 +1,9 @@
-go 1.21
+go 1.23
 
 use (
 	.
 	./adapters/gorm
+	./api
 	./examples/basic
 	./features/email-password
 )

@@ -44,8 +44,10 @@ type signingConfig struct {
 
 // claimsConfig configures JWT claims
 type claimsConfig struct {
-	subjectField string
-	customClaims []string // List of user fields to include
+	subjectField    string
+	subjectValue    func(user *User) string
+	userFromSubject func(subject string) (*User, error)
+	customClaims    func(user *User) map[string]any // map of custom claims
 }
 
 // NewDefaultJWTConfig creates a new JWT configuration with default values
@@ -67,7 +69,6 @@ func NewDefaultJWTConfig(opts ...jWTConfigOption) *jWTConfig {
 		},
 		claims: claimsConfig{
 			subjectField: "id",
-			customClaims: []string{},
 		},
 	}
 
@@ -114,6 +115,10 @@ func (c *jWTConfig) validate() error {
 
 	if c.accessToken.issuer == "" {
 		return ErrJWTInvalidIssuer
+	}
+
+	if c.claims.subjectValue != nil && (c.claims.subjectField != "" && c.claims.subjectField != "id") {
+		return ErrJWTSubjectFieldConflict
 	}
 
 	return nil
@@ -271,6 +276,8 @@ func WithJWTPublicKeyPEM(publicKeyPEM string) jWTConfigOption {
 // WithClaimsSubjectField sets the field of the user that will be used as the subject of the JWT.
 // This is usually the user's ID.
 //
+// To customize the subject field value, use WithClaimsSubjectValue instead
+//
 //	@default: "id"
 func WithClaimsSubjectField(subjectField string) jWTConfigOption {
 	return func(c *jWTConfig) {
@@ -279,8 +286,25 @@ func WithClaimsSubjectField(subjectField string) jWTConfigOption {
 }
 
 // WithClaimsCustomClaims sets the fields of the user that will be included in the JWT
-func WithClaimsCustomClaims(customClaims []string) jWTConfigOption {
+func WithClaimsCustomClaims(customClaims func(user *User) map[string]any) jWTConfigOption {
 	return func(c *jWTConfig) {
 		c.claims.customClaims = customClaims
+	}
+}
+
+// WithClaimsSubjectValue sets the value of the subject field of the JWT.
+//
+// Useful for customizing the subject field value when the subject is not a direct field of the user
+func WithClaimsSubjectValue(subjectValue func(user *User) string) jWTConfigOption {
+	return func(c *jWTConfig) {
+		c.claims.subjectValue = subjectValue
+	}
+}
+
+// WithClaimsUserFromSubject sets the function to get the user from the subject field when the subject is not a direct field of the user
+// i.e when WithClaimsSubjectValue is used
+func WithClaimsUserFromSubject(userFromSubject func(subject string) (*User, error)) jWTConfigOption {
+	return func(c *jWTConfig) {
+		c.claims.userFromSubject = userFromSubject
 	}
 }

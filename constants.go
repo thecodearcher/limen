@@ -23,3 +23,13 @@ const (
 	JWTAlgorithmES384 JWTAlgorithm = "ES384"
 	JWTAlgorithmES512 JWTAlgorithm = "ES512"
 )
+
+// SessionStrategyType represents the type of session strategy
+type SessionStrategyType string
+
+// Session strategy types
+const (
+	SessionStrategyServerSide SessionStrategyType = "server_side"
+	SessionStrategyJWT        SessionStrategyType = "jwt"
+	SessionStrategyHybrid     SessionStrategyType = "hybrid"
+)

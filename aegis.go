@@ -53,5 +53,4 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	return aegis, nil
-
 }
