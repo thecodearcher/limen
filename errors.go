@@ -4,6 +4,12 @@ import (
 	"errors"
 )
 
+type AegisError interface {
+	error
+	Details() any
+	Status() int
+}
+
 var (
 	ErrDatabaseAdapterRequired = errors.New("database adapter is required")
 	ErrPluginNotFound          = errors.New("plugin not found")
@@ -33,3 +39,25 @@ var (
 	ErrSessionExpired  = errors.New("session has expired")
 	ErrSessionInvalid  = errors.New("session is invalid")
 )
+
+type AegisErrorImpl struct {
+	message string
+	details any
+	status  int
+}
+
+func NewAegisError(message string, status int, details any) *AegisErrorImpl {
+	return &AegisErrorImpl{message: message, details: details, status: status}
+}
+
+func (e *AegisErrorImpl) Error() string {
+	return e.message
+}
+
+func (e *AegisErrorImpl) Details() any {
+	return e.details
+}
+
+func (e *AegisErrorImpl) Status() int {
+	return e.status
+}

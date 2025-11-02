@@ -33,3 +33,11 @@ const (
 	SessionStrategyJWT        SessionStrategyType = "jwt"
 	SessionStrategyHybrid     SessionStrategyType = "hybrid"
 )
+
+type EnvelopeMode int
+
+const (
+	EnvelopeOff EnvelopeMode = iota
+	EnvelopeWrapSuccess
+	EnvelopeAlways
+)

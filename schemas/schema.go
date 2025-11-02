@@ -11,6 +11,7 @@ type TableName string
 const (
 	UserSchemaTableName         TableName = "users"
 	VerificationSchemaTableName TableName = "verifications"
+	SessionSchemaTableName      TableName = "sessions"
 )
 
 // defaults for schemas fields
@@ -28,6 +29,16 @@ const (
 	VerificationSchemaExpiresAtField SchemaField = "expires_at"
 	VerificationSchemaCreatedAtField SchemaField = "created_at"
 	VerificationSchemaUpdatedAtField SchemaField = "updated_at"
+
+	SessionSchemaUserIDField     SchemaField = "user_id"
+	SessionSchemaDataField       SchemaField = "data"
+	SessionSchemaCreatedAtField  SchemaField = "created_at"
+	SessionSchemaExpiresAtField  SchemaField = "expires_at"
+	SessionSchemaLastAccessField SchemaField = "last_access"
+	SessionSchemaIPAddressField  SchemaField = "ip_address"
+	SessionSchemaUserAgentField  SchemaField = "user_agent"
+	SessionSchemaCSRFTokenField  SchemaField = "csrf_token"
+	SessionSchemaMetadataField   SchemaField = "metadata"
 )
 
 type AdditionalFieldsFunc func(ctx context.Context) map[string]any

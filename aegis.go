@@ -3,13 +3,16 @@ package aegis
 
 import (
 	"fmt"
+	"net/http"
 
+	"github.com/thecodearcher/aegis/pkg/httpx"
 	"github.com/thecodearcher/aegis/schemas"
 )
 
 type Aegis struct {
 	EmailPassword EmailPasswordFeature
 	JWT           TokenGenerator
+	config        *Config
 }
 
 type AegisCore struct {
@@ -33,7 +36,8 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	aegis := &Aegis{
-		JWT: jwtHandler,
+		JWT:    jwtHandler,
+		config: config,
 	}
 	core := &AegisCore{
 		DB:     config.Database,
@@ -53,4 +57,33 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	return aegis, nil
+}
+
+func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
+	config := &httpConfig{}
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	if config.basePath == "" {
+		config.basePath = "/auth"
+	}
+
+	config.basePath = httpx.NormalizeBasePath(config.basePath)
+
+	router := httpx.NewRouter(config.middleware...)
+	responder := NewResponder(config.responseEnvelope)
+	for _, feature := range a.config.Features {
+		mount := feature.HTTPMount(a, &responder)
+		basePath := mount.DefaultBase
+		override := config.overrides[string(feature.Name())]
+		if override != nil && override.BasePath != "" {
+			basePath = httpx.NormalizeBasePath(override.BasePath)
+		}
+
+		normalizedBasePath := config.basePath + httpx.NormalizeBasePath(basePath)
+		router.Mount(normalizedBasePath, mount.Handler, override.Middleware...)
+	}
+
+	return router
 }

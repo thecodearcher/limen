@@ -3,6 +3,7 @@ package aegis
 import (
 	"context"
 
+	"github.com/thecodearcher/aegis/pkg/httpx"
 	"github.com/thecodearcher/aegis/schemas"
 )
 
@@ -19,6 +20,16 @@ const (
 type Feature interface {
 	Name() FeatureName
 	Initialize(core *AegisCore) error
+	HTTPMount(aegis *Aegis, responder *Responder) HTTPMount
+}
+
+// HTTPMount is how the plugin exposes its HTTP surface.
+type HTTPMount struct {
+	Handler *httpx.Router
+
+	// Your default mount base. The end user can override this in Aegis config.
+	// Example: "/magic" => routes live under /auth/magic/* by default.
+	DefaultBase string
 }
 
 type EmailPasswordFeature interface {
