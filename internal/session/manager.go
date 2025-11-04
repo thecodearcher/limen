@@ -16,27 +16,27 @@ type SessionManager struct {
 	strategies map[aegis.SessionStrategyType]aegis.SessionStrategy
 }
 
-func NewSessionManager(store aegis.SessionStore, config *aegis.SessionConfig, core *aegis.AegisCore) *SessionManager {
+func NewSessionManager(core *aegis.AegisCore) *SessionManager {
 	return &SessionManager{
-		store:  store,
-		config: config,
+		store:  determineStore(core.Session, core),
+		config: core.Session,
 		core:   core,
 	}
 }
 
 func (m *SessionManager) determineStrategy(config aegis.SessionStrategyType) aegis.SessionStrategy {
 	switch config {
-	case aegis.SessionStrategyServerSide:
-		return NewServerSideStrategy(m.store, m.config)
 	case aegis.SessionStrategyJWT:
 		return NewJWTStrategy(m.core, m.config)
+	case aegis.SessionStrategyServerSide:
+		fallthrough
 	default:
-		return nil
+		return NewServerSideStrategy(m.store, m.config)
 	}
 }
 
 func (m *SessionManager) CreateSession(ctx context.Context, user *aegis.User, request *http.Request) (*aegis.SessionResult, error) {
-	strategy := m.determineStrategyFromRequest(request)
+	strategy := m.determineStrategyForRequest(request)
 	result, err := strategy.Create(ctx, user)
 	if err != nil {
 		return nil, err
@@ -63,13 +63,13 @@ func (m *SessionManager) CreateSession(ctx context.Context, user *aegis.User, re
 }
 
 func (m *SessionManager) ValidateSession(ctx context.Context, request *http.Request) (*aegis.SessionValidateResult, error) {
-	strategy := m.determineStrategyFromRequest(request)
+	strategy := m.determineStrategyForRequest(request)
 
 	return strategy.Validate(ctx, request)
 }
 
 func (m *SessionManager) RefreshSession(ctx context.Context, request *http.Request) (*aegis.SessionRefreshResult, error) {
-	strategy := m.determineStrategyFromRequest(request)
+	strategy := m.determineStrategyForRequest(request)
 	result, err := strategy.Refresh(ctx, request)
 	if err != nil {
 		return nil, err
@@ -120,27 +120,33 @@ func (m *SessionManager) determineTokenModeFromRequest(request *http.Request) ae
 		return aegis.SessionStrategyJWT
 	case "cookie":
 		return aegis.SessionStrategyServerSide
-	default:
+	case "hybrid":
 		return aegis.SessionStrategyHybrid
+	default:
+		return ""
 	}
 }
 
-func (m *SessionManager) determineStrategyFromRequest(request *http.Request) aegis.SessionStrategy {
+func (m *SessionManager) determineStrategyForRequest(request *http.Request) aegis.SessionStrategy {
 	strategy := m.determineTokenModeFromRequest(request)
+	if strategy == "" {
+		strategy = m.config.Strategy
+	}
+
 	return m.determineStrategy(strategy)
 }
 
-func (m *SessionManager) createCookie(token string) *http.Cookie {
-	cookieOptions := m.config.CookieOptions
+func determineStore(config *aegis.SessionConfig, core *aegis.AegisCore) aegis.SessionStore {
+	if config.CustomStore != nil {
+		return config.CustomStore
+	}
 
-	return &http.Cookie{
-		Name:        cookieOptions.Name,
-		Value:       token,
-		Path:        cookieOptions.Path,
-		MaxAge:      int(m.config.Duration.Seconds()),
-		HttpOnly:    cookieOptions.HTTPOnly,
-		Secure:      cookieOptions.Secure,
-		SameSite:    cookieOptions.SameSite,
-		Partitioned: cookieOptions.Partitioned,
+	switch config.StoreType {
+	case aegis.SessionStoreTypeDatabase:
+		return NewDatabaseSessionStore(core)
+	case aegis.SessionStoreTypeMemory:
+		fallthrough
+	default:
+		return NewMemorySessionStore()
 	}
 }

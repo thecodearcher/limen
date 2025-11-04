@@ -41,3 +41,10 @@ const (
 	EnvelopeWrapSuccess
 	EnvelopeAlways
 )
+
+type SessionStoreType string
+
+const (
+	SessionStoreTypeMemory   SessionStoreType = "in_memory"
+	SessionStoreTypeDatabase SessionStoreType = "database"
+)

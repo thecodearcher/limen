@@ -37,7 +37,7 @@ func (s *ServerSideStrategy) Create(ctx context.Context, user *aegis.User) (*aeg
 	}
 
 	return &aegis.SessionResult{
-		Token: sessionID,
+		Cookie: s.createCookie(sessionID),
 	}, nil
 }
 
@@ -121,4 +121,19 @@ func (s *ServerSideStrategy) extractSessionID(request *http.Request) (string, er
 	}
 
 	return sessionID, nil
+}
+
+func (s *ServerSideStrategy) createCookie(token string) *http.Cookie {
+	cookieOptions := s.config.CookieOptions
+
+	return &http.Cookie{
+		Name:        cookieOptions.Name,
+		Value:       token,
+		Path:        cookieOptions.Path,
+		MaxAge:      int(s.config.Duration.Seconds()),
+		HttpOnly:    cookieOptions.HTTPOnly,
+		Secure:      cookieOptions.Secure,
+		SameSite:    cookieOptions.SameSite,
+		Partitioned: cookieOptions.Partitioned,
+	}
 }
