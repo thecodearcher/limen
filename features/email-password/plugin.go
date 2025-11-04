@@ -78,7 +78,7 @@ func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 }
 
 func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*aegis.AuthenticationResult, error) {
-	user, err := database.FindOne(ctx, p.core.DB, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), email)}, nil)
+	user, err := p.dbAction.FindUserByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrEmailNotFound
 	}
@@ -102,7 +102,7 @@ func (p *emailPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, u
 		return nil, err
 	}
 
-	userExists, err := database.Exists(ctx, p.core.DB, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), user.Email)})
+	userExists, err := database.Exists(ctx, p.core, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), user.Email)})
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (p *emailPasswordFeature) ComparePassword(password string, hash string) (bo
 }
 
 func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email string) (*schemas.Verification, error) {
-	user, err := database.FindOne(ctx, p.core.DB, p.userSchema, []aegis.Where{
+	user, err := database.FindOne(ctx, p.core, p.userSchema, []aegis.Where{
 		aegis.Eq(p.userSchema.GetEmailField(), email),
 	}, nil)
 	if err != nil {
@@ -232,8 +232,8 @@ func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.U
 	return nil
 }
 
-func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, email string) (*schemas.Verification, error) {
-	user, err := p.dbAction.FindUserByEmail(ctx, email)
+func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, user *aegis.User) (*schemas.Verification, error) {
+	user, err := p.dbAction.FindUserByEmail(ctx, user.Email)
 	if err != nil {
 		return nil, err
 	}

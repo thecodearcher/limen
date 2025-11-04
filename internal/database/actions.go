@@ -31,13 +31,13 @@ func NewCommonDatabaseActionsHelper(core *aegis.AegisCore) *DatabaseActionHelper
 }
 
 func (i *DatabaseActionHelper) FindUserByEmail(ctx context.Context, email string) (*schemas.User, error) {
-	return FindOne[schemas.User](ctx, i.core.DB, &i.core.Schema.User, []aegis.Where{
+	return FindOne(ctx, i.core, &i.core.Schema.User, []aegis.Where{
 		aegis.Eq(i.core.Schema.User.GetEmailField(), email),
 	}, nil)
 }
 
 func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data *schemas.User, additionalFields map[string]any) error {
-	if err := Create[schemas.User](ctx, i.core, &i.core.Schema.User, data, additionalFields); err != nil {
+	if err := Create(ctx, i.core, &i.core.Schema.User, data, additionalFields); err != nil {
 		return err
 	}
 	return nil
@@ -49,7 +49,7 @@ func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 	}
 	verificationSchema := i.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
-	if err := Create[schemas.Verification](ctx, i.core, &verificationSchema, &schemas.Verification{
+	if err := Create(ctx, i.core, &verificationSchema, &schemas.Verification{
 		Subject:   actionValue,
 		Value:     token,
 		ExpiresAt: time.Now().Add(expiresAt).UTC(),
@@ -63,7 +63,7 @@ func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 func (i *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, action string, identifier string) (*schemas.Verification, error) {
 	verificationSchema := i.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
-	return FindOne[schemas.Verification](ctx, i.core.DB, &verificationSchema,
+	return FindOne(ctx, i.core, &verificationSchema,
 		[]aegis.Where{
 			aegis.Eq(verificationSchema.GetSubjectField(), actionValue),
 		},
@@ -77,7 +77,7 @@ func (i *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, act
 
 func (i *DatabaseActionHelper) FindVerificationByToken(ctx context.Context, token string) (*schemas.Verification, error) {
 	verificationSchema := i.core.Schema.Verification
-	return FindOne[schemas.Verification](ctx, i.core.DB, &verificationSchema,
+	return FindOne(ctx, i.core, &verificationSchema,
 		[]aegis.Where{
 			aegis.Eq(verificationSchema.GetValueField(), token),
 		},
@@ -97,7 +97,7 @@ func (i *DatabaseActionHelper) DeleteExpiredVerifications(ctx context.Context) e
 }
 
 func (i *DatabaseActionHelper) UpdateUser(ctx context.Context, data *schemas.User, conditions []aegis.Where) error {
-	if err := Update[schemas.User](ctx, i.core.DB, &i.core.Schema.User, data, conditions); err != nil {
+	if err := Update(ctx, i.core, &i.core.Schema.User, data, conditions); err != nil {
 		return err
 	}
 	return nil

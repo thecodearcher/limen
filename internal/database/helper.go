@@ -10,12 +10,9 @@ import (
 	"github.com/thecodearcher/aegis/schemas"
 )
 
-func FindOne[T schemas.Model](ctx context.Context, db aegis.DatabaseAdapter, schema schemas.Schema[T], conditions []aegis.Where, orderBy []aegis.OrderBy) (*T, error) {
-	if schema.GetSoftDeleteField() != "" {
-		conditions = append(conditions, aegis.IsNull(string(schema.GetSoftDeleteField())))
-	}
-
-	result, err := db.FindOne(ctx, schema.GetTableName(), conditions, orderBy)
+func FindOne[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], conditions []aegis.Where, orderBy []aegis.OrderBy) (*T, error) {
+	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
+	result, err := core.DB.FindOne(ctx, schema.GetTableName(), conditions, orderBy)
 	if err != nil {
 		return nil, err
 	}
@@ -53,12 +50,10 @@ func Create[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema 
 	return nil
 }
 
-func Exists[T schemas.Model](ctx context.Context, db aegis.DatabaseAdapter, schema schemas.Schema[T], conditions []aegis.Where) (bool, error) {
-	if schema.GetSoftDeleteField() != "" {
-		conditions = append(conditions, aegis.IsNull(string(schema.GetSoftDeleteField())))
-	}
+func Exists[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], conditions []aegis.Where) (bool, error) {
+	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
 
-	return db.Exists(ctx, schema.GetTableName(), conditions)
+	return core.DB.Exists(ctx, schema.GetTableName(), conditions)
 }
 
 func GenerateVerificationAction(action string, identifier string) string {
@@ -70,7 +65,7 @@ func ParseVerificationAction(action string) (string, string) {
 	return parts[0], parts[1]
 }
 
-func Update[T schemas.Model](ctx context.Context, db aegis.DatabaseAdapter, schema schemas.Schema[T], data *T, conditions []aegis.Where) error {
+func Update[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], data *T, conditions []aegis.Where) error {
 	payload := make(map[string]any)
 	maps.Copy(payload, schema.ToStorage(data))
 
@@ -80,6 +75,20 @@ func Update[T schemas.Model](ctx context.Context, db aegis.DatabaseAdapter, sche
 			delete(payload, key)
 		}
 	}
+	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
 
-	return db.Update(ctx, schema.GetTableName(), conditions, payload)
+	return core.DB.Update(ctx, schema.GetTableName(), conditions, payload)
+}
+
+func applySoftDeleteFilter[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], conditions []aegis.Where) []aegis.Where {
+	softDeleteField := core.Schema.SoftDeleteField
+	if schema.GetSoftDeleteField() != "" {
+		softDeleteField = string(schema.GetSoftDeleteField())
+	}
+
+	if softDeleteField != "" {
+		conditions = append(conditions, aegis.IsNull(softDeleteField))
+	}
+
+	return conditions
 }
