@@ -13,8 +13,12 @@ type Config struct {
 	// 		 }
 	//	 }
 	// this function will be called during the creation of any schema record.
-	// You can also set fields on the schema itself.
+	// You can also set fields on supported schemas itself.
 	AdditionalFields AdditionalFieldsFunc
-	User             UserSchema
-	Verification     VerificationSchema
+	// User schema configuration
+	User UserSchema
+	// Verification schema configuration
+	Verification VerificationSchema
+	// Session schema configuration
+	Session SessionSchema
 }

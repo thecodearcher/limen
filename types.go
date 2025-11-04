@@ -42,8 +42,9 @@ type SessionFields = schemas.SessionFields
 
 // SessionResult contains the result of session operations
 type SessionResult struct {
-	Token        string // JWT token for JWT/hybrid strategies
-	RefreshToken string // Refresh token if enabled
+	Token        string       `json:"token,omitzero"`         // JWT token for JWT/hybrid strategies
+	RefreshToken string       `json:"refresh_token,omitzero"` // Refresh token if enabled
+	Cookie       *http.Cookie `json:"-"`
 }
 
 type SessionRefreshResult struct {

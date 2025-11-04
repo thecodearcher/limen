@@ -15,10 +15,16 @@ type SessionConfig struct {
 	IdleTimeout time.Duration
 	// ActivityCheckInterval: the interval at which the session last access time will be updated
 	ActivityCheckInterval time.Duration
-	Store                 SessionStore
-	CookieOptions         *CookieConfig
+	// StoreType: the type of session store to use if no custom store is provided
+	StoreType SessionStoreType
+	// CustomStore: a custom session store to use instead of the default store
+	CustomStore SessionStore
+	// CookieOptions: the cookie options to use
+	CookieOptions *CookieConfig
 	// TrustedOrigins: list of allowed origins for cross-site credentialed requests (CORS + CSRF header).
 	TrustedOrigins []string
+	// TokenGenerator: the token generator to use
+	TokenGenerator TokenGenerator
 }
 
 type CookieConfig struct {
@@ -49,7 +55,6 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
 		RefreshInterval:       0,
 		IdleTimeout:           0,
 		ActivityCheckInterval: 1 * time.Hour,
-		Store:                 NewDefaultSessionStore(),
 		CookieOptions: &CookieConfig{
 			Name:        "aegis_session",
 			Path:        "/",
@@ -75,10 +80,6 @@ func (c *SessionConfig) validate() error {
 	return nil
 }
 
-func NewDefaultSessionStore() SessionStore {
-	return nil
-}
-
 type SessionConfigOption func(*SessionConfig)
 
 func WithSessionStrategy(strategy SessionStrategyType) SessionConfigOption {
@@ -87,9 +88,15 @@ func WithSessionStrategy(strategy SessionStrategyType) SessionConfigOption {
 	}
 }
 
-func WithSessionStore(store SessionStore) SessionConfigOption {
+func WithCustomSessionStore(store SessionStore) SessionConfigOption {
 	return func(c *SessionConfig) {
-		c.Store = store
+		c.CustomStore = store
+	}
+}
+
+func WithSessionStoreType(storeType SessionStoreType) SessionConfigOption {
+	return func(c *SessionConfig) {
+		c.StoreType = storeType
 	}
 }
 

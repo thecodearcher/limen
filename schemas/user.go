@@ -5,10 +5,10 @@ import (
 )
 
 type User struct {
-	ID              any
-	Email           string
-	Password        string
-	EmailVerifiedAt *time.Time
+	ID              any        `json:"id"`
+	Email           string     `json:"email"`
+	Password        string     `json:"-"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 	raw             map[string]any
 }
 
@@ -38,6 +38,9 @@ type UserSchema struct {
 	AdditionalFields AdditionalFieldsFunc
 	// mapping of the user schema to the database columns
 	Fields UserFields
+
+	// A function to serialize the model to a json object for returning to the client
+	Serializer func(data *User) map[string]any
 }
 
 type UserFields struct {
@@ -96,4 +99,13 @@ func (c *UserSchema) ToStorage(data *User) map[string]any {
 		c.GetPasswordField():        data.Password,
 		c.GetEmailVerifiedAtField(): data.EmailVerifiedAt,
 	}
+}
+
+func (c *UserSchema) Serialize(data *User) map[string]any {
+	if c.Serializer != nil {
+		return c.Serializer(data)
+	}
+	raw := data.Raw()
+	delete(raw, c.GetPasswordField())
+	return raw
 }

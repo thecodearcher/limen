@@ -16,9 +16,10 @@ type Aegis struct {
 }
 
 type AegisCore struct {
-	DB     DatabaseAdapter
-	Schema schemas.Config
-	JWT    *JwtHandler
+	DB      DatabaseAdapter
+	Schema  schemas.Config
+	JWT     *JwtHandler
+	Session *SessionConfig
 }
 
 func New(config *Config) (*Aegis, error) {
@@ -40,9 +41,10 @@ func New(config *Config) (*Aegis, error) {
 		config: config,
 	}
 	core := &AegisCore{
-		DB:     config.Database,
-		Schema: config.Schema,
-		JWT:    jwtHandler,
+		DB:      config.Database,
+		Schema:  config.Schema,
+		JWT:     jwtHandler,
+		Session: config.Session,
 	}
 
 	for _, feature := range config.Features {
