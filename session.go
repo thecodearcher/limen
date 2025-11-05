@@ -1,6 +1,7 @@
 package aegis
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -39,7 +40,7 @@ type CookieConfig struct {
 	CrossSubdomain *CrossDomainConfig
 
 	// CrossDomain: allow cookies to be sent from entirely different sites (requires SameSite=None; Secure=true).
-	// When enabled, Aegis will force CSRF.Enabled=true and require CORS credentials + TrustedOrigins.
+	// When enabled, Aegis will require TrustedOrigins.
 	CrossDomain bool
 }
 
@@ -77,6 +78,9 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
 }
 
 func (c *SessionConfig) validate() error {
+	if c.CookieOptions.CrossDomain && len(c.TrustedOrigins) == 0 {
+		return fmt.Errorf("trusted origins are required when cross domain is enabled")
+	}
 	return nil
 }
 
@@ -143,6 +147,12 @@ func WithSessionCookieCrossDomainEnabled() SessionConfigOption {
 		c.CookieOptions.SameSite = http.SameSiteNoneMode
 		c.CookieOptions.Secure = true
 		c.CookieOptions.Partitioned = true
+	}
+}
+
+func WithSessionTrustedOrigins(origins []string) SessionConfigOption {
+	return func(c *SessionConfig) {
+		c.TrustedOrigins = origins
 	}
 }
 
