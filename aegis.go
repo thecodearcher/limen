@@ -62,7 +62,7 @@ func New(config *Config) (*Aegis, error) {
 }
 
 func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
-	config := &httpConfig{}
+	config := &HTTPConfig{}
 	for _, opt := range opts {
 		opt(config)
 	}
@@ -74,9 +74,9 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 	config.basePath = httpx.NormalizeBasePath(config.basePath)
 
 	router := httpx.NewRouter(config.middleware...)
-	responder := NewResponder(config.responseEnvelope)
+	responder := NewResponder(config)
 	for _, feature := range a.config.Features {
-		mount := feature.HTTPMount(a, &responder)
+		mount := feature.HTTPMount(a, &responder, config)
 		basePath := mount.DefaultBase
 		override := config.overrides[string(feature.Name())]
 		if override != nil && override.BasePath != "" {
@@ -84,7 +84,11 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 		}
 
 		normalizedBasePath := config.basePath + httpx.NormalizeBasePath(basePath)
-		router.Mount(normalizedBasePath, mount.Handler, override.Middleware...)
+		if override != nil && len(override.Middleware) > 0 {
+			router.Mount(normalizedBasePath, mount.Handler, override.Middleware...)
+		} else {
+			router.Mount(normalizedBasePath, mount.Handler)
+		}
 	}
 
 	return router
