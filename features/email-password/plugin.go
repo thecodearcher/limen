@@ -80,6 +80,9 @@ func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*aegis.AuthenticationResult, error) {
 	user, err := p.dbAction.FindUserByEmail(ctx, email)
 	if err != nil {
+		// hash the password to avoid timing attacks when the user is not found
+		// this allows constant response time for both valid and invalid credentials
+		_, _ = p.HashPassword(password)
 		return nil, ErrEmailNotFound
 	}
 
