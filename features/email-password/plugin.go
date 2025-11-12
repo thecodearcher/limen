@@ -99,8 +99,14 @@ func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, e
 		return nil, ErrInvalidPassword
 	}
 
+	pendingActions := []aegis.PendingAction{}
+	if p.config.requireEmailVerification && user.EmailVerifiedAt == nil {
+		pendingActions = append(pendingActions, aegis.PendingActionEmailVerification)
+	}
+
 	return &aegis.AuthenticationResult{
-		User: user,
+		User:           user,
+		PendingActions: pendingActions,
 	}, nil
 }
 
