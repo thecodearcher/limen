@@ -33,6 +33,7 @@ func routes(api *emailPasswordAPI) *httpx.Router {
 	router.AddRoute(httpx.MethodPOST, "/signin", api.SignInWithEmailAndPassword, "signin", "Sign in with email and password")
 	router.AddRoute(httpx.MethodPOST, "/signup", api.SignUpWithEmailAndPassword, "signup", "Sign up with email and password")
 	router.AddRoute(httpx.MethodPOST, "/verify-email", api.VerifyEmail, "verify-email", "Verify email")
+	router.AddRoute(httpx.MethodPOST, "/email-verifications", api.RequestEmailVerification, "email-verifications", "Request email verifications")
 	return router
 }
 
@@ -132,5 +133,29 @@ func (p *emailPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	p.responder.JSON(w, r, http.StatusOK, map[string]any{
 		"message": "email verified successfully",
+	})
+}
+
+// TODO: update the request email verification to use the user from the request context instead of the email
+func (p *emailPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
+	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.Required("email", data["email"])
+	})
+
+	if body == nil {
+		return
+	}
+
+	_, err := p.feature.RequestEmailVerification(r.Context(), &aegis.User{
+		Email: body["email"].(string),
+	})
+
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		return
+	}
+
+	p.responder.JSON(w, r, http.StatusOK, map[string]any{
+		"message": "email verification requested successfully",
 	})
 }
