@@ -32,15 +32,16 @@ func routes(api *emailPasswordAPI) *httpx.Router {
 	router := httpx.NewRouter()
 	router.AddRoute(httpx.MethodPOST, "/signin", api.SignInWithEmailAndPassword, "signin", "Sign in with email and password")
 	router.AddRoute(httpx.MethodPOST, "/signup", api.SignUpWithEmailAndPassword, "signup", "Sign up with email and password")
+	router.AddRoute(httpx.MethodPOST, "/verify-email", api.VerifyEmail, "verify-email", "Verify email")
 	return router
 }
 
 func (p *emailPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder,
 		func(v *validator.Validator, data map[string]any) *validator.Validator {
-			return v.Required("email", data["email"].(string)).
-				Email("email", data["email"].(string)).
-				Required("password", data["password"].(string))
+			return v.Required("email", data["email"]).
+				Email("email", data["email"]).
+				Required("password", data["password"])
 		})
 
 	if body == nil {
@@ -71,9 +72,10 @@ func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *
 	}
 
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
-		return v.Required("email", data["email"].(string)).
-			Email("email", data["email"].(string)).
-			Required("password", data["password"].(string))
+		return v.
+			Required("email", data["email"]).
+			Required("password", data["password"]).
+			Email("email", data["email"])
 	})
 
 	if body == nil {
@@ -111,4 +113,24 @@ func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *
 	}
 
 	p.responder.SessionResponse(w, r, p.feature.core, result, sessionResult)
+}
+
+func (p *emailPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.Required("token", data["token"])
+	})
+
+	if body == nil {
+		return
+	}
+
+	err := p.feature.VerifyEmail(r.Context(), body["token"].(string))
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		return
+	}
+
+	p.responder.JSON(w, r, http.StatusOK, map[string]any{
+		"message": "email verified successfully",
+	})
 }

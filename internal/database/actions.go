@@ -77,11 +77,12 @@ func (i *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, act
 		})
 }
 
-func (i *DatabaseActionHelper) FindVerificationByToken(ctx context.Context, token string) (*aegis.Verification, error) {
+func (i *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context, token string) (*aegis.Verification, error) {
 	verificationSchema := i.core.Schema.Verification
 	return FindOne(ctx, i.core, &verificationSchema,
 		[]aegis.Where{
 			aegis.Eq(verificationSchema.GetValueField(), token),
+			aegis.Gt(verificationSchema.GetExpiresAtField(), time.Now().UTC()),
 		},
 		[]aegis.OrderBy{
 			{
@@ -94,7 +95,16 @@ func (i *DatabaseActionHelper) FindVerificationByToken(ctx context.Context, toke
 func (i *DatabaseActionHelper) DeleteExpiredVerifications(ctx context.Context) error {
 	verificationSchema := i.core.Schema.Verification
 	return i.core.DB.Delete(ctx, verificationSchema.GetTableName(), []aegis.Where{
-		aegis.Lt(verificationSchema.GetExpiresAtField(), time.Now()),
+		aegis.Lt(verificationSchema.GetExpiresAtField(), time.Now().UTC()),
+	})
+}
+
+func (i *DatabaseActionHelper) RevokeVerification(ctx context.Context, token string) error {
+	verificationSchema := i.core.Schema.Verification
+	return i.core.DB.Update(ctx, verificationSchema.GetTableName(), []aegis.Where{
+		aegis.Eq(verificationSchema.GetValueField(), token),
+	}, map[string]any{
+		verificationSchema.GetExpiresAtField(): time.Now().Add(-time.Minute).UTC(),
 	})
 }
 

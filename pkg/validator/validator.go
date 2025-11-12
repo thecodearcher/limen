@@ -73,10 +73,17 @@ func (v *Validator) Validate() error {
 	return nil
 }
 
-func (v *Validator) Required(field, value string) *Validator {
-	if strings.TrimSpace(value) == "" {
+func (v *Validator) Required(field string, value any) *Validator {
+	if value == nil {
+		v.errors.Add(field, "is required")
+		return v
+	}
+
+	valueString, ok := value.(string)
+	if ok && strings.TrimSpace(valueString) == "" {
 		v.errors.Add(field, "is required")
 	}
+
 	return v
 }
 
@@ -101,12 +108,12 @@ func (v *Validator) Length(field, value string, length int) *Validator {
 	return v
 }
 
-func (v *Validator) Email(field, value string) *Validator {
-	if value == "" {
-		return v // Empty emails are handled by Required()
+func (v *Validator) Email(field string, value any) *Validator {
+	if value == nil || value == "" {
+		return v
 	}
 	emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
-	matched, err := regexp.MatchString(emailRegex, value)
+	matched, err := regexp.MatchString(emailRegex, value.(string))
 	if err != nil || !matched {
 		v.errors.Add(field, "must be a valid email address")
 	}

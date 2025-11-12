@@ -8,6 +8,7 @@ import (
 )
 
 // Plugin Errors - These errors are more granular and only used within the plugin not the API
+
 var (
 	ErrInvalidPassword           = errors.New("invalid password")
 	ErrEmailNotFound             = errors.New("email not found")
