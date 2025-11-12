@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"strings"
+	"time"
 
 	"github.com/thecodearcher/aegis"
 )
@@ -99,4 +100,20 @@ func applySoftDeleteFilter[T aegis.Model](ctx context.Context, core *aegis.Aegis
 	}
 
 	return conditions
+}
+
+func Delete[T aegis.Model](ctx context.Context, core *aegis.AegisCore, schema aegis.Schema[T], conditions []aegis.Where) error {
+	// if there are conditions, we update the soft delete field to the current time
+	// otherwise we delete the record directly
+	if schema.GetSoftDeleteField() != "" {
+		if err := core.DB.Update(ctx, schema.GetTableName(), conditions, map[string]any{
+			string(schema.GetSoftDeleteField()): time.Now().UTC(),
+		}); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	return core.DB.Delete(ctx, schema.GetTableName(), conditions)
 }

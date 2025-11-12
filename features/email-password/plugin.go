@@ -23,21 +23,21 @@ type emailPasswordFeature struct {
 
 // Config defines the configuration for the email password feature.
 type config struct {
-	passwordMinLength           int                                              // Minimum length of the password
-	passwordRequireUppercase    bool                                             // Require uppercase letters in the password
-	passwordRequireNumbers      bool                                             // Require numbers in the password
-	passwordRequireSymbols      bool                                             // Require symbols in the password
-	hashFn                      func(password string) (string, error)            // Custom function to hash the password
-	compareFn                   func(password string, hash string) (bool, error) // Custom function to compare the password and the hash
-	passwordHasherConfig        passwordHasherConfig                             // Custom Argon2id configuration for the password hasher
-	requireEmailVerification    bool                                             // require email verification after sign up
-	emailVerificationExpiration time.Duration                                    // Custom expiration duration for the email verification
-	resetTokenExpiration        time.Duration                                    // Custom expiration duration for the reset token
-	generateResetToken          func(*aegis.User) (string, error)                // custom function to generate the reset token e.g generating TOTP code
-	removeExpiredVerifications  bool                                             // remove expired verifications after reset password
-	autoSignInOnSignUp          bool                                             // auto sign in the user after sign up
-	sendVerificationEmail       func(email string, token string) error           // custom function to send the email verification message
-	sendPasswordResetEmail      func(email string, token string) error           // custom function to send the password reset message
+	passwordMinLength           int                                               // Minimum length of the password
+	passwordRequireUppercase    bool                                              // Require uppercase letters in the password
+	passwordRequireNumbers      bool                                              // Require numbers in the password
+	passwordRequireSymbols      bool                                              // Require symbols in the password
+	hashFn                      func(password string) (string, error)             // Custom function to hash the password
+	compareFn                   func(password string, hash string) (bool, error)  // Custom function to compare the password and the hash
+	passwordHasherConfig        passwordHasherConfig                              // Custom Argon2id configuration for the password hasher
+	requireEmailVerification    bool                                              // require email verification after sign up
+	emailVerificationExpiration time.Duration                                     // Custom expiration duration for the email verification
+	resetTokenExpiration        time.Duration                                     // Custom expiration duration for the reset token
+	generateResetToken          func(*aegis.User) (string, error)                 // custom function to generate the reset token e.g generating TOTP code
+	autoSignInOnSignUp          bool                                              // auto sign in the user after sign up
+	sendVerificationEmail       func(email string, token string) error            // function to send the email verification message
+	sendPasswordResetEmail      func(email string, token string) error            // function to send the password reset message
+	onPasswordResetSuccess      func(ctx context.Context, user *aegis.User) error // function to call when the password reset is successful
 }
 
 // New returns a new config with the default values.
@@ -50,7 +50,6 @@ func New(opts ...ConfigOption) *emailPasswordFeature {
 		passwordRequireSymbols:      defaultPasswordRequireSymbols,
 		passwordHasherConfig:        DefaultPasswordHasherConfig(),
 		resetTokenExpiration:        30 * time.Minute,
-		removeExpiredVerifications:  true,
 		autoSignInOnSignUp:          true,
 		requireEmailVerification:    false,
 		emailVerificationExpiration: 24 * time.Hour,
@@ -179,7 +178,7 @@ func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email s
 		aegis.Eq(p.userSchema.GetEmailField(), email),
 	}, nil)
 	if err != nil {
-		return nil, err
+		return nil, ErrEmailNotFound
 	}
 
 	token, err := p.generateVerificationToken(user)
@@ -192,13 +191,19 @@ func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email s
 		return nil, err
 	}
 
+	if p.config.sendPasswordResetEmail != nil {
+		if err := p.config.sendPasswordResetEmail(email, verification.Value); err != nil {
+			return nil, err
+		}
+	}
+
 	return verification, nil
 }
 
 func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, newPassword string) error {
 	verification, err := p.dbAction.FindValidVerificationByToken(ctx, token)
 	if err != nil {
-		return err
+		return ErrResetTokenInvalid
 	}
 
 	action, identifier := database.ParseVerificationAction(verification.Subject)
@@ -208,6 +213,10 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 
 	if verification.ExpiresAt.Before(time.Now().UTC()) {
 		return ErrResetTokenInvalid
+	}
+
+	if err := p.validatePassword(newPassword); err != nil {
+		return err
 	}
 
 	hashedPassword, err := p.HashPassword(newPassword)
@@ -222,9 +231,18 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 		return err
 	}
 
-	if p.config.removeExpiredVerifications {
-		err = p.dbAction.DeleteExpiredVerifications(ctx)
+	err = p.dbAction.DeleteVerificationToken(ctx, token)
+	if err != nil {
+		return err
+	}
+
+	if p.config.onPasswordResetSuccess != nil {
+		user, err := p.dbAction.FindUserByEmail(ctx, identifier)
 		if err != nil {
+			return err
+		}
+
+		if err := p.config.onPasswordResetSuccess(ctx, user); err != nil {
 			return err
 		}
 	}
@@ -314,14 +332,8 @@ func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) er
 		return err
 	}
 
-	if err = p.dbAction.RevokeVerification(ctx, verification.Value); err != nil {
+	if err = p.dbAction.DeleteVerificationToken(ctx, verification.Value); err != nil {
 		return err
-	}
-
-	if p.config.removeExpiredVerifications {
-		if err = p.dbAction.DeleteExpiredVerifications(ctx); err != nil {
-			return err
-		}
 	}
 
 	return nil

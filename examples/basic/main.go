@@ -38,15 +38,15 @@ func main() {
 		Database: adapter.New(db),
 		Features: []aegis.Feature{
 			emailpassword.New(
-				emailpassword.WithResetTokenExpiration(1*time.Minute),
-				emailpassword.WithRemoveExpiredVerifications(false),
-				emailpassword.WithPasswordRequireSymbols(true),
-				emailpassword.WithPasswordRequireNumbers(true),
-				emailpassword.WithPasswordRequireUppercase(true),
 				emailpassword.WithRequireEmailVerification(true),
 				emailpassword.WithSendVerificationEmail(func(email string, token string) error {
 					fmt.Printf("Sending verification email to %s\n", email)
 					fmt.Printf("Verification token: %s\n", token)
+					return nil
+				}),
+				emailpassword.WithSendPasswordResetEmail(func(email string, token string) error {
+					fmt.Printf("Sending password reset email to %s\n", email)
+					fmt.Printf("Password reset token: %s\n", token)
 					return nil
 				}),
 			),

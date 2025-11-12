@@ -34,6 +34,8 @@ func routes(api *emailPasswordAPI) *httpx.Router {
 	router.AddRoute(httpx.MethodPOST, "/signup", api.SignUpWithEmailAndPassword, "signup", "Sign up with email and password")
 	router.AddRoute(httpx.MethodPOST, "/verify-email", api.VerifyEmail, "verify-email", "Verify email")
 	router.AddRoute(httpx.MethodPOST, "/email-verifications", api.RequestEmailVerification, "email-verifications", "Request email verifications")
+	router.AddRoute(httpx.MethodPOST, "/passwords/request-reset", api.RequestPasswordReset, "passwords-request-reset", "Request password reset")
+	router.AddRoute(httpx.MethodPOST, "/passwords/reset", api.ResetPassword, "passwords-reset", "Reset password")
 	return router
 }
 
@@ -131,9 +133,7 @@ func (p *emailPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p.responder.JSON(w, r, http.StatusOK, map[string]any{
-		"message": "email verified successfully",
-	})
+	p.responder.JSON(w, r, http.StatusOK, "email verified successfully")
 }
 
 // TODO: update the request email verification to use the user from the request context instead of the email
@@ -155,7 +155,52 @@ func (p *emailPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *ht
 		return
 	}
 
-	p.responder.JSON(w, r, http.StatusOK, map[string]any{
-		"message": "email verification requested successfully",
+	p.responder.JSON(w, r, http.StatusOK, "email verification requested successfully")
+}
+
+func (p *emailPasswordAPI) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.
+			Required("email", data["email"]).
+			Email("email", data["email"])
 	})
+
+	if body == nil {
+		return
+	}
+
+	message := "if the email address is associated with an account, you will receive an email with instructions to reset your password"
+	_, err := p.feature.RequestPasswordReset(r.Context(), body["email"].(string))
+	if err != nil {
+		if errors.Is(err, ErrEmailNotFound) {
+			// we don't want to leak the existence of the email address
+			p.responder.JSON(w, r, http.StatusOK, message)
+			return
+		}
+
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		return
+	}
+
+	p.responder.JSON(w, r, http.StatusOK, message)
+}
+
+func (p *emailPasswordAPI) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.
+			Required("token", data["token"]).
+			Required("new_password", data["new_password"])
+	})
+
+	if body == nil {
+		return
+	}
+
+	err := p.feature.ResetPassword(r.Context(), body["token"].(string), body["new_password"].(string))
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		return
+	}
+
+	p.responder.JSON(w, r, http.StatusOK, "password reset successfully")
 }

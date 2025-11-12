@@ -42,6 +42,18 @@ func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, pay
 		}
 	}
 
+	if message, ok := payload.(string); ok {
+		out = map[string]any{
+			"message": message,
+		}
+
+		if rs.cfg.mode != EnvelopeOff && rs.cfg.mode != EnvelopeWrapSuccess && rs.cfg.fields.Message != "" {
+			out = map[string]any{
+				rs.cfg.fields.Message: message,
+			}
+		}
+	}
+
 	return json.NewEncoder(w).Encode(out)
 }
 

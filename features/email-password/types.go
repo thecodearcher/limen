@@ -1,6 +1,7 @@
 package emailpassword
 
 import (
+	"context"
 	"time"
 
 	"github.com/thecodearcher/aegis"
@@ -71,13 +72,6 @@ func WithGenerateResetToken(generateResetToken func(*aegis.User) (string, error)
 	}
 }
 
-// WithRemoveExpiredVerifications sets whether to remove expired verifications after reset password
-func WithRemoveExpiredVerifications(removeExpiredVerifications bool) ConfigOption {
-	return func(c *config) {
-		c.removeExpiredVerifications = removeExpiredVerifications
-	}
-}
-
 // WithAutoSignInOnSignUp sets whether to auto sign in the user after sign up
 func WithAutoSignInOnSignUp(autoSignInOnSignUp bool) ConfigOption {
 	return func(c *config) {
@@ -96,5 +90,19 @@ func WithSendVerificationEmail(sendVerificationEmail func(email string, token st
 func WithRequireEmailVerification(requireEmailVerification bool) ConfigOption {
 	return func(c *config) {
 		c.requireEmailVerification = requireEmailVerification
+	}
+}
+
+// WithSendPasswordResetEmail sets the function to send the password reset message
+func WithSendPasswordResetEmail(sendPasswordResetEmail func(email string, token string) error) ConfigOption {
+	return func(c *config) {
+		c.sendPasswordResetEmail = sendPasswordResetEmail
+	}
+}
+
+// WithOnPasswordResetSuccess sets the function to call when the password reset is successful
+func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context, user *aegis.User) error) ConfigOption {
+	return func(c *config) {
+		c.onPasswordResetSuccess = onPasswordResetSuccess
 	}
 }

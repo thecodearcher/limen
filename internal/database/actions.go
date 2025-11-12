@@ -49,6 +49,7 @@ func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 	}
 	verificationSchema := i.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
+
 	if err := Create(ctx, i.core, &verificationSchema, &aegis.Verification{
 		Subject:   actionValue,
 		Value:     token,
@@ -92,19 +93,10 @@ func (i *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context,
 		})
 }
 
-func (i *DatabaseActionHelper) DeleteExpiredVerifications(ctx context.Context) error {
+func (i *DatabaseActionHelper) DeleteVerificationToken(ctx context.Context, token string) error {
 	verificationSchema := i.core.Schema.Verification
-	return i.core.DB.Delete(ctx, verificationSchema.GetTableName(), []aegis.Where{
-		aegis.Lt(verificationSchema.GetExpiresAtField(), time.Now().UTC()),
-	})
-}
-
-func (i *DatabaseActionHelper) RevokeVerification(ctx context.Context, token string) error {
-	verificationSchema := i.core.Schema.Verification
-	return i.core.DB.Update(ctx, verificationSchema.GetTableName(), []aegis.Where{
+	return Delete(ctx, i.core, &verificationSchema, []aegis.Where{
 		aegis.Eq(verificationSchema.GetValueField(), token),
-	}, map[string]any{
-		verificationSchema.GetExpiresAtField(): time.Now().Add(-time.Minute).UTC(),
 	})
 }
 
