@@ -30,14 +30,14 @@ func (s *ServerSideStrategy) IsStateful() bool {
 	return true
 }
 
-func (s *ServerSideStrategy) Create(ctx context.Context, user *aegis.User) (*aegis.SessionResult, error) {
+func (s *ServerSideStrategy) Create(ctx context.Context, user *aegis.User, temporaryAuth bool) (*aegis.SessionResult, error) {
 	sessionID, err := GenerateCryptoSecureRandomString()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
 	return &aegis.SessionResult{
-		Cookie: s.createCookie(sessionID),
+		Cookie: s.createCookie(sessionID, temporaryAuth),
 	}, nil
 }
 
@@ -123,10 +123,10 @@ func (s *ServerSideStrategy) extractSessionID(request *http.Request) (string, er
 	return sessionID, nil
 }
 
-func (s *ServerSideStrategy) createCookie(token string) *http.Cookie {
+func (s *ServerSideStrategy) createCookie(token string, temporaryAuth bool) *http.Cookie {
 	cookieOptions := s.config.CookieOptions
 
-	return &http.Cookie{
+	cookie := &http.Cookie{
 		Name:        cookieOptions.Name,
 		Value:       token,
 		Path:        cookieOptions.Path,
@@ -136,4 +136,11 @@ func (s *ServerSideStrategy) createCookie(token string) *http.Cookie {
 		SameSite:    cookieOptions.SameSite,
 		Partitioned: cookieOptions.Partitioned,
 	}
+
+	if temporaryAuth {
+		// we override the max age for temporary auth to 5 minutes
+		cookie.MaxAge = int(time.Duration(5 * time.Minute).Seconds())
+	}
+
+	return cookie
 }

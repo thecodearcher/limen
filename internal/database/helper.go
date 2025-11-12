@@ -7,10 +7,9 @@ import (
 	"strings"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/schemas"
 )
 
-func FindOne[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], conditions []aegis.Where, orderBy []aegis.OrderBy) (*T, error) {
+func FindOne[T aegis.Model](ctx context.Context, core *aegis.AegisCore, schema aegis.Schema[T], conditions []aegis.Where, orderBy []aegis.OrderBy) (*T, error) {
 	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
 	result, err := core.DB.FindOne(ctx, schema.GetTableName(), conditions, orderBy)
 	if err != nil {
@@ -21,16 +20,25 @@ func FindOne[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema
 	return model, nil
 }
 
-func Create[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], data *T, additionalFields map[string]any) error {
+func Create[T aegis.Model](ctx context.Context, core *aegis.AegisCore, schema aegis.Schema[T], data *T, additionalFields map[string]any) error {
 	payload := make(map[string]any)
+	additionalFieldsContext := aegis.NewAdditionalFieldsContext(nil, nil)
 	// the order of the copy of the fields is important here!
 	// global -> schema -> additional fields -> data
 	if core.Schema.AdditionalFields != nil {
-		maps.Copy(payload, core.Schema.AdditionalFields(ctx))
+		additionalFields, err := core.Schema.AdditionalFields(additionalFieldsContext)
+		if err != nil {
+			return err
+		}
+		maps.Copy(payload, additionalFields)
 	}
 
 	if schema.GetAdditionalFields() != nil {
-		maps.Copy(payload, schema.GetAdditionalFields()(ctx))
+		additionalFields, err := schema.GetAdditionalFields()(additionalFieldsContext)
+		if err != nil {
+			return err
+		}
+		maps.Copy(payload, additionalFields)
 	}
 	maps.Copy(payload, additionalFields)
 	maps.Copy(payload, schema.ToStorage(data))
@@ -50,7 +58,7 @@ func Create[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema 
 	return nil
 }
 
-func Exists[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], conditions []aegis.Where) (bool, error) {
+func Exists[T aegis.Model](ctx context.Context, core *aegis.AegisCore, schema aegis.Schema[T], conditions []aegis.Where) (bool, error) {
 	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
 
 	return core.DB.Exists(ctx, schema.GetTableName(), conditions)
@@ -65,7 +73,7 @@ func ParseVerificationAction(action string) (string, string) {
 	return parts[0], parts[1]
 }
 
-func Update[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], data *T, conditions []aegis.Where) error {
+func Update[T aegis.Model](ctx context.Context, core *aegis.AegisCore, schema aegis.Schema[T], data *T, conditions []aegis.Where) error {
 	payload := make(map[string]any)
 	maps.Copy(payload, schema.ToStorage(data))
 
@@ -80,7 +88,7 @@ func Update[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema 
 	return core.DB.Update(ctx, schema.GetTableName(), conditions, payload)
 }
 
-func applySoftDeleteFilter[T schemas.Model](ctx context.Context, core *aegis.AegisCore, schema schemas.Schema[T], conditions []aegis.Where) []aegis.Where {
+func applySoftDeleteFilter[T aegis.Model](ctx context.Context, core *aegis.AegisCore, schema aegis.Schema[T], conditions []aegis.Where) []aegis.Where {
 	softDeleteField := core.Schema.SoftDeleteField
 	if schema.GetSoftDeleteField() != "" {
 		softDeleteField = string(schema.GetSoftDeleteField())

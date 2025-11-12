@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -9,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type ValidationError struct {
@@ -181,23 +181,23 @@ func (e *DecodeError) Error() string {
 	return e.Message
 }
 
-// DecodeJSONAndValidate decodes the JSON body of the request and validates it using the validateFunc.
+// ValidateJSON decodes the JSON body of the request and validates it using the validateFunc.
 // It returns the decoded data if the validation succeeds, otherwise it returns nil and an error is written to the response.
-func DecodeJSONAndValidate[T any](w http.ResponseWriter, r *http.Request, responder *aegis.Responder, validateFunc func(*Validator, *T) *Validator) *T {
-	var data T
+func ValidateJSON(w http.ResponseWriter, r *http.Request, responder *aegis.Responder, validateFunc func(*Validator, map[string]any) *Validator) map[string]any {
+	body := httpx.GetJSONBody(r)
 
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		responder.Error(w, r, aegis.NewAegisError(fmt.Sprintf("invalid JSON: %v", err), http.StatusBadRequest, nil))
+	if len(body) == 0 || body == nil {
+		responder.Error(w, r, aegis.NewAegisError("empty JSON body", http.StatusBadRequest, nil))
 		return nil
 	}
 
 	v := New()
-	validateFunc(v, &data)
+	validateFunc(v, body)
 
 	if err := v.Validate(); err != nil {
 		responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnprocessableEntity, nil))
 		return nil
 	}
 
-	return &data
+	return body
 }

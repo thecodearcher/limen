@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/thecodearcher/aegis"
 	"github.com/thecodearcher/aegis/internal/database"
-	"github.com/thecodearcher/aegis/schemas"
 )
 
 type JWTStrategy struct {
@@ -33,13 +33,19 @@ func (s *JWTStrategy) IsStateful() bool {
 	return false
 }
 
-func (s *JWTStrategy) Create(ctx context.Context, user *schemas.User) (*aegis.SessionResult, error) {
+func (s *JWTStrategy) Create(ctx context.Context, user *aegis.User, temporaryAuth bool) (*aegis.SessionResult, error) {
 	sessionID, err := GenerateCryptoSecureRandomString()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
-	token, refreshToken, err := s.jwtHandler.GenerateAccessToken(sessionID, user)
+	additionalClaims := map[string]any{}
+	duration := s.config.Duration
+	if temporaryAuth {
+		additionalClaims["temp_auth"] = true
+		duration = time.Duration(5 * time.Minute)
+	}
+	token, refreshToken, err := s.jwtHandler.GenerateAccessToken(sessionID, user, &duration, additionalClaims)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate JWT token: %w", err)
 	}
@@ -95,6 +101,11 @@ func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*aegi
 		return nil, aegis.ErrSessionInvalid
 	}
 
+	tempAuth, ok := claims["temp_auth"].(bool)
+	if ok && tempAuth {
+		return nil, aegis.ErrSessionInvalid
+	}
+
 	sessionID = strings.TrimSuffix(sessionID, "_refresh")
 
 	user, err := s.findUserWithSubject(ctx, userID)
@@ -107,7 +118,7 @@ func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*aegi
 		return nil, fmt.Errorf("failed to generate new session ID: %w", err)
 	}
 
-	token, newRefreshToken, err := s.jwtHandler.GenerateAccessToken(newSessionID, user)
+	token, newRefreshToken, err := s.jwtHandler.GenerateAccessToken(newSessionID, user, nil, map[string]any{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate new JWT tokens: %w", err)
 	}
@@ -163,7 +174,7 @@ func (s *JWTStrategy) extractRefreshToken(request *http.Request) (string, error)
 	return "", fmt.Errorf("no refresh token found in request")
 }
 
-func (s *JWTStrategy) findUserWithSubject(ctx context.Context, userID string) (*schemas.User, error) {
+func (s *JWTStrategy) findUserWithSubject(ctx context.Context, userID string) (*aegis.User, error) {
 	if userFn := s.jwtHandler.CustomUserFromSubjectFn(); userFn != nil {
 		user, err := userFn(userID)
 		if err != nil {

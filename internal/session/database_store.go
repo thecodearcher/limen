@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/schemas"
 )
 
 // DatabaseSessionStore implements SessionStore using a database adapter
 type DatabaseSessionStore struct {
 	core   *aegis.AegisCore
-	schema *schemas.SessionSchema
+	schema *aegis.SessionSchema
 }
 
 // NewDatabaseSessionStore creates a new database-backed session store
@@ -26,15 +25,24 @@ func NewDatabaseSessionStore(core *aegis.AegisCore) *DatabaseSessionStore {
 // Create creates a new session with the given ID and data
 func (s *DatabaseSessionStore) Create(ctx context.Context, session *aegis.Session) error {
 	payload := make(map[string]any)
+	additionalFieldsContext := aegis.NewAdditionalFieldsContext(nil, nil)
 
 	// Copy global additional fields first
 	if s.core.Schema.AdditionalFields != nil {
-		maps.Copy(payload, s.core.Schema.AdditionalFields(ctx))
+		additionalFields, err := s.core.Schema.AdditionalFields(additionalFieldsContext)
+		if err != nil {
+			return err
+		}
+		maps.Copy(payload, additionalFields)
 	}
 
 	// Copy schema additional fields
 	if s.schema.GetAdditionalFields() != nil {
-		maps.Copy(payload, s.schema.GetAdditionalFields()(ctx))
+		additionalFields, err := s.schema.GetAdditionalFields()(additionalFieldsContext)
+		if err != nil {
+			return err
+		}
+		maps.Copy(payload, additionalFields)
 	}
 
 	// Copy session data using ToStorage

@@ -11,12 +11,18 @@ type Responder struct {
 }
 
 func NewResponder(cfg *HTTPConfig) Responder {
+	if cfg == nil {
+		cfg = &HTTPConfig{}
+	}
+
 	envelopeConfig := &responseEnvelopeConfig{
 		mode: EnvelopeOff,
 	}
+
 	if cfg.responseEnvelope != nil {
 		envelopeConfig = cfg.responseEnvelope
 	}
+
 	return Responder{cfg: envelopeConfig, sessionTransformer: cfg.sessionTransformer}
 }
 
@@ -39,7 +45,7 @@ func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, pay
 	return json.NewEncoder(w).Encode(out)
 }
 
-func (rs Responder) Error(w http.ResponseWriter, r *http.Request, ae AegisError) error {
+func (rs Responder) Error(w http.ResponseWriter, r *http.Request, ae *AegisError) error {
 	if rs.cfg.serializer != nil {
 		return rs.cfg.serializer(w, r, ae.Status(), nil, ae)
 	}

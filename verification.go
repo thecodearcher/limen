@@ -1,4 +1,4 @@
-package schemas
+package aegis
 
 import "time"
 
@@ -89,5 +89,7 @@ func (c *VerificationSchema) ToStorage(data *Verification) map[string]any {
 		c.GetSubjectField():   data.Subject,
 		c.GetValueField():     data.Value,
 		c.GetExpiresAtField(): data.ExpiresAt,
+		c.GetCreatedAtField(): data.CreatedAt,
+		c.GetUpdatedAtField(): data.UpdatedAt,
 	}
 }

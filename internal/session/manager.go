@@ -35,9 +35,10 @@ func (m *SessionManager) determineStrategy(config aegis.SessionStrategyType) aeg
 	}
 }
 
-func (m *SessionManager) CreateSession(ctx context.Context, user *aegis.User, request *http.Request) (*aegis.SessionResult, error) {
+func (m *SessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *aegis.AuthenticationResult) (*aegis.SessionResult, error) {
 	strategy := m.determineStrategyForRequest(request)
-	result, err := strategy.Create(ctx, user)
+	temporaryAuth := len(authResult.PendingActions) > 0
+	result, err := strategy.Create(ctx, authResult.User, temporaryAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -48,11 +49,16 @@ func (m *SessionManager) CreateSession(ctx context.Context, user *aegis.User, re
 
 	session := &aegis.Session{
 		ID:         result.Token,
-		UserID:     user.ID,
+		UserID:     authResult.User.ID,
 		CreatedAt:  time.Now(),
 		ExpiresAt:  time.Now().Add(m.config.Duration),
 		LastAccess: time.Now(),
 		Metadata:   make(map[string]interface{}),
+	}
+
+	if temporaryAuth {
+		session.Metadata["temp_auth"] = true
+		session.ExpiresAt = time.Now().Add(time.Duration(5 * time.Minute))
 	}
 
 	if err := m.store.Create(ctx, session); err != nil {

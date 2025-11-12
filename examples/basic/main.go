@@ -1,15 +1,17 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
+	"maps"
+	"net/http"
 	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"github.com/thecodearcher/aegis"
@@ -38,6 +40,15 @@ func main() {
 			emailpassword.New(
 				emailpassword.WithResetTokenExpiration(1*time.Minute),
 				emailpassword.WithRemoveExpiredVerifications(false),
+				emailpassword.WithPasswordRequireSymbols(true),
+				emailpassword.WithPasswordRequireNumbers(true),
+				emailpassword.WithPasswordRequireUppercase(true),
+				emailpassword.WithRequireEmailVerification(true),
+				emailpassword.WithSendVerificationEmail(func(email string, token string) error {
+					fmt.Printf("Sending verification email to %s\n", email)
+					fmt.Printf("Verification token: %s\n", token)
+					return nil
+				}),
 			),
 		},
 		JWT: aegis.NewDefaultJWTConfig(
@@ -45,15 +56,29 @@ func main() {
 			aegis.WithClaimsSubjectField("uuid"),
 		),
 		Schema: aegis.SchemaConfig{
-			SoftDeleteField: "soft_delete",
-			AdditionalFields: func(ctx context.Context) map[string]any {
-				return map[string]any{
-					"uuid":       uuid.New().String(),
-					"created_at": time.Now(),
-					"updated_at": time.Now(),
-				}
+			// AdditionalFields: func(ctx *schemas.AdditionalFieldsContext) map[string]any {
+			// 	return map[string]any{
+			// 		"uuid":       uuid.New().String(),
+			// 		"created_at": time.Now(),
+			// 		"updated_at": time.Now(),
+			// 	}
+			// },
+			User: aegis.UserSchema{
+				Fields: aegis.UserFields{
+					EmailVerifiedAt: "email_verified",
+				},
+				AdditionalFields: func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
+					return map[string]any{
+						"uuid":       uuid.New().String(),
+						"created_at": time.Now().Format(time.RFC3339),
+						"updated_at": time.Now().Format(time.RFC3339),
+						"first_name": ctx.GetBodyValue("firstname"),
+						"last_name":  ctx.GetBodyValue("lastname"),
+					}, nil
+				},
 			},
 		},
+		Session: aegis.NewDefaultSessionConfig(),
 	}
 
 	auth, err := aegis.New(config)
@@ -65,23 +90,80 @@ func main() {
 	fmt.Println("Aegis instance created successfully!")
 	uuid := uuid.New().String()
 	fmt.Printf("UUID: %s\n", uuid)
-	response, err := auth.EmailPassword.SignInWithEmailAndPassword(context.Background(), "johndoe4@gmail.com", "SecurePassword123@")
-	if err != nil {
-		log.Fatalf("Failed to sign in: %v", err)
+	// response, err := auth.EmailPassword.SignInWithEmailAndPassword(context.Background(), "johndoe4@gmail.com", "SecurePassword123@")
+	// if err != nil {
+	// 	log.Fatalf("Failed to sign in: %v", err)
+	// }
+
+	// fmt.Printf("User: %+v\n", response.User)
+
+	// verification, err := auth.EmailPassword.RequestPasswordReset(context.Background(), "johndoe4@gmail.com")
+	// if err != nil {
+	// 	log.Fatalf("Failed to request password reset: %v", err)
+	// }
+
+	// err = auth.EmailPassword.ResetPassword(context.Background(), verification.Value, "SecurePassword123@")
+	// if err != nil {
+	// 	log.Fatalf("Failed to reset password: %v", err)
+	// }
+
+	// fmt.Printf("Password reset: %+v\n", verification)
+	// err = auth.EmailPassword.UpdatePassword(context.Background(), &aegis.User{
+	// 	ID:       "1",
+	// 	Password: "$argon2id$v=19$m=65536,t=3,p=4$kKVedyD9X35xm/1tI53dQQ$jmVCO+QvCrFG+i6rt4rU0VxwTtm1aF/FsLX5bnqfcbE"},
+	// 	"SecurePassword123@",
+	// 	"SecurePassword123AndMore@",
+	// )
+	// if err != nil {
+	// 	log.Fatalf("Failed to update password: %v", err)
+	// }
+
+	// verification, err := auth.EmailPassword.RequestEmailVerification(context.Background(), &aegis.User{
+	// 	ID:    "1",
+	// 	Email: "johndoe42@gmail.com",
+	// })
+
+	// if err != nil {
+	// 	log.Fatalf("Failed to request email verification: %v", err)
+	// }
+
+	// err = auth.EmailPassword.VerifyEmail(context.Background(), verification.Value)
+	// if err != nil {
+	// 	log.Fatalf("Failed to verify email: %v", err)
+	// }
+
+	handler := auth.Handler(aegis.WithHTTPBasePath("/api/auth")) // aegis.WithHTTPHooks(&httpx.Hooks{
+	// 	Before: httpx.HookFunc(func(ctx *httpx.HookContext) {
+	// 		fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+	// 		fmt.Printf("Before request body: %+v\n", ctx.BodyData)
+	// 	}),
+	// 	After: httpx.HookFunc(func(ctx *httpx.HookContext) {
+	// 		fmt.Printf("After request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+	// 		fmt.Printf("After request status code: %d\n", ctx.StatusCode)
+	// 	}),
+	// }),
+
+	r := gin.Default()
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "Hello, World!"})
+	})
+
+	r.Any("/api/*path", func(c *gin.Context) {
+		fmt.Println("api called")
+		handler.ServeHTTP(c.Writer, c.Request)
+	})
+
+	http.ListenAndServe(":8080", r)
+
+}
+
+func sessionTransformer(user map[string]any, pendingActions []aegis.PendingAction, token string, refreshToken string) (map[string]any, *aegis.AegisError) {
+	payload := map[string]any{
+		"pending_actions": pendingActions,
+		"token":           token,
+		"refresh_token":   refreshToken,
+		"user":            user,
 	}
-
-	fmt.Printf("User: %+v\n", response.User)
-
-	verification, err := auth.EmailPassword.RequestPasswordReset(context.Background(), "johndoe4@gmail.com")
-	if err != nil {
-		log.Fatalf("Failed to request password reset: %v", err)
-	}
-
-	err = auth.EmailPassword.ResetPassword(context.Background(), verification.Value, "SecurePassword123@")
-	if err != nil {
-		log.Fatalf("Failed to reset password: %v", err)
-	}
-
-	fmt.Printf("Password reset: %+v\n", verification)
-
+	maps.Copy(payload, user)
+	return payload, nil
 }

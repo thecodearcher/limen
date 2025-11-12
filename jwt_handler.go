@@ -80,11 +80,12 @@ func (s *JwtHandler) VerifyToken(tokenString string) (map[string]any, error) {
 }
 
 // GenerateAccessToken generates an access token with the configured duration and claims
-func (s *JwtHandler) GenerateAccessToken(sessionID string, user *User) (string, string, error) {
+func (s *JwtHandler) GenerateAccessToken(sessionID string, user *User, duration *time.Duration, additionalClaims map[string]any) (string, string, error) {
 	rawUserData := user.Raw()
 	claims := map[string]any{
 		"jti": sessionID,
 	}
+	maps.Copy(claims, additionalClaims)
 	if s.config.claims.subjectValue != nil {
 		claims["sub"] = s.config.claims.subjectValue(user)
 	} else {
@@ -95,7 +96,12 @@ func (s *JwtHandler) GenerateAccessToken(sessionID string, user *User) (string, 
 		customClaims := s.config.claims.customClaims(user)
 		maps.Copy(claims, customClaims)
 	}
-	accessToken, err := s.GenerateToken(claims, s.config.accessToken.duration)
+
+	if duration == nil {
+		duration = &s.config.accessToken.duration
+	}
+
+	accessToken, err := s.GenerateToken(claims, *duration)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate access token: %w", err)
 	}

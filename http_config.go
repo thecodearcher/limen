@@ -22,6 +22,8 @@ type HTTPConfig struct {
 	// SessionTransformer customizes the session response payload before it's sent to the client.
 	// Returns a map[string]any for the response body, or an AegisError to handle an error condition.
 	sessionTransformer SessionTransformer
+	// HTTPHooks are functions that are called before and after the request is processed
+	hooks *httpx.Hooks
 }
 
 type EnvelopeSerializer func(
@@ -29,11 +31,11 @@ type EnvelopeSerializer func(
 	r *http.Request,
 	status int,
 	rawBody []byte,
-	err AegisError,
+	err *AegisError,
 ) error
 
 // SessionTransformer is a function to serialize the session data to a map[string]any for the response body
-type SessionTransformer func(user map[string]any, pendingActions []PendingAction, token string, refreshToken string) (map[string]any, AegisError)
+type SessionTransformer func(user map[string]any, pendingActions []PendingAction, token string, refreshToken string) (map[string]any, *AegisError)
 
 type EnvelopeFields struct {
 	Data    string
@@ -108,5 +110,11 @@ func WithHTTPResponseEnvelopeSerializer(serializer EnvelopeSerializer) HTTPConfi
 func WithHTTPSessionTransformer(transformer SessionTransformer) HTTPConfigOption {
 	return func(c *HTTPConfig) {
 		c.sessionTransformer = transformer
+	}
+}
+
+func WithHTTPHooks(hooks *httpx.Hooks) HTTPConfigOption {
+	return func(c *HTTPConfig) {
+		c.hooks = hooks
 	}
 }

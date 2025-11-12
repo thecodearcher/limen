@@ -6,18 +6,18 @@ import (
 	"net/http"
 
 	"github.com/thecodearcher/aegis/pkg/httpx"
-	"github.com/thecodearcher/aegis/schemas"
 )
 
 type Aegis struct {
 	EmailPassword EmailPasswordFeature
 	JWT           TokenGenerator
+	Plugins       map[FeatureName]Feature
 	config        *Config
 }
 
 type AegisCore struct {
 	DB      DatabaseAdapter
-	Schema  schemas.Config
+	Schema  SchemaConfig
 	JWT     *JwtHandler
 	Session *SessionConfig
 }
@@ -85,9 +85,9 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 
 		normalizedBasePath := config.basePath + httpx.NormalizeBasePath(basePath)
 		if override != nil && len(override.Middleware) > 0 {
-			router.Mount(normalizedBasePath, mount.Handler, override.Middleware...)
+			router.Mount(normalizedBasePath, mount.Handler, override.Middleware, config.hooks)
 		} else {
-			router.Mount(normalizedBasePath, mount.Handler)
+			router.Mount(normalizedBasePath, mount.Handler, []httpx.Middleware{}, config.hooks)
 		}
 	}
 

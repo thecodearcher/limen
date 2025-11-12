@@ -1,181 +1,206 @@
 package aegis
 
 import (
-	"fmt"
-	"net/http"
+	"encoding/json"
 	"time"
 )
 
-type SessionConfig struct {
-	Strategy SessionStrategyType
-	// Duration: the absolute duration of the session
-	Duration time.Duration
-	// RefreshInterval: the interval at which the session will be refreshed
-	RefreshInterval time.Duration
-	// IdleTimeout: the time after which the session will be considered expired if no activity is detected
-	IdleTimeout time.Duration
-	// ActivityCheckInterval: the interval at which the session last access time will be updated
-	ActivityCheckInterval time.Duration
-	// StoreType: the type of session store to use if no custom store is provided
-	StoreType SessionStoreType
-	// CustomStore: a custom session store to use instead of the default store
-	CustomStore SessionStore
-	// CookieOptions: the cookie options to use
-	CookieOptions *CookieConfig
-	// TrustedOrigins: list of allowed origins for cross-site credentialed requests (CORS + CSRF header).
-	TrustedOrigins []string
-	// TokenGenerator: the token generator to use
-	TokenGenerator TokenGenerator
+type Session struct {
+	ID         string
+	UserID     any
+	Data       map[string]interface{}
+	CreatedAt  time.Time
+	ExpiresAt  time.Time
+	LastAccess time.Time
+	IPAddress  string
+	UserAgent  string
+	Metadata   map[string]interface{}
+	raw        map[string]any
 }
 
-type CookieConfig struct {
-	Name        string
-	Path        string
-	Secure      bool
-	HTTPOnly    bool
-	SameSite    http.SameSite
-	Partitioned bool // optional: set true for browsers supporting CHIPS/partitioned cookies
-	// CrossSubdomain: share cookies across subdomains while keeping SameSite=Lax.
-	// Set Cookie.Domain to ".example.com" (your eTLD+1) when true.
-	CrossSubdomain *CrossDomainConfig
-
-	// CrossDomain: allow cookies to be sent from entirely different sites (requires SameSite=None; Secure=true).
-	// When enabled, Aegis will require TrustedOrigins.
-	CrossDomain bool
+// Raw returns the session raw data as returned from the database
+func (s Session) Raw() map[string]any {
+	return s.raw
 }
 
-type CrossDomainConfig struct {
-	Enabled bool
-	Domain  string
+func (s Session) TableName() string {
+	return string(SessionSchemaTableName)
 }
 
-func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
-	config := &SessionConfig{
-		Strategy:              SessionStrategyServerSide,
-		Duration:              1 * time.Hour,
-		RefreshInterval:       0,
-		IdleTimeout:           0,
-		ActivityCheckInterval: 1 * time.Hour,
-		CookieOptions: &CookieConfig{
-			Name:        "aegis_session",
-			Path:        "/",
-			Secure:      true,
-			HTTPOnly:    true,
-			SameSite:    http.SameSiteLaxMode,
-			Partitioned: false,
-			CrossSubdomain: &CrossDomainConfig{
-				Enabled: false,
-			},
-			CrossDomain: false,
-		},
+// IsExpired checks if the session has expired
+func (s *Session) IsExpired(idleTimeout time.Duration) bool {
+	if idleTimeout == 0 {
+		return time.Now().After(s.ExpiresAt)
+	}
+	return time.Now().After(s.ExpiresAt) || time.Now().After(s.LastAccess.Add(idleTimeout))
+}
+
+// ShouldRefresh checks if the session should be refreshed
+func (s *Session) ShouldRefresh(refreshInterval time.Duration) bool {
+	if refreshInterval == 0 {
+		return false
+	}
+	return time.Now().After(s.CreatedAt.Add(refreshInterval))
+}
+
+// Touch updates the last access time
+func (s *Session) Touch() {
+	s.LastAccess = time.Now()
+}
+
+type SessionSchema struct {
+	// name of the table in the database
+	TableName TableName
+	// field name for the soft delete field - if not set, the soft delete field will not be used
+	SoftDeleteField SchemaField
+	// A function to return a map of additional fields to be added to the schema when creating a record
+	AdditionalFields AdditionalFieldsFunc
+	// mapping of the session schema to the database columns
+	Fields SessionFields
+}
+
+type SessionFields struct {
+	ID         string
+	UserID     string
+	Data       string
+	CreatedAt  string
+	ExpiresAt  string
+	LastAccess string
+	IPAddress  string
+	UserAgent  string
+	CSRFToken  string
+	Metadata   string
+}
+
+func (s *SessionSchema) GetTableName() TableName {
+	if s.TableName == "" {
+		return SessionSchemaTableName
+	}
+	return s.TableName
+}
+
+func (s *SessionSchema) GetSoftDeleteField() SchemaField {
+	return s.SoftDeleteField
+}
+
+func (s *SessionSchema) GetIDField() string {
+	return getFieldOrDefault(s.Fields.ID, SchemaIDField)
+}
+
+func (s *SessionSchema) GetUserIDField() string {
+	return getFieldOrDefault(s.Fields.UserID, SessionSchemaUserIDField)
+}
+
+func (s *SessionSchema) GetDataField() string {
+	return getFieldOrDefault(s.Fields.Data, SessionSchemaDataField)
+}
+
+func (s *SessionSchema) GetCreatedAtField() string {
+	return getFieldOrDefault(s.Fields.CreatedAt, SessionSchemaCreatedAtField)
+}
+
+func (s *SessionSchema) GetExpiresAtField() string {
+	return getFieldOrDefault(s.Fields.ExpiresAt, SessionSchemaExpiresAtField)
+}
+
+func (s *SessionSchema) GetLastAccessField() string {
+	return getFieldOrDefault(s.Fields.LastAccess, SessionSchemaLastAccessField)
+}
+
+func (s *SessionSchema) GetIPAddressField() string {
+	return getFieldOrDefault(s.Fields.IPAddress, SessionSchemaIPAddressField)
+}
+
+func (s *SessionSchema) GetUserAgentField() string {
+	return getFieldOrDefault(s.Fields.UserAgent, SessionSchemaUserAgentField)
+}
+
+func (s *SessionSchema) GetCSRFTokenField() string {
+	return getFieldOrDefault(s.Fields.CSRFToken, SessionSchemaCSRFTokenField)
+}
+
+func (s *SessionSchema) GetMetadataField() string {
+	return getFieldOrDefault(s.Fields.Metadata, SessionSchemaMetadataField)
+}
+
+func (s *SessionSchema) GetAdditionalFields() AdditionalFieldsFunc {
+	return s.AdditionalFields
+}
+
+func (s *SessionSchema) FromStorage(data map[string]any) *Session {
+	session := &Session{
+		ID:         data[s.GetIDField()].(string),
+		UserID:     data[s.GetUserIDField()].(string),
+		CreatedAt:  data[s.GetCreatedAtField()].(time.Time),
+		ExpiresAt:  data[s.GetExpiresAtField()].(time.Time),
+		LastAccess: data[s.GetLastAccessField()].(time.Time),
+		raw:        data,
 	}
 
-	for _, opt := range opts {
-		opt(config)
+	// Handle optional fields
+	if ipAddr, ok := data[s.GetIPAddressField()].(string); ok {
+		session.IPAddress = ipAddr
 	}
 
-	return config
+	if userAgent, ok := data[s.GetUserAgentField()].(string); ok {
+		session.UserAgent = userAgent
+	}
+
+	// Deserialize JSON fields
+	if dataStr, ok := data[s.GetDataField()].(string); ok && dataStr != "" {
+		var sessionData map[string]interface{}
+		if err := json.Unmarshal([]byte(dataStr), &sessionData); err == nil {
+			session.Data = sessionData
+		} else {
+			session.Data = make(map[string]interface{})
+		}
+	} else {
+		session.Data = make(map[string]interface{})
+	}
+
+	if metadataStr, ok := data[s.GetMetadataField()].(string); ok && metadataStr != "" {
+		var metadata map[string]interface{}
+		if err := json.Unmarshal([]byte(metadataStr), &metadata); err == nil {
+			session.Metadata = metadata
+		} else {
+			session.Metadata = make(map[string]interface{})
+		}
+	} else {
+		session.Metadata = make(map[string]interface{})
+	}
+
+	return session
 }
 
-func (c *SessionConfig) validate() error {
-	if c.CookieOptions.CrossDomain && len(c.TrustedOrigins) == 0 {
-		return fmt.Errorf("trusted origins are required when cross domain is enabled")
+func (s *SessionSchema) ToStorage(data *Session) map[string]any {
+	result := map[string]any{
+		s.GetUserIDField():     data.UserID,
+		s.GetCreatedAtField():  data.CreatedAt,
+		s.GetExpiresAtField():  data.ExpiresAt,
+		s.GetLastAccessField(): data.LastAccess,
 	}
-	return nil
-}
 
-type SessionConfigOption func(*SessionConfig)
-
-func WithSessionStrategy(strategy SessionStrategyType) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.Strategy = strategy
+	// Handle optional fields
+	if data.IPAddress != "" {
+		result[s.GetIPAddressField()] = data.IPAddress
 	}
-}
 
-func WithCustomSessionStore(store SessionStore) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CustomStore = store
+	if data.UserAgent != "" {
+		result[s.GetUserAgentField()] = data.UserAgent
 	}
-}
 
-func WithSessionStoreType(storeType SessionStoreType) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.StoreType = storeType
+	// Serialize JSON fields
+	if data.Data != nil {
+		if dataJSON, err := json.Marshal(data.Data); err == nil {
+			result[s.GetDataField()] = string(dataJSON)
+		}
 	}
-}
 
-func WithSessionDuration(duration time.Duration) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.Duration = duration
+	if data.Metadata != nil {
+		if metadataJSON, err := json.Marshal(data.Metadata); err == nil {
+			result[s.GetMetadataField()] = string(metadataJSON)
+		}
 	}
-}
 
-func WithSessionRefreshInterval(refreshInterval time.Duration) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.RefreshInterval = refreshInterval
-	}
-}
-
-func WithSessionIdleTimeout(idleTimeout time.Duration) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.IdleTimeout = idleTimeout
-	}
-}
-
-func WithSessionCookieName(cookieName string) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions.Name = cookieName
-	}
-}
-
-func WithSessionCookieOptions(cookieOptions *CookieConfig) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions = cookieOptions
-	}
-}
-
-func WithSessionCookieCrossSubdomainEnabled(subdomain string) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions.CrossSubdomain.Enabled = true
-		c.CookieOptions.CrossSubdomain.Domain = subdomain
-	}
-}
-
-func WithSessionCookieCrossDomainEnabled() SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions.CrossDomain = true
-		c.CookieOptions.SameSite = http.SameSiteNoneMode
-		c.CookieOptions.Secure = true
-		c.CookieOptions.Partitioned = true
-	}
-}
-
-func WithSessionTrustedOrigins(origins []string) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.TrustedOrigins = origins
-	}
-}
-
-func WithSessionCookiePath(cookiePath string) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions.Path = cookiePath
-	}
-}
-
-func WithSessionCookieSecure(cookieSecure bool) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions.Secure = cookieSecure
-	}
-}
-
-func WithSessionCookieHTTPOnly(cookieHTTPOnly bool) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions.HTTPOnly = cookieHTTPOnly
-	}
-}
-
-func WithSessionCookieSameSite(cookieSameSite http.SameSite) SessionConfigOption {
-	return func(c *SessionConfig) {
-		c.CookieOptions.SameSite = cookieSameSite
-	}
+	return result
 }

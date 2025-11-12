@@ -130,33 +130,29 @@ func TestContainsAny(t *testing.T) {
 	}
 }
 
-func TestDecodeJSONAndValidate(t *testing.T) {
-	type TestData struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
+func TestValidateJSON(t *testing.T) {
 	t.Run("valid data", func(t *testing.T) {
 		jsonBody := `{"email":"test@example.com","password":"secret123"}`
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := DecodeJSONAndValidate(w, req, &responder, func(v *Validator, d *TestData) *Validator {
-			return v.Required("email", d.Email).
-				Email("email", d.Email).
-				Required("password", d.Password).
-				MinLength("password", d.Password, 8)
+		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
+			return v.Required("email", d["email"].(string)).
+				Email("email", d["email"].(string)).
+				Required("password", d["password"].(string)).
+				MinLength("password", d["password"].(string), 8)
 		})
 
 		if data == nil {
 			t.Fatal("Expected data to be returned")
 		}
-		if data.Email != "test@example.com" {
-			t.Errorf("Expected email to be 'test@example.com', got %s", data.Email)
+		if data["email"].(string) != "test@example.com" {
+			t.Errorf("Expected email to be 'test@example.com', got %s", data["email"].(string))
 		}
-		if data.Password != "secret123" {
-			t.Errorf("Expected password to be 'secret123', got %s", data.Password)
+		if data["password"].(string) != "secret123" {
+			t.Errorf("Expected password to be 'secret123', got %s", data["password"].(string))
 		}
 		if w.Code != 0 && w.Code != http.StatusOK {
 			t.Errorf("Expected no error response, got status %d", w.Code)
@@ -166,14 +162,15 @@ func TestDecodeJSONAndValidate(t *testing.T) {
 	t.Run("validation error", func(t *testing.T) {
 		jsonBody := `{"email":"invalid","password":"short"}`
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := DecodeJSONAndValidate(w, req, &responder, func(v *Validator, d *TestData) *Validator {
-			return v.Required("email", d.Email).
-				Email("email", d.Email).
-				Required("password", d.Password).
-				MinLength("password", d.Password, 8)
+		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
+			return v.Required("email", d["email"].(string)).
+				Email("email", d["email"].(string)).
+				Required("password", d["password"].(string)).
+				MinLength("password", d["password"].(string), 8)
 		})
 
 		if data != nil {
@@ -187,10 +184,11 @@ func TestDecodeJSONAndValidate(t *testing.T) {
 	t.Run("invalid JSON", func(t *testing.T) {
 		jsonBody := `{"email":"test@example.com"`
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := DecodeJSONAndValidate(w, req, &responder, func(v *Validator, d *TestData) *Validator {
+		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
 			return v
 		})
 
@@ -205,13 +203,16 @@ func TestDecodeJSONAndValidate(t *testing.T) {
 	t.Run("missing required field", func(t *testing.T) {
 		jsonBody := `{"email":"test@example.com"}`
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
+		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := DecodeJSONAndValidate(w, req, &responder, func(v *Validator, d *TestData) *Validator {
-			return v.Required("email", d.Email).
-				Email("email", d.Email).
-				Required("password", d.Password)
+		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
+			email, _ := d["email"].(string)
+			password, _ := d["password"].(string)
+			return v.Required("email", email).
+				Email("email", email).
+				Required("password", password)
 		})
 
 		if data != nil {

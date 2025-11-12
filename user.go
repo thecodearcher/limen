@@ -1,4 +1,4 @@
-package schemas
+package aegis
 
 import (
 	"time"

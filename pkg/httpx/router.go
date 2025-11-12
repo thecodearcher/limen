@@ -1,8 +1,11 @@
 package httpx
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"net/http"
 	"path"
@@ -219,19 +222,49 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // Mount attaches a whole handler subtree under a fixed prefix using StripPrefix.
 // No wildcard support needed; the mounted handler receives paths starting at its own root.
-func (rt *Router) Mount(prefix string, h http.Handler, perMountMW ...Middleware) {
+func (rt *Router) Mount(prefix string, h http.Handler, perMountMW []Middleware, hooks *Hooks) {
 	prefix = NormalizeBasePath(prefix)
 
 	h = applyMiddleware(append(rt.globalMiddleware, perMountMW...), h)
 	stripped := http.StripPrefix(prefix, h)
 
 	rt.AddRoute(MethodANY, prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hookCtx := &HookContext{
+			Context:  r.Context(),
+			Request:  r,
+			Response: w,
+			Method:   r.Method,
+			Path:     r.URL.Path,
+		}
+
+		if hooks != nil && hooks.Before != nil {
+			if !hooks.Before(hookCtx) {
+				return
+			}
+
+			if hookCtx.bodyModified {
+				bodyBytes, _ := json.Marshal(hookCtx.modifiedData)
+				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+				r = r.WithContext(context.WithValue(r.Context(), bodyContextKey{}, hookCtx.modifiedData))
+			}
+		}
+
+		r, _ = parseAndStoreBody(r) // parse the body and store it in the request context
+
 		fmt.Printf("Mounted handler called\n %s %s\n %s\n", r.Method, r.URL.Path, prefix)
 		if !strings.HasPrefix(r.URL.Path, prefix) {
 			http.NotFound(w, r)
 			return
 		}
-		stripped.ServeHTTP(w, r)
+		rw := &responseWriter{
+			ResponseWriter: w,
+			wroteHeader:    false,
+		}
+		stripped.ServeHTTP(rw, r)
+		if hooks != nil && hooks.After != nil {
+			hookCtx.StatusCode = rw.statusCode
+			hooks.After(hookCtx)
+		}
 	}), "", "")
 }
 

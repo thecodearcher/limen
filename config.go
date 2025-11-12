@@ -1,14 +1,10 @@
 package aegis
 
-import (
-	"github.com/thecodearcher/aegis/schemas"
-)
-
 // Config is the main configuration struct for the aegis library
 type Config struct {
 	Database DatabaseAdapter
 	Features []Feature
-	Schema   schemas.Config
+	Schema   SchemaConfig
 	JWT      *jWTConfig
 	Session  *SessionConfig
 }

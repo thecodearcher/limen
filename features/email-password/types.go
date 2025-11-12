@@ -77,3 +77,24 @@ func WithRemoveExpiredVerifications(removeExpiredVerifications bool) ConfigOptio
 		c.removeExpiredVerifications = removeExpiredVerifications
 	}
 }
+
+// WithAutoSignInOnSignUp sets whether to auto sign in the user after sign up
+func WithAutoSignInOnSignUp(autoSignInOnSignUp bool) ConfigOption {
+	return func(c *config) {
+		c.autoSignInOnSignUp = autoSignInOnSignUp
+	}
+}
+
+// WithSendVerificationEmail sets the function to send the email verification message
+func WithSendVerificationEmail(sendVerificationEmail func(email string, token string) error) ConfigOption {
+	return func(c *config) {
+		c.sendVerificationEmail = sendVerificationEmail
+	}
+}
+
+// WithRequireEmailVerification sets whether to require email verification after sign up
+func WithRequireEmailVerification(requireEmailVerification bool) ConfigOption {
+	return func(c *config) {
+		c.requireEmailVerification = requireEmailVerification
+	}
+}

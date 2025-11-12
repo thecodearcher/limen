@@ -1,6 +1,6 @@
-package schemas
+package aegis
 
-type Config struct {
+type SchemaConfig struct {
 	// global field name for the soft delete field - if not set, the soft delete field will not be used
 	SoftDeleteField string
 

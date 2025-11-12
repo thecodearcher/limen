@@ -2,6 +2,7 @@ package emailpassword
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/thecodearcher/aegis"
@@ -30,34 +31,80 @@ func (p *emailPasswordFeature) HTTPMount(c *aegis.Aegis, responder *aegis.Respon
 func routes(api *emailPasswordAPI) *httpx.Router {
 	router := httpx.NewRouter()
 	router.AddRoute(httpx.MethodPOST, "/signin", api.SignInWithEmailAndPassword, "signin", "Sign in with email and password")
+	router.AddRoute(httpx.MethodPOST, "/signup", api.SignUpWithEmailAndPassword, "signup", "Sign up with email and password")
 	return router
 }
 
 func (p *emailPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
-	type SignInRequest struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	body := validator.DecodeJSONAndValidate(w, r, p.responder,
-		func(v *validator.Validator, data *SignInRequest) *validator.Validator {
-			return v.Required("email", data.Email).
-				Email("email", data.Email).
-				Required("password", data.Password)
+	body := validator.ValidateJSON(w, r, p.responder,
+		func(v *validator.Validator, data map[string]any) *validator.Validator {
+			return v.Required("email", data["email"].(string)).
+				Email("email", data["email"].(string)).
+				Required("password", data["password"].(string))
 		})
 
 	if body == nil {
 		return
 	}
 
-	result, err := p.feature.SignInWithEmailAndPassword(context.Background(), body.Email, body.Password)
+	result, err := p.feature.SignInWithEmailAndPassword(r.Context(), body["email"].(string), body["password"].(string))
 	if err != nil {
-		p.responder.Error(w, r, ErrInvalidCredentials)
+		p.responder.Error(w, r, ErrAPIInvalidCredentials)
 		return
 	}
 
 	sessionManager := session.NewSessionManager(p.feature.core)
-	sessionResult, err := sessionManager.CreateSession(context.Background(), result.User, r)
+	sessionResult, err := sessionManager.CreateSession(context.Background(), r, result)
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
+		return
+	}
+
+	p.responder.SessionResponse(w, r, p.feature.core, result, sessionResult)
+}
+
+func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
+	additionalFields, err := aegis.GetSchemaAdditionalFieldsForRequest(w, r, p.feature.userSchema)
+	if err != nil {
+		p.responder.Error(w, r, err.(*aegis.AegisError))
+		return
+	}
+
+	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.Required("email", data["email"].(string)).
+			Email("email", data["email"].(string)).
+			Required("password", data["password"].(string))
+	})
+
+	if body == nil {
+		return
+	}
+
+	result, err := p.feature.SignUpWithEmailAndPassword(r.Context(), &aegis.User{
+		Email:    body["email"].(string),
+		Password: body["password"].(string),
+	}, additionalFields)
+
+	if err != nil {
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusConflict, nil))
+			return
+		}
+		if errors.Is(err, ErrInvalidPassword) {
+			p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnprocessableEntity, nil))
+			return
+		}
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		return
+	}
+
+	if !p.feature.config.autoSignInOnSignUp {
+		p.responder.SessionResponse(w, r, p.feature.core, result, &aegis.SessionResult{})
+		return
+	}
+
+	sessionManager := session.NewSessionManager(p.feature.core)
+	sessionResult, err := sessionManager.CreateSession(r.Context(), r, result)
 	if err != nil {
 		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
 		return

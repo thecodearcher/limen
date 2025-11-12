@@ -4,10 +4,10 @@ import (
 	"errors"
 )
 
-type AegisError interface {
-	error
-	Details() any
-	Status() int
+type AegisError struct {
+	message string
+	details any
+	status  int
 }
 
 var (
@@ -46,18 +46,18 @@ type AegisErrorImpl struct {
 	status  int
 }
 
-func NewAegisError(message string, status int, details any) *AegisErrorImpl {
-	return &AegisErrorImpl{message: message, details: details, status: status}
+func NewAegisError(message string, status int, details any) *AegisError {
+	return &AegisError{message: message, details: details, status: status}
 }
 
-func (e *AegisErrorImpl) Error() string {
+func (e AegisError) Error() string {
 	return e.message
 }
 
-func (e *AegisErrorImpl) Details() any {
+func (e AegisError) Details() any {
 	return e.details
 }
 
-func (e *AegisErrorImpl) Status() int {
+func (e AegisError) Status() int {
 	return e.status
 }
