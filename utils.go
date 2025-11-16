@@ -1,4 +1,4 @@
-package session
+package aegis
 
 import (
 	"crypto/rand"

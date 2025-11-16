@@ -37,6 +37,7 @@ func main() {
 	config := &aegis.Config{
 		Database: adapter.New(db),
 		Features: []aegis.Feature{
+
 			emailpassword.New(
 				emailpassword.WithRequireEmailVerification(true),
 				emailpassword.WithSendVerificationEmail(func(email string, token string) error {
@@ -78,7 +79,7 @@ func main() {
 				},
 			},
 		},
-		Session: aegis.NewDefaultSessionConfig(),
+		Session: aegis.NewDefaultSessionConfig(aegis.WithSessionStoreType(aegis.SessionStoreTypeDatabase)),
 	}
 
 	auth, err := aegis.New(config)
@@ -145,11 +146,16 @@ func main() {
 
 	r := gin.Default()
 	r.GET("/", func(c *gin.Context) {
+		session, err := auth.GetSession(c.Request)
+		if err != nil {
+			c.JSON(500, gin.H{"message": "Failed to get session"})
+			return
+		}
+		fmt.Printf("Session: %+v\n", session)
 		c.JSON(200, gin.H{"message": "Hello, World!"})
 	})
 
 	r.Any("/api/*path", func(c *gin.Context) {
-		fmt.Println("api called")
 		handler.ServeHTTP(c.Writer, c.Request)
 	})
 

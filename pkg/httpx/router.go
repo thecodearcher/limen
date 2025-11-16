@@ -83,6 +83,7 @@ type Route struct {
 	Handler     http.HandlerFunc
 	RouteID     RouteID
 	Description string
+	Middleware  []Middleware
 }
 
 // RouteID is a unique identifier for each route
@@ -100,20 +101,25 @@ func NewRouter(globalMiddleware ...Middleware) *Router {
 }
 
 // AddRoute adds a new route to the radix tree
-func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, description string) {
+// Middleware is applied in order: global middleware first, then route-specific middleware
+func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, middleware ...Middleware) {
 	route := &Route{
-		Method:      method,
-		Pattern:     pattern,
-		Handler:     handler,
-		RouteID:     routeID,
-		Description: description,
+		Method:  method,
+		Pattern: pattern,
+		Handler: handler,
+		RouteID: routeID,
+		// Description: description,
+		Middleware: middleware,
 	}
+
+	// Apply middleware to create wrapped handler
+	wrappedHandler := r.wrapHandler(handler, middleware)
 
 	// Check if this is a static route (no parameters)
 	if !strings.Contains(pattern, ":") && method != MethodANY {
-		// Add to exact fast path
+		// Add to exact fast path with middleware applied
 		key := string(method) + " " + pattern
-		r.exactRoutes[key] = handler
+		r.exactRoutes[key] = wrappedHandler
 	}
 
 	// Split path into segments, removing empty segments
@@ -183,6 +189,8 @@ func (r *Router) handleStaticSegment(current *RadixNode, segment string) *RadixN
 
 // ServeHTTP implements http.Handler
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	fmt.Printf("ServeHTTP called\n %s %s\n", req.Method, req.URL.Path)
+	fmt.Printf("Exact routes: %v\n", r.exactRoutes)
 	// Try exact fast path first (O(1) for static routes)
 	key := req.Method + " " + req.URL.Path
 	if handler, exists := r.exactRoutes[key]; exists {
@@ -260,12 +268,21 @@ func (rt *Router) Mount(prefix string, h http.Handler, perMountMW []Middleware, 
 			ResponseWriter: w,
 			wroteHeader:    false,
 		}
+		fmt.Printf("Stripped handler called\n %s %s\n %s\n", r.Method, r.URL.Path, prefix)
 		stripped.ServeHTTP(rw, r)
 		if hooks != nil && hooks.After != nil {
 			hookCtx.StatusCode = rw.statusCode
 			hooks.After(hookCtx)
 		}
-	}), "", "")
+	}), "")
+}
+
+// wrapHandler applies global middleware and route-specific middleware to a handler
+func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware) http.HandlerFunc {
+	// Combine global and route middleware (global first, then route-specific)
+	allMiddleware := append(r.globalMiddleware, routeMiddleware...)
+	wrapped := applyMiddleware(allMiddleware, http.HandlerFunc(handler))
+	return wrapped.ServeHTTP
 }
 
 // handleRoute handles a matched route with parameters
@@ -275,7 +292,10 @@ func (r *Router) handleRoute(w http.ResponseWriter, req *http.Request, route *Ro
 		ctx := context.WithValue(req.Context(), paramsContextKey{}, params)
 		req = req.WithContext(ctx)
 	}
-	route.Handler(w, req)
+
+	// Apply middleware (global + route-specific) to the handler
+	wrappedHandler := r.wrapHandler(route.Handler, route.Middleware)
+	wrappedHandler(w, req)
 }
 
 // matchRoute searches the radix tree for a matching route

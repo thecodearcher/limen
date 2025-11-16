@@ -138,7 +138,7 @@ func TestValidateJSON(t *testing.T) {
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
+		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v.Required("email", d["email"].(string)).
 				Email("email", d["email"].(string)).
 				Required("password", d["password"].(string)).
@@ -166,7 +166,7 @@ func TestValidateJSON(t *testing.T) {
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
+		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v.Required("email", d["email"].(string)).
 				Email("email", d["email"].(string)).
 				Required("password", d["password"].(string)).
@@ -188,7 +188,7 @@ func TestValidateJSON(t *testing.T) {
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
+		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v
 		})
 
@@ -207,7 +207,7 @@ func TestValidateJSON(t *testing.T) {
 		w := httptest.NewRecorder()
 		responder := aegis.NewResponder(nil)
 
-		data := ValidateJSON(w, req, &responder, func(v *Validator, d map[string]any) *Validator {
+		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			email, _ := d["email"].(string)
 			password, _ := d["password"].(string)
 			return v.Required("email", email).

@@ -10,7 +10,7 @@ type Responder struct {
 	sessionTransformer SessionTransformer
 }
 
-func NewResponder(cfg *HTTPConfig) Responder {
+func NewResponder(cfg *HTTPConfig) *Responder {
 	if cfg == nil {
 		cfg = &HTTPConfig{}
 	}
@@ -23,7 +23,7 @@ func NewResponder(cfg *HTTPConfig) Responder {
 		envelopeConfig = cfg.responseEnvelope
 	}
 
-	return Responder{cfg: envelopeConfig, sessionTransformer: cfg.sessionTransformer}
+	return &Responder{cfg: envelopeConfig, sessionTransformer: cfg.sessionTransformer}
 }
 
 func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, payload any) error {

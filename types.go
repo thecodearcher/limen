@@ -30,7 +30,7 @@ type AuthenticationResult struct {
 
 // SessionResult contains the result of session operations
 type SessionResult struct {
-	Token        string       `json:"token,omitzero"`         // JWT token for JWT/hybrid strategies
+	Token        string       `json:"token,omitzero"`         // Session token (cookie value, JWT token for JWT/hybrid strategies)
 	RefreshToken string       `json:"refresh_token,omitzero"` // Refresh token if enabled
 	Cookie       *http.Cookie `json:"-"`
 }
@@ -45,6 +45,8 @@ type SessionRefreshResult struct {
 
 type SessionValidateResult struct {
 	UserID   any
+	User     *User
+	Session  *Session
 	Metadata map[string]interface{}
 }
 
@@ -53,26 +55,17 @@ type SessionStore interface {
 	// Create creates a new session with the given ID and data
 	Create(ctx context.Context, session *Session) error
 
-	// Get retrieves a session by ID
-	Get(ctx context.Context, sessionID string) (*Session, error)
+	// Get retrieves a session by token
+	Get(ctx context.Context, sessionToken string) (*Session, error)
 
 	// Update updates an existing session
 	Update(ctx context.Context, session *Session) error
 
-	// Delete removes a session by ID
-	Delete(ctx context.Context, sessionID string) error
+	// Delete removes a session by token
+	Delete(ctx context.Context, sessionToken string) error
 
 	// DeleteByUserID removes all sessions for a specific user
-	DeleteByUserID(ctx context.Context, userID string) error
-
-	// Cleanup removes expired sessions
-	Cleanup(ctx context.Context) error
-
-	// Exists checks if a session exists
-	Exists(ctx context.Context, sessionID string) (bool, error)
-
-	// Count returns the number of active sessions for a user
-	Count(ctx context.Context, userID string) (int, error)
+	DeleteByUserID(ctx context.Context, userID any) error
 }
 
 // SessionStrategy defines the interface for different session management strategies

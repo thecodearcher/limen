@@ -33,13 +33,10 @@ const (
 	VerificationSchemaUpdatedAtField SchemaField = "updated_at"
 
 	SessionSchemaUserIDField     SchemaField = "user_id"
-	SessionSchemaDataField       SchemaField = "data"
+	SessionSchemaTokenField      SchemaField = "token"
 	SessionSchemaCreatedAtField  SchemaField = "created_at"
 	SessionSchemaExpiresAtField  SchemaField = "expires_at"
 	SessionSchemaLastAccessField SchemaField = "last_access"
-	SessionSchemaIPAddressField  SchemaField = "ip_address"
-	SessionSchemaUserAgentField  SchemaField = "user_agent"
-	SessionSchemaCSRFTokenField  SchemaField = "csrf_token"
 	SessionSchemaMetadataField   SchemaField = "metadata"
 )
 

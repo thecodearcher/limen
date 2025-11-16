@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/internal/database"
 )
 
 type emailPasswordFeature struct {
@@ -18,7 +17,7 @@ type emailPasswordFeature struct {
 	config             *config
 	userSchema         *aegis.UserSchema
 	verificationSchema *aegis.VerificationSchema
-	dbAction           *database.DatabaseActionHelper
+	dbAction           *aegis.DatabaseActionHelper
 }
 
 // Config defines the configuration for the email password feature.
@@ -71,7 +70,7 @@ func (p *emailPasswordFeature) Name() aegis.FeatureName {
 func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	p.core = core
 	p.userSchema = &core.Schema.User
-	p.dbAction = database.NewCommonDatabaseActionsHelper(core)
+	p.dbAction = core.DBAction
 	if p.config == nil {
 		return fmt.Errorf("config is required")
 	}
@@ -117,7 +116,7 @@ func (p *emailPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, u
 		return nil, err
 	}
 
-	userExists, err := database.Exists(ctx, p.core, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), user.Email)})
+	userExists, err := aegis.Exists(ctx, p.core, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), user.Email)})
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +173,7 @@ func (p *emailPasswordFeature) ComparePassword(password string, hash string) (bo
 }
 
 func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email string) (*aegis.Verification, error) {
-	user, err := database.FindOne(ctx, p.core, p.userSchema, []aegis.Where{
+	user, err := aegis.FindOne(ctx, p.core, p.userSchema, []aegis.Where{
 		aegis.Eq(p.userSchema.GetEmailField(), email),
 	}, nil)
 	if err != nil {
@@ -206,7 +205,7 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 		return ErrResetTokenInvalid
 	}
 
-	action, identifier := database.ParseVerificationAction(verification.Subject)
+	action, identifier := aegis.ParseVerificationAction(verification.Subject)
 	if action != PasswordResetAction {
 		return ErrResetTokenInvalid
 	}
@@ -315,7 +314,7 @@ func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) er
 		return ErrResetTokenInvalid
 	}
 
-	action, identifier := database.ParseVerificationAction(verification.Subject)
+	action, identifier := aegis.ParseVerificationAction(verification.Subject)
 	if action != EmailVerificationAction {
 		return ErrResetTokenInvalid
 	}

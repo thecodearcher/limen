@@ -1,41 +1,39 @@
 package emailpassword
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/internal/session"
 	"github.com/thecodearcher/aegis/pkg/httpx"
 	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
 type emailPasswordAPI struct {
 	feature   *emailPasswordFeature
+	httpCore  *aegis.AegisHTTPCore
 	responder *aegis.Responder
-	config    *aegis.HTTPConfig
 }
 
-func NewEmailPasswordAPI(emailPasswordFeature *emailPasswordFeature, responder *aegis.Responder, config *aegis.HTTPConfig) *emailPasswordAPI {
-	return &emailPasswordAPI{feature: emailPasswordFeature, responder: responder, config: config}
+func NewEmailPasswordAPI(emailPasswordFeature *emailPasswordFeature, httpCore *aegis.AegisHTTPCore) *emailPasswordAPI {
+	return &emailPasswordAPI{feature: emailPasswordFeature, httpCore: httpCore, responder: httpCore.Responder}
 }
 
-func (p *emailPasswordFeature) HTTPMount(c *aegis.Aegis, responder *aegis.Responder, config *aegis.HTTPConfig) aegis.HTTPMount {
-	api := NewEmailPasswordAPI(p, responder, config)
+func (p *emailPasswordFeature) HTTPMount(httpCore *aegis.AegisHTTPCore) aegis.HTTPMount {
+	api := NewEmailPasswordAPI(p, httpCore)
 	return aegis.HTTPMount{
 		Handler: routes(api),
 	}
 }
 
-func routes(api *emailPasswordAPI) *httpx.Router {
+func routes(e *emailPasswordAPI) *httpx.Router {
 	router := httpx.NewRouter()
-	router.AddRoute(httpx.MethodPOST, "/signin", api.SignInWithEmailAndPassword, "signin", "Sign in with email and password")
-	router.AddRoute(httpx.MethodPOST, "/signup", api.SignUpWithEmailAndPassword, "signup", "Sign up with email and password")
-	router.AddRoute(httpx.MethodPOST, "/verify-email", api.VerifyEmail, "verify-email", "Verify email")
-	router.AddRoute(httpx.MethodPOST, "/email-verifications", api.RequestEmailVerification, "email-verifications", "Request email verifications")
-	router.AddRoute(httpx.MethodPOST, "/passwords/request-reset", api.RequestPasswordReset, "passwords-request-reset", "Request password reset")
-	router.AddRoute(httpx.MethodPOST, "/passwords/reset", api.ResetPassword, "passwords-reset", "Reset password")
+	router.AddRoute(httpx.MethodPOST, "/signin/email", e.SignInWithEmailAndPassword, "signin")
+	router.AddRoute(httpx.MethodPOST, "/signup/email", e.SignUpWithEmailAndPassword, "signup")
+	router.AddRoute(httpx.MethodPOST, "/verify-email", e.VerifyEmail, "verify-email")
+	router.AddRoute(httpx.MethodPOST, "/email-verifications", e.RequestEmailVerification, "email-verifications")
+	router.AddRoute(httpx.MethodPOST, "/passwords/request-reset", e.RequestPasswordReset, "passwords-request-reset")
+	router.AddRoute(httpx.MethodPOST, "/passwords/reset", e.ResetPassword, "passwords-reset")
 	return router
 }
 
@@ -57,8 +55,7 @@ func (p *emailPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *
 		return
 	}
 
-	sessionManager := session.NewSessionManager(p.feature.core)
-	sessionResult, err := sessionManager.CreateSession(context.Background(), r, result)
+	sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, result)
 	if err != nil {
 		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
 		return
@@ -108,8 +105,7 @@ func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *
 		return
 	}
 
-	sessionManager := session.NewSessionManager(p.feature.core)
-	sessionResult, err := sessionManager.CreateSession(r.Context(), r, result)
+	sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, result)
 	if err != nil {
 		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
 		return

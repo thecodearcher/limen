@@ -1,39 +1,35 @@
-package session
+package aegis
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
-
-	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/internal/database"
 )
 
 type JWTStrategy struct {
-	jwtHandler *aegis.JwtHandler
-	config     *aegis.SessionConfig
-	dbAction   *database.DatabaseActionHelper
+	jwtHandler *JwtHandler
+	config     *SessionConfig
+	dbAction   *DatabaseActionHelper
 }
 
-func NewJWTStrategy(core *aegis.AegisCore, config *aegis.SessionConfig) *JWTStrategy {
+func NewJWTStrategy(core *AegisCore, config *SessionConfig) *JWTStrategy {
 	return &JWTStrategy{
 		jwtHandler: core.JWT,
 		config:     config,
-		dbAction:   database.NewCommonDatabaseActionsHelper(core),
+		dbAction:   core.DBAction,
 	}
 }
 
 func (s *JWTStrategy) GetName() string {
-	return string(aegis.SessionStrategyJWT)
+	return string(SessionStrategyJWT)
 }
 
 func (s *JWTStrategy) IsStateful() bool {
 	return false
 }
 
-func (s *JWTStrategy) Create(ctx context.Context, user *aegis.User, temporaryAuth bool) (*aegis.SessionResult, error) {
+func (s *JWTStrategy) Create(ctx context.Context, user *User, temporaryAuth bool) (*SessionResult, error) {
 	sessionID, err := GenerateCryptoSecureRandomString()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
@@ -42,42 +38,42 @@ func (s *JWTStrategy) Create(ctx context.Context, user *aegis.User, temporaryAut
 	additionalClaims := map[string]any{}
 	duration := s.config.Duration
 	if temporaryAuth {
-		additionalClaims["temp_auth"] = true
-		duration = time.Duration(5 * time.Minute)
+		additionalClaims[temporaryAuthKey] = true
+		duration = s.config.TemporaryAuthDuration
 	}
 	token, refreshToken, err := s.jwtHandler.GenerateAccessToken(sessionID, user, &duration, additionalClaims)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate JWT token: %w", err)
 	}
 
-	return &aegis.SessionResult{
+	return &SessionResult{
 		Token:        token,
 		RefreshToken: refreshToken,
 	}, nil
 }
 
-func (s *JWTStrategy) Validate(ctx context.Context, request *http.Request) (*aegis.SessionValidateResult, error) {
+func (s *JWTStrategy) Validate(ctx context.Context, request *http.Request) (*SessionValidateResult, error) {
 	token, err := s.extractJWTToken(request)
 	if err != nil {
-		return nil, aegis.ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 
 	claims, err := s.jwtHandler.VerifyToken(token)
 	if err != nil {
-		if err == aegis.ErrTokenExpired {
-			return nil, aegis.ErrSessionExpired
+		if err == ErrTokenExpired {
+			return nil, ErrSessionExpired
 		}
-		return nil, aegis.ErrSessionInvalid
+		return nil, ErrSessionInvalid
 	}
 	fmt.Println(claims)
 
-	return &aegis.SessionValidateResult{
+	return &SessionValidateResult{
 		UserID:   claims["sub"],
 		Metadata: claims,
 	}, nil
 }
 
-func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*aegis.SessionRefreshResult, error) {
+func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*SessionRefreshResult, error) {
 	refreshToken, err := s.extractRefreshToken(request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract refresh token: %w", err)
@@ -85,25 +81,25 @@ func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*aegi
 
 	claims, err := s.jwtHandler.VerifyToken(refreshToken)
 	if err != nil {
-		if err == aegis.ErrTokenExpired {
-			return nil, aegis.ErrSessionExpired
+		if err == ErrTokenExpired {
+			return nil, ErrSessionExpired
 		}
-		return nil, aegis.ErrSessionInvalid
+		return nil, ErrSessionInvalid
 	}
 
 	userID, ok := claims["sub"].(string)
 	if !ok || userID == "" {
-		return nil, aegis.ErrSessionInvalid
+		return nil, ErrSessionInvalid
 	}
 
 	sessionID, ok := claims["jti"].(string)
 	if !ok || sessionID == "" {
-		return nil, aegis.ErrSessionInvalid
+		return nil, ErrSessionInvalid
 	}
 
-	tempAuth, ok := claims["temp_auth"].(bool)
+	tempAuth, ok := claims[temporaryAuthKey].(bool)
 	if ok && tempAuth {
-		return nil, aegis.ErrSessionInvalid
+		return nil, ErrSessionInvalid
 	}
 
 	sessionID = strings.TrimSuffix(sessionID, "_refresh")
@@ -123,7 +119,7 @@ func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*aegi
 		return nil, fmt.Errorf("failed to generate new JWT tokens: %w", err)
 	}
 
-	return &aegis.SessionRefreshResult{
+	return &SessionRefreshResult{
 		Token:          token,
 		StaleSessionID: sessionID,
 		UserID:         userID,
@@ -174,7 +170,7 @@ func (s *JWTStrategy) extractRefreshToken(request *http.Request) (string, error)
 	return "", fmt.Errorf("no refresh token found in request")
 }
 
-func (s *JWTStrategy) findUserWithSubject(ctx context.Context, userID string) (*aegis.User, error) {
+func (s *JWTStrategy) findUserWithSubject(ctx context.Context, userID string) (*User, error) {
 	if userFn := s.jwtHandler.CustomUserFromSubjectFn(); userFn != nil {
 		user, err := userFn(userID)
 		if err != nil {

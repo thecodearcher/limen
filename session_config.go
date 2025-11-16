@@ -3,6 +3,7 @@ package aegis
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -10,6 +11,9 @@ type SessionConfig struct {
 	Strategy SessionStrategyType
 	// Duration: the absolute duration of the session
 	Duration time.Duration
+	// TemporaryAuthDuration: the duration of the temporary auth session i.e: for two-factor authentication, email verification etc.
+	// If not set, the duration will be set to 5 minutes
+	TemporaryAuthDuration time.Duration
 	// RefreshInterval: the interval at which the session will be refreshed
 	RefreshInterval time.Duration
 	// IdleTimeout: the time after which the session will be considered expired if no activity is detected
@@ -26,6 +30,10 @@ type SessionConfig struct {
 	TrustedOrigins []string
 	// TokenGenerator: the token generator to use
 	TokenGenerator TokenGenerator
+	// IPAddressExtractor: the function to extract the IP address from the request
+	IPAddressExtractor func(request *http.Request) string
+	// UserAgentExtractor: the function to extract the user agent from the request
+	UserAgentExtractor func(request *http.Request) string
 }
 
 type CookieConfig struct {
@@ -53,6 +61,7 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
 	config := &SessionConfig{
 		Strategy:              SessionStrategyServerSide,
 		Duration:              1 * time.Hour,
+		TemporaryAuthDuration: 5 * time.Minute,
 		RefreshInterval:       0,
 		IdleTimeout:           0,
 		ActivityCheckInterval: 1 * time.Hour,
@@ -67,6 +76,18 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
 				Enabled: false,
 			},
 			CrossDomain: false,
+		},
+		IPAddressExtractor: func(request *http.Request) string {
+			if ip := request.Header.Get("X-Forwarded-For"); ip != "" {
+				return ip
+			}
+			if ip := request.Header.Get("X-Real-IP"); ip != "" {
+				return ip
+			}
+			return strings.Split(request.RemoteAddr, ":")[0]
+		},
+		UserAgentExtractor: func(request *http.Request) string {
+			return request.UserAgent()
 		},
 	}
 
@@ -177,5 +198,23 @@ func WithSessionCookieHTTPOnly(cookieHTTPOnly bool) SessionConfigOption {
 func WithSessionCookieSameSite(cookieSameSite http.SameSite) SessionConfigOption {
 	return func(c *SessionConfig) {
 		c.CookieOptions.SameSite = cookieSameSite
+	}
+}
+
+func WithSessionIPAddressExtractor(ipAddressExtractor func(request *http.Request) string) SessionConfigOption {
+	return func(c *SessionConfig) {
+		c.IPAddressExtractor = ipAddressExtractor
+	}
+}
+
+func WithSessionUserAgentExtractor(userAgentExtractor func(request *http.Request) string) SessionConfigOption {
+	return func(c *SessionConfig) {
+		c.UserAgentExtractor = userAgentExtractor
+	}
+}
+
+func WithSessionTemporaryAuthDuration(temporaryAuthDuration time.Duration) SessionConfigOption {
+	return func(c *SessionConfig) {
+		c.TemporaryAuthDuration = temporaryAuthDuration
 	}
 }

@@ -1,37 +1,34 @@
-package session
+package aegis
 
 import (
 	"context"
 	"fmt"
 	"maps"
 	"sync"
-	"time"
-
-	"github.com/thecodearcher/aegis"
 )
 
 // MemorySessionStore implements SessionStore using in-memory storage
 type MemorySessionStore struct {
-	sessions map[string]*aegis.Session // map[sessionID]*Session
-	users    map[string][]string       // map[userID][]sessionID for efficient lookup
+	sessions map[string]*Session // map[sessionID]*Session
+	users    map[string][]string // map[userID][]sessionID for efficient lookup
 	mu       sync.RWMutex
 }
 
 // NewMemorySessionStore creates a new in-memory session store
 func NewMemorySessionStore() *MemorySessionStore {
 	return &MemorySessionStore{
-		sessions: make(map[string]*aegis.Session),
+		sessions: make(map[string]*Session),
 		users:    make(map[string][]string),
 	}
 }
 
 // Create creates a new session with the given ID and data
-func (s *MemorySessionStore) Create(ctx context.Context, session *aegis.Session) error {
+func (s *MemorySessionStore) Create(ctx context.Context, session *Session) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Check if session already exists
-	if _, exists := s.sessions[session.ID]; exists {
+	if _, exists := s.sessions[session.Token]; exists {
 		return nil // Session already exists, treat as success (idempotent)
 	}
 
@@ -39,23 +36,23 @@ func (s *MemorySessionStore) Create(ctx context.Context, session *aegis.Session)
 	sessionCopy := s.copySession(session)
 
 	// Store the session
-	s.sessions[session.ID] = sessionCopy
+	s.sessions[session.Token] = sessionCopy
 
 	// Index by userID
 	userIDStr := s.userIDToString(session.UserID)
-	s.users[userIDStr] = append(s.users[userIDStr], session.ID)
+	s.users[userIDStr] = append(s.users[userIDStr], session.Token)
 
 	return nil
 }
 
 // Get retrieves a session by ID
-func (s *MemorySessionStore) Get(ctx context.Context, sessionID string) (*aegis.Session, error) {
+func (s *MemorySessionStore) Get(ctx context.Context, sessionID string) (*Session, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	session, exists := s.sessions[sessionID]
 	if !exists {
-		return nil, aegis.ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 
 	// Return a copy to prevent external modifications
@@ -63,28 +60,28 @@ func (s *MemorySessionStore) Get(ctx context.Context, sessionID string) (*aegis.
 }
 
 // Update updates an existing session
-func (s *MemorySessionStore) Update(ctx context.Context, session *aegis.Session) error {
+func (s *MemorySessionStore) Update(ctx context.Context, session *Session) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.sessions[session.ID]; !exists {
-		return aegis.ErrSessionNotFound
+	if _, exists := s.sessions[session.Token]; !exists {
+		return ErrSessionNotFound
 	}
 
 	// If UserID changed, update the index
-	oldSession := s.sessions[session.ID]
+	oldSession := s.sessions[session.Token]
 	oldUserIDStr := s.userIDToString(oldSession.UserID)
 	newUserIDStr := s.userIDToString(session.UserID)
 
 	if oldUserIDStr != newUserIDStr {
 		// Remove from old user index
-		s.removeFromUserIndex(oldUserIDStr, session.ID)
+		s.removeFromUserIndex(oldUserIDStr, session.Token)
 		// Add to new user index
-		s.users[newUserIDStr] = append(s.users[newUserIDStr], session.ID)
+		s.users[newUserIDStr] = append(s.users[newUserIDStr], session.Token)
 	}
 
 	// Update the session
-	s.sessions[session.ID] = s.copySession(session)
+	s.sessions[session.Token] = s.copySession(session)
 
 	return nil
 }
@@ -96,7 +93,7 @@ func (s *MemorySessionStore) Delete(ctx context.Context, sessionID string) error
 
 	session, exists := s.sessions[sessionID]
 	if !exists {
-		return aegis.ErrSessionNotFound
+		return ErrSessionNotFound
 	}
 
 	// Remove from user index
@@ -110,11 +107,11 @@ func (s *MemorySessionStore) Delete(ctx context.Context, sessionID string) error
 }
 
 // DeleteByUserID removes all sessions for a specific user
-func (s *MemorySessionStore) DeleteByUserID(ctx context.Context, userID string) error {
+func (s *MemorySessionStore) DeleteByUserID(ctx context.Context, userID any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	userIDStr := userID
+	userIDStr := s.userIDToString(userID)
 	sessionIDs, exists := s.users[userIDStr]
 	if !exists {
 		return nil // No sessions for this user, treat as success
@@ -131,75 +128,24 @@ func (s *MemorySessionStore) DeleteByUserID(ctx context.Context, userID string) 
 	return nil
 }
 
-// Cleanup removes expired sessions
-func (s *MemorySessionStore) Cleanup(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now()
-	var expiredIDs []string
-
-	// Find all expired sessions
-	for sessionID, session := range s.sessions {
-		if now.After(session.ExpiresAt) {
-			expiredIDs = append(expiredIDs, sessionID)
-		}
-	}
-
-	// Delete expired sessions
-	for _, sessionID := range expiredIDs {
-		session := s.sessions[sessionID]
-		userIDStr := s.userIDToString(session.UserID)
-		s.removeFromUserIndex(userIDStr, sessionID)
-		delete(s.sessions, sessionID)
-	}
-
-	return nil
-}
-
-// Exists checks if a session exists
-func (s *MemorySessionStore) Exists(ctx context.Context, sessionID string) (bool, error) {
+func (s *MemorySessionStore) List(ctx context.Context) (map[string]*Session, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	_, exists := s.sessions[sessionID]
-	return exists, nil
-}
-
-// Count returns the number of active sessions for a user
-func (s *MemorySessionStore) Count(ctx context.Context, userID string) (int, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	sessionIDs, exists := s.users[userID]
-	if !exists {
-		return 0, nil
-	}
-
-	// Count only non-expired sessions
-	now := time.Now()
-	count := 0
-	for _, sessionID := range sessionIDs {
-		if session, ok := s.sessions[sessionID]; ok && !now.After(session.ExpiresAt) {
-			count++
-		}
-	}
-
-	return count, nil
+	return s.sessions, nil
 }
 
 // Helper methods
 
 // copySession creates a deep copy of a session
-func (s *MemorySessionStore) copySession(session *aegis.Session) *aegis.Session {
-	copy := &aegis.Session{
-		ID:         session.ID,
+func (s *MemorySessionStore) copySession(session *Session) *Session {
+	copy := &Session{
+		Token:      session.Token,
 		UserID:     session.UserID,
 		CreatedAt:  session.CreatedAt,
 		ExpiresAt:  session.ExpiresAt,
 		LastAccess: session.LastAccess,
-		IPAddress:  session.IPAddress,
-		UserAgent:  session.UserAgent,
+		Metadata:   session.Metadata,
 	}
 
 	// Copy maps

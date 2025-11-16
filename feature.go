@@ -19,7 +19,7 @@ const (
 type Feature interface {
 	Name() FeatureName
 	Initialize(core *AegisCore) error
-	HTTPMount(aegis *Aegis, responder *Responder, config *HTTPConfig) HTTPMount
+	HTTPMount(httpCore *AegisHTTPCore) HTTPMount
 }
 
 // HTTPMount is how the plugin exposes its HTTP surface.

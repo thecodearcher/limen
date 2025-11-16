@@ -1,22 +1,22 @@
-package session
+package aegis
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/thecodearcher/aegis"
 )
 
 type SessionManager struct {
-	store      aegis.SessionStore
-	config     *aegis.SessionConfig
-	core       *aegis.AegisCore
-	strategies map[aegis.SessionStrategyType]aegis.SessionStrategy
+	store      SessionStore
+	config     *SessionConfig
+	core       *AegisCore
+	strategies map[SessionStrategyType]SessionStrategy
 }
 
-func NewSessionManager(core *aegis.AegisCore) *SessionManager {
+const temporaryAuthKey = "temp_auth"
+
+func newSessionManager(core *AegisCore) *SessionManager {
 	return &SessionManager{
 		store:  determineStore(core.Session, core),
 		config: core.Session,
@@ -24,18 +24,18 @@ func NewSessionManager(core *aegis.AegisCore) *SessionManager {
 	}
 }
 
-func (m *SessionManager) determineStrategy(config aegis.SessionStrategyType) aegis.SessionStrategy {
+func (m *SessionManager) determineStrategy(config SessionStrategyType) SessionStrategy {
 	switch config {
-	case aegis.SessionStrategyJWT:
+	case SessionStrategyJWT:
 		return NewJWTStrategy(m.core, m.config)
-	case aegis.SessionStrategyServerSide:
+	case SessionStrategyServerSide:
 		fallthrough
 	default:
 		return NewServerSideStrategy(m.store, m.config)
 	}
 }
 
-func (m *SessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *aegis.AuthenticationResult) (*aegis.SessionResult, error) {
+func (m *SessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult) (*SessionResult, error) {
 	strategy := m.determineStrategyForRequest(request)
 	temporaryAuth := len(authResult.PendingActions) > 0
 	result, err := strategy.Create(ctx, authResult.User, temporaryAuth)
@@ -47,18 +47,21 @@ func (m *SessionManager) CreateSession(ctx context.Context, request *http.Reques
 		return result, nil
 	}
 
-	session := &aegis.Session{
-		ID:         result.Token,
+	session := &Session{
+		Token:      result.Token,
 		UserID:     authResult.User.ID,
 		CreatedAt:  time.Now(),
 		ExpiresAt:  time.Now().Add(m.config.Duration),
 		LastAccess: time.Now(),
-		Metadata:   make(map[string]interface{}),
+		Metadata: map[string]any{
+			"ip_address": m.config.IPAddressExtractor(request),
+			"user_agent": m.config.UserAgentExtractor(request),
+		},
 	}
 
 	if temporaryAuth {
-		session.Metadata["temp_auth"] = true
-		session.ExpiresAt = time.Now().Add(time.Duration(5 * time.Minute))
+		session.Metadata[temporaryAuthKey] = true
+		session.ExpiresAt = time.Now().Add(m.config.TemporaryAuthDuration)
 	}
 
 	if err := m.store.Create(ctx, session); err != nil {
@@ -68,13 +71,28 @@ func (m *SessionManager) CreateSession(ctx context.Context, request *http.Reques
 	return result, nil
 }
 
-func (m *SessionManager) ValidateSession(ctx context.Context, request *http.Request) (*aegis.SessionValidateResult, error) {
+func (m *SessionManager) ValidateSession(ctx context.Context, request *http.Request) (*SessionValidateResult, error) {
 	strategy := m.determineStrategyForRequest(request)
 
-	return strategy.Validate(ctx, request)
+	validateResult, err := strategy.Validate(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := m.core.DBAction.FindUserByID(ctx, validateResult.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SessionValidateResult{
+		UserID:   validateResult.UserID,
+		User:     user,
+		Session:  validateResult.Session,
+		Metadata: validateResult.Metadata,
+	}, nil
 }
 
-func (m *SessionManager) RefreshSession(ctx context.Context, request *http.Request) (*aegis.SessionRefreshResult, error) {
+func (m *SessionManager) RefreshSession(ctx context.Context, request *http.Request) (*SessionRefreshResult, error) {
 	strategy := m.determineStrategyForRequest(request)
 	result, err := strategy.Refresh(ctx, request)
 	if err != nil {
@@ -82,8 +100,8 @@ func (m *SessionManager) RefreshSession(ctx context.Context, request *http.Reque
 	}
 
 	if result.ShouldStore {
-		session := &aegis.Session{
-			ID:         result.Token,
+		session := &Session{
+			Token:      result.Token,
 			UserID:     result.UserID,
 			CreatedAt:  time.Now(),
 			ExpiresAt:  time.Now().Add(m.config.Duration),
@@ -118,22 +136,22 @@ func (s *ServerSideStrategy) RevokeAll(ctx context.Context, userID string) error
 	return s.store.DeleteByUserID(ctx, userID)
 }
 
-func (m *SessionManager) determineTokenModeFromRequest(request *http.Request) aegis.SessionStrategyType {
+func (m *SessionManager) determineTokenModeFromRequest(request *http.Request) SessionStrategyType {
 	transport := request.Header.Get("X-Session-Transport")
 
 	switch transport {
 	case "jwt":
-		return aegis.SessionStrategyJWT
+		return SessionStrategyJWT
 	case "cookie":
-		return aegis.SessionStrategyServerSide
+		return SessionStrategyServerSide
 	case "hybrid":
-		return aegis.SessionStrategyHybrid
+		return SessionStrategyHybrid
 	default:
 		return ""
 	}
 }
 
-func (m *SessionManager) determineStrategyForRequest(request *http.Request) aegis.SessionStrategy {
+func (m *SessionManager) determineStrategyForRequest(request *http.Request) SessionStrategy {
 	strategy := m.determineTokenModeFromRequest(request)
 	if strategy == "" {
 		strategy = m.config.Strategy
@@ -142,15 +160,15 @@ func (m *SessionManager) determineStrategyForRequest(request *http.Request) aegi
 	return m.determineStrategy(strategy)
 }
 
-func determineStore(config *aegis.SessionConfig, core *aegis.AegisCore) aegis.SessionStore {
+func determineStore(config *SessionConfig, core *AegisCore) SessionStore {
 	if config.CustomStore != nil {
 		return config.CustomStore
 	}
 
 	switch config.StoreType {
-	case aegis.SessionStoreTypeDatabase:
+	case SessionStoreTypeDatabase:
 		return NewDatabaseSessionStore(core)
-	case aegis.SessionStoreTypeMemory:
+	case SessionStoreTypeMemory:
 		fallthrough
 	default:
 		return NewMemorySessionStore()

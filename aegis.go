@@ -9,17 +9,26 @@ import (
 )
 
 type Aegis struct {
-	EmailPassword EmailPasswordFeature
-	JWT           TokenGenerator
-	Plugins       map[FeatureName]Feature
-	config        *Config
+	EmailPassword  EmailPasswordFeature
+	JWT            TokenGenerator
+	config         *Config
+	sessionManager *SessionManager
 }
 
 type AegisCore struct {
-	DB      DatabaseAdapter
-	Schema  SchemaConfig
-	JWT     *JwtHandler
-	Session *SessionConfig
+	DB             DatabaseAdapter
+	DBAction       *DatabaseActionHelper
+	Schema         SchemaConfig
+	JWT            *JwtHandler
+	Session        *SessionConfig
+	SessionManager *SessionManager
+	Responder      *Responder
+}
+
+type AegisHTTPCore struct {
+	Responder    *Responder
+	AuthInstance *Aegis
+	Config       *HTTPConfig
 }
 
 func New(config *Config) (*Aegis, error) {
@@ -36,16 +45,26 @@ func New(config *Config) (*Aegis, error) {
 		return nil, fmt.Errorf("failed to create jwt handler: %w", err)
 	}
 
+	if config.Features == nil {
+		config.Features = []Feature{}
+	}
+
 	aegis := &Aegis{
 		JWT:    jwtHandler,
 		config: config,
 	}
+
 	core := &AegisCore{
 		DB:      config.Database,
 		Schema:  config.Schema,
 		JWT:     jwtHandler,
 		Session: config.Session,
 	}
+
+	sessionManager := newSessionManager(core)
+	core.DBAction = newCommonDatabaseActionsHelper(core)
+	core.SessionManager = sessionManager
+	aegis.sessionManager = sessionManager
 
 	for _, feature := range config.Features {
 		if err := feature.Initialize(core); err != nil {
@@ -72,11 +91,15 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 	}
 
 	config.basePath = httpx.NormalizeBasePath(config.basePath)
-
+	httpCore := &AegisHTTPCore{
+		Responder:    NewResponder(config),
+		AuthInstance: a,
+		Config:       config,
+	}
 	router := httpx.NewRouter(config.middleware...)
-	responder := NewResponder(config)
+
 	for _, feature := range a.config.Features {
-		mount := feature.HTTPMount(a, &responder, config)
+		mount := feature.HTTPMount(httpCore)
 		basePath := mount.DefaultBase
 		override := config.overrides[string(feature.Name())]
 		if override != nil && override.BasePath != "" {

@@ -1,4 +1,4 @@
-package session
+package aegis
 
 import (
 	"context"
@@ -6,16 +6,14 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/thecodearcher/aegis"
 )
 
 type ServerSideStrategy struct {
-	store  aegis.SessionStore
-	config *aegis.SessionConfig
+	store  SessionStore
+	config *SessionConfig
 }
 
-func NewServerSideStrategy(store aegis.SessionStore, config *aegis.SessionConfig) *ServerSideStrategy {
+func NewServerSideStrategy(store SessionStore, config *SessionConfig) *ServerSideStrategy {
 	return &ServerSideStrategy{
 		store:  store,
 		config: config,
@@ -23,38 +21,39 @@ func NewServerSideStrategy(store aegis.SessionStore, config *aegis.SessionConfig
 }
 
 func (s *ServerSideStrategy) GetName() string {
-	return string(aegis.SessionStrategyServerSide)
+	return string(SessionStrategyServerSide)
 }
 
 func (s *ServerSideStrategy) IsStateful() bool {
 	return true
 }
 
-func (s *ServerSideStrategy) Create(ctx context.Context, user *aegis.User, temporaryAuth bool) (*aegis.SessionResult, error) {
-	sessionID, err := GenerateCryptoSecureRandomString()
+func (s *ServerSideStrategy) Create(ctx context.Context, user *User, temporaryAuth bool) (*SessionResult, error) {
+	sessionToken, err := GenerateCryptoSecureRandomString()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
-	return &aegis.SessionResult{
-		Cookie: s.createCookie(sessionID, temporaryAuth),
+	return &SessionResult{
+		Token:  sessionToken,
+		Cookie: s.createCookie(sessionToken, temporaryAuth),
 	}, nil
 }
 
-func (s *ServerSideStrategy) Validate(ctx context.Context, request *http.Request) (*aegis.SessionValidateResult, error) {
-	sessionID, err := s.extractSessionID(request)
+func (s *ServerSideStrategy) Validate(ctx context.Context, request *http.Request) (*SessionValidateResult, error) {
+	sessionID, err := s.extractSessionToken(request)
 	if err != nil {
-		return nil, aegis.ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 
 	session, err := s.store.Get(ctx, sessionID)
 	if err != nil {
-		return nil, aegis.ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 
 	if session.IsExpired(s.config.IdleTimeout) {
 		s.store.Delete(ctx, sessionID)
-		return nil, aegis.ErrSessionExpired
+		return nil, ErrSessionExpired
 	}
 
 	if s.config.ActivityCheckInterval > 0 && time.Now().After(session.LastAccess.Add(s.config.ActivityCheckInterval)) {
@@ -65,32 +64,33 @@ func (s *ServerSideStrategy) Validate(ctx context.Context, request *http.Request
 		}
 	}
 
-	return &aegis.SessionValidateResult{
+	return &SessionValidateResult{
 		UserID:   session.UserID,
 		Metadata: session.Metadata,
+		Session:  session,
 	}, nil
 }
 
-func (s *ServerSideStrategy) Refresh(ctx context.Context, request *http.Request) (*aegis.SessionRefreshResult, error) {
-	sessionID, err := s.extractSessionID(request)
+func (s *ServerSideStrategy) Refresh(ctx context.Context, request *http.Request) (*SessionRefreshResult, error) {
+	sessionToken, err := s.extractSessionToken(request)
 	if err != nil {
-		return nil, aegis.ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 
-	session, err := s.store.Get(ctx, sessionID)
+	session, err := s.store.Get(ctx, sessionToken)
 	if err != nil {
-		return nil, aegis.ErrSessionNotFound
+		return nil, ErrSessionNotFound
 	}
 
 	if session.IsExpired(s.config.IdleTimeout) {
-		s.store.Delete(ctx, sessionID)
-		return nil, aegis.ErrSessionExpired
+		s.store.Delete(ctx, sessionToken)
+		return nil, ErrSessionExpired
 	}
 
 	if !session.ShouldRefresh(s.config.RefreshInterval) {
 		// Session doesn't need refresh yet, return as-is
-		return &aegis.SessionRefreshResult{
-			Token:       session.ID,
+		return &SessionRefreshResult{
+			Token:       session.Token,
 			UserID:      session.UserID,
 			ShouldStore: false,
 		}, nil
@@ -101,15 +101,15 @@ func (s *ServerSideStrategy) Refresh(ctx context.Context, request *http.Request)
 		return nil, fmt.Errorf("failed to generate new session ID: %w", err)
 	}
 
-	return &aegis.SessionRefreshResult{
+	return &SessionRefreshResult{
 		Token:          newSessionID,
 		UserID:         session.UserID,
 		ShouldStore:    true,
-		StaleSessionID: sessionID,
+		StaleSessionID: sessionToken,
 	}, nil
 }
 
-func (s *ServerSideStrategy) extractSessionID(request *http.Request) (string, error) {
+func (s *ServerSideStrategy) extractSessionToken(request *http.Request) (string, error) {
 	cookie, err := request.Cookie(s.config.CookieOptions.Name)
 	if err != nil {
 		return "", err
@@ -138,8 +138,7 @@ func (s *ServerSideStrategy) createCookie(token string, temporaryAuth bool) *htt
 	}
 
 	if temporaryAuth {
-		// we override the max age for temporary auth to 5 minutes
-		cookie.MaxAge = int(time.Duration(5 * time.Minute).Seconds())
+		cookie.MaxAge = int(s.config.TemporaryAuthDuration.Seconds())
 	}
 
 	return cookie

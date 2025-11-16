@@ -1,7 +1,22 @@
 package aegis
 
-import "net/http"
+import (
+	"net/http"
+)
 
-type API interface {
-	SignInWithEmailAndPassword(r *http.Request, w *http.ResponseWriter)
+type AegisSession struct {
+	User    *User
+	Session *Session
+	Raw     map[string]any
+}
+
+func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
+	sessionValidateResult, err := a.sessionManager.ValidateSession(req.Context(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &AegisSession{
+		User:    sessionValidateResult.User,
+		Session: sessionValidateResult.Session,
+	}, nil
 }
