@@ -2,8 +2,8 @@ package aegis
 
 import (
 	"fmt"
+	"net"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -84,7 +84,8 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
 			if ip := request.Header.Get("X-Real-IP"); ip != "" {
 				return ip
 			}
-			return strings.Split(request.RemoteAddr, ":")[0]
+			ip, _, _ := net.SplitHostPort(request.RemoteAddr)
+			return ip
 		},
 		UserAgentExtractor: func(request *http.Request) string {
 			return request.UserAgent()
