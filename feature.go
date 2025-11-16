@@ -60,7 +60,9 @@ type EmailPasswordFeature interface {
 	ResetPassword(ctx context.Context, token string, newPassword string) error
 
 	// UpdatePassword updates the password for the given user.
-	UpdatePassword(ctx context.Context, user *User, currentPassword string, newPassword string) error
+	//
+	// Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
+	UpdatePassword(ctx context.Context, user *User, currentPassword string, newPassword string, revokeOtherSessions bool) error
 
 	// RequestEmailVerification requests an email verification for the given user.
 	RequestEmailVerification(ctx context.Context, user *User) (*Verification, error)

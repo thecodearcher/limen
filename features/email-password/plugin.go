@@ -249,7 +249,10 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 	return nil
 }
 
-func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.User, currentPassword string, newPassword string) error {
+// UpdatePassword updates the password for the given user and revokes other sessions if requested.
+//
+// Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
+func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.User, currentPassword string, newPassword string, revokeOtherSessions bool) error {
 	if err := p.validatePassword(newPassword); err != nil {
 		return err
 	}
@@ -268,12 +271,18 @@ func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.U
 		return ErrInvalidCurrentPassword
 	}
 
-	err = p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
+	if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
 		aegis.Eq(p.userSchema.GetIDField(), user.ID),
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
+
+	if revokeOtherSessions {
+		if err := p.dbAction.DeleteSessionByUserID(ctx, user.ID); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

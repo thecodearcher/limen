@@ -84,7 +84,7 @@ func (rs Responder) Error(w http.ResponseWriter, r *http.Request, ae *AegisError
 }
 
 func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core *AegisCore, result *AuthenticationResult, sessionResult *SessionResult) error {
-	if sessionResult.Cookie != nil {
+	if sessionResult != nil && sessionResult.Cookie != nil {
 		http.SetCookie(w, sessionResult.Cookie)
 	}
 
@@ -101,11 +101,11 @@ func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core
 		"user":            core.Schema.User.Serialize(result.User),
 	}
 
-	if sessionResult.Token != "" {
+	if sessionResult != nil && sessionResult.Cookie == nil && sessionResult.Token != "" {
 		payload["token"] = sessionResult.Token
 	}
 
-	if sessionResult.RefreshToken != "" {
+	if sessionResult != nil && sessionResult.Cookie == nil && sessionResult.RefreshToken != "" {
 		payload["refresh_token"] = sessionResult.RefreshToken
 	}
 

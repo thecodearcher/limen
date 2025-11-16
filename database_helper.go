@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	reflect "reflect"
 	"strings"
 	"time"
 )
@@ -72,16 +73,17 @@ func ParseVerificationAction(action string) (string, string) {
 	return parts[0], parts[1]
 }
 
-func Update[T Model](ctx context.Context, core *AegisCore, schema Schema[T], data *T, conditions []Where) error {
+func Update[T Model](ctx context.Context, core *AegisCore, schema Schema[T], updatedData *T, conditions []Where) error {
 	payload := make(map[string]any)
-	maps.Copy(payload, schema.ToStorage(data))
 
+	maps.Copy(payload, schema.ToStorage(updatedData))
 	for key, value := range payload {
 		//we remove any empty strings or zeros to avoid accidental NULL updates
-		if value == "" || value == 0 || value == nil {
+		if reflect.ValueOf(value).IsZero() {
 			delete(payload, key)
 		}
 	}
+
 	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
 
 	return core.DB.Update(ctx, schema.GetTableName(), conditions, payload)

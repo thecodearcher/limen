@@ -34,8 +34,8 @@ func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data *User, addit
 	return nil
 }
 
-func (i *DatabaseActionHelper) UpdateUser(ctx context.Context, data *User, conditions []Where) error {
-	if err := Update(ctx, i.core, &i.core.Schema.User, data, conditions); err != nil {
+func (i *DatabaseActionHelper) UpdateUser(ctx context.Context, updatedUser *User, conditions []Where) error {
+	if err := Update(ctx, i.core, &i.core.Schema.User, updatedUser, conditions); err != nil {
 		return err
 	}
 	return nil

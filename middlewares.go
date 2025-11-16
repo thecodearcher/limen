@@ -10,7 +10,10 @@ import (
 type contextKeyActiveSession struct{}
 
 func GetCurrentSessionFromCtx(r *http.Request) (*AegisSession, error) {
-	return r.Context().Value(contextKeyActiveSession{}).(*AegisSession), nil
+	if currentSession, ok := r.Context().Value(contextKeyActiveSession{}).(*AegisSession); ok && currentSession != nil {
+		return currentSession, nil
+	}
+	return nil, ErrSessionNotFound
 }
 
 // MiddlewareRequireSession is a middleware that requires a session to be present in the request context.

@@ -34,6 +34,7 @@ func routes(e *emailPasswordAPI) *httpx.Router {
 	router.AddRoute(httpx.MethodPOST, "/email-verifications", e.RequestEmailVerification, "email-verifications")
 	router.AddRoute(httpx.MethodPOST, "/passwords/request-reset", e.RequestPasswordReset, "passwords-request-reset")
 	router.AddRoute(httpx.MethodPOST, "/passwords/reset", e.ResetPassword, "passwords-reset")
+	router.AddRoute(httpx.MethodPOST, "/passwords/change", e.ChangePassword, "passwords-change", e.httpCore.MiddlewareRequireSession())
 	return router
 }
 
@@ -199,4 +200,49 @@ func (p *emailPasswordAPI) ResetPassword(w http.ResponseWriter, r *http.Request)
 	}
 
 	p.responder.JSON(w, r, http.StatusOK, "password reset successfully")
+}
+
+func (p *emailPasswordAPI) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.
+			Required("current_password", data["current_password"]).
+			Required("new_password", data["new_password"])
+	})
+
+	if body == nil {
+		return
+	}
+
+	revokeOtherSessions := true
+	if value, ok := body["revoke_other_sessions"].(bool); ok {
+		revokeOtherSessions = value
+	}
+
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnauthorized, nil))
+		return
+	}
+
+	err = p.feature.UpdatePassword(r.Context(), session.User, body["current_password"].(string), body["new_password"].(string), revokeOtherSessions)
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		return
+	}
+
+	authResult := &aegis.AuthenticationResult{
+		User: session.User,
+	}
+
+	if revokeOtherSessions {
+		sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, authResult)
+		if err != nil {
+			p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
+			return
+		}
+		p.responder.SessionResponse(w, r, p.feature.core, authResult, sessionResult)
+		return
+	}
+
+	p.responder.SessionResponse(w, r, p.feature.core, authResult, nil)
 }
