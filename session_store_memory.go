@@ -149,13 +149,6 @@ func (s *MemorySessionStore) copySession(session *Session) *Session {
 	}
 
 	// Copy maps
-	if session.Data != nil {
-		copy.Data = make(map[string]interface{})
-		maps.Copy(copy.Data, session.Data)
-	} else {
-		copy.Data = make(map[string]interface{})
-	}
-
 	if session.Metadata != nil {
 		copy.Metadata = make(map[string]interface{})
 		maps.Copy(copy.Metadata, session.Metadata)
