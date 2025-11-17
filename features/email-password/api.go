@@ -35,6 +35,7 @@ func routes(e *emailPasswordAPI) *httpx.Router {
 	router.AddRoute(httpx.MethodPOST, "/passwords/request-reset", e.RequestPasswordReset, "passwords-request-reset")
 	router.AddRoute(httpx.MethodPOST, "/passwords/reset", e.ResetPassword, "passwords-reset")
 	router.AddRoute(httpx.MethodPOST, "/passwords/change", e.ChangePassword, "passwords-change", e.httpCore.MiddlewareRequireSession())
+	router.AddRoute(httpx.MethodPOST, "/signout", e.SignOut, "signout", e.httpCore.MiddlewareRequireSession())
 	return router
 }
 
@@ -245,4 +246,20 @@ func (p *emailPasswordAPI) ChangePassword(w http.ResponseWriter, r *http.Request
 	}
 
 	p.responder.SessionResponse(w, r, p.feature.core, authResult, nil)
+}
+
+func (p *emailPasswordAPI) SignOut(w http.ResponseWriter, r *http.Request) {
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnauthorized, nil))
+		return
+	}
+
+	err = p.feature.SignOut(r.Context(), session.Session.Token)
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		return
+	}
+
+	p.responder.JSON(w, r, http.StatusOK, "OK")
 }

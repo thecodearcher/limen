@@ -317,6 +317,10 @@ func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, use
 	return verification, nil
 }
 
+func (p *emailPasswordFeature) SignOut(ctx context.Context, sessionToken string) error {
+	return p.dbAction.DeleteSessionByToken(ctx, sessionToken)
+}
+
 func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) error {
 	verification, err := p.dbAction.FindValidVerificationByToken(ctx, token)
 	if err != nil {
