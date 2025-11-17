@@ -8,21 +8,16 @@ import (
 type Session struct {
 	Token      string
 	UserID     any
-	Data       map[string]interface{}
 	CreatedAt  time.Time
 	ExpiresAt  time.Time
 	LastAccess time.Time
-	Metadata   map[string]interface{}
+	Metadata   map[string]any
 	raw        map[string]any
 }
 
 // Raw returns the session raw data as returned from the database
 func (s Session) Raw() map[string]any {
 	return s.raw
-}
-
-func (s Session) TableName() string {
-	return string(SessionSchemaTableName)
 }
 
 // IsExpired checks if the session has expired
@@ -49,8 +44,6 @@ func (s *Session) Touch() {
 type SessionSchema struct {
 	// name of the table in the database
 	TableName TableName
-	// field name for the soft delete field - if not set, the soft delete field will not be used
-	SoftDeleteField SchemaField
 	// A function to return a map of additional fields to be added to the schema when creating a record
 	AdditionalFields AdditionalFieldsFunc
 	// mapping of the session schema to the database columns
@@ -74,8 +67,9 @@ func (s *SessionSchema) GetTableName() TableName {
 	return s.TableName
 }
 
-func (s *SessionSchema) GetSoftDeleteField() SchemaField {
-	return s.SoftDeleteField
+func (s *SessionSchema) GetSoftDeleteField() string {
+	// sessions should not have a soft delete field
+	return ""
 }
 
 func (s *SessionSchema) GetIDField() string {
@@ -111,7 +105,7 @@ func (s *SessionSchema) GetAdditionalFields() AdditionalFieldsFunc {
 }
 
 func (s *SessionSchema) FromStorage(data map[string]any) *Session {
-	session := &Session{
+	return &Session{
 		Token:      data[s.GetTokenField()].(string),
 		UserID:     data[s.GetUserIDField()],
 		CreatedAt:  data[s.GetCreatedAtField()].(time.Time),
@@ -119,8 +113,6 @@ func (s *SessionSchema) FromStorage(data map[string]any) *Session {
 		LastAccess: data[s.GetLastAccessField()].(time.Time),
 		raw:        data,
 	}
-
-	return session
 }
 
 func (s *SessionSchema) ToStorage(data *Session) map[string]any {

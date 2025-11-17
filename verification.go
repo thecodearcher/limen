@@ -11,10 +11,6 @@ type Verification struct {
 	raw       map[string]any
 }
 
-func (v Verification) TableName() string {
-	return string(VerificationSchemaTableName)
-}
-
 func (v Verification) Raw() map[string]any {
 	return v.raw
 }
@@ -22,74 +18,78 @@ func (v Verification) Raw() map[string]any {
 type VerificationSchema struct {
 	// name of the table in the database
 	TableName TableName
-	Fields    VerificationFields
+	// mapping of the verification schema to the database columns
+	Fields VerificationFields
+	// A function to return a map of additional fields to be added to the schema when creating a record
+	AdditionalFields AdditionalFieldsFunc
 }
 
 type VerificationFields struct {
-	ID        string
-	Subject   string // (email_verification, password_reset, etc.):${email,id}
-	Value     string // token/code
-	ExpiresAt string
-	CreatedAt string
-	UpdatedAt string
+	ID              string
+	Subject         string // ${action}:${identifier} (e.g. email_verification:john.doe@example.com)
+	Value           string // token/code
+	ExpiresAt       string
+	CreatedAt       string
+	UpdatedAt       string
+	SoftDeleteField string
 }
 
-func (c *VerificationSchema) GetTableName() TableName {
-	if c.TableName == "" {
+func (v *VerificationSchema) GetTableName() TableName {
+	if v.TableName == "" {
 		return VerificationSchemaTableName
 	}
-	return c.TableName
+	return v.TableName
 }
 
-func (c *VerificationSchema) GetAdditionalFields() AdditionalFieldsFunc {
-	return nil
+func (v *VerificationSchema) GetAdditionalFields() AdditionalFieldsFunc {
+	return v.AdditionalFields
 }
 
-func (c *VerificationSchema) GetIDField() string {
-	return getFieldOrDefault(c.Fields.ID, SchemaIDField)
+func (v *VerificationSchema) GetIDField() string {
+	return getFieldOrDefault(v.Fields.ID, SchemaIDField)
 }
 
-func (c *VerificationSchema) GetSubjectField() string {
-	return getFieldOrDefault(c.Fields.Subject, VerificationSchemaSubjectField)
+func (v *VerificationSchema) GetSubjectField() string {
+	return getFieldOrDefault(v.Fields.Subject, VerificationSchemaSubjectField)
 }
 
-func (c *VerificationSchema) GetValueField() string {
-	return getFieldOrDefault(c.Fields.Value, VerificationSchemaValueField)
+func (v *VerificationSchema) GetValueField() string {
+	return getFieldOrDefault(v.Fields.Value, VerificationSchemaValueField)
 }
 
-func (c *VerificationSchema) GetExpiresAtField() string {
-	return getFieldOrDefault(c.Fields.ExpiresAt, VerificationSchemaExpiresAtField)
+func (v *VerificationSchema) GetExpiresAtField() string {
+	return getFieldOrDefault(v.Fields.ExpiresAt, VerificationSchemaExpiresAtField)
 }
 
-func (c *VerificationSchema) GetCreatedAtField() string {
-	return getFieldOrDefault(c.Fields.CreatedAt, VerificationSchemaCreatedAtField)
+func (v *VerificationSchema) GetCreatedAtField() string {
+	return getFieldOrDefault(v.Fields.CreatedAt, VerificationSchemaCreatedAtField)
 }
 
-func (c *VerificationSchema) GetUpdatedAtField() string {
-	return getFieldOrDefault(c.Fields.UpdatedAt, VerificationSchemaUpdatedAtField)
+func (v *VerificationSchema) GetUpdatedAtField() string {
+	return getFieldOrDefault(v.Fields.UpdatedAt, VerificationSchemaUpdatedAtField)
 }
 
-func (c *VerificationSchema) GetSoftDeleteField() SchemaField {
-	return ""
+func (v *VerificationSchema) GetSoftDeleteField() string {
+	return getFieldOrDefault(v.Fields.SoftDeleteField, "")
 }
 
-func (c *VerificationSchema) FromStorage(data map[string]any) *Verification {
+func (v *VerificationSchema) FromStorage(data map[string]any) *Verification {
 	return &Verification{
-		Subject:   data[c.GetSubjectField()].(string),
-		Value:     data[c.GetValueField()].(string),
-		ExpiresAt: data[c.GetExpiresAtField()].(time.Time),
-		CreatedAt: data[c.GetCreatedAtField()].(time.Time),
-		UpdatedAt: data[c.GetUpdatedAtField()].(time.Time),
+		Subject:   data[v.GetSubjectField()].(string),
+		Value:     data[v.GetValueField()].(string),
+		ExpiresAt: data[v.GetExpiresAtField()].(time.Time),
+		CreatedAt: data[v.GetCreatedAtField()].(time.Time),
+		UpdatedAt: data[v.GetUpdatedAtField()].(time.Time),
 		raw:       data,
 	}
 }
 
-func (c *VerificationSchema) ToStorage(data *Verification) map[string]any {
+func (v *VerificationSchema) ToStorage(data *Verification) map[string]any {
 	return map[string]any{
-		c.GetSubjectField():   data.Subject,
-		c.GetValueField():     data.Value,
-		c.GetExpiresAtField(): data.ExpiresAt,
-		c.GetCreatedAtField(): data.CreatedAt,
-		c.GetUpdatedAtField(): data.UpdatedAt,
+		v.GetSubjectField():   data.Subject,
+		v.GetValueField():     data.Value,
+		v.GetExpiresAtField(): data.ExpiresAt,
+		v.GetCreatedAtField(): data.CreatedAt,
+		v.GetUpdatedAtField(): data.UpdatedAt,
 	}
 }

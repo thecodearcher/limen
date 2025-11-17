@@ -24,8 +24,6 @@ func (c User) TableName() string {
 type UserSchema struct {
 	// name of the table in the database
 	TableName TableName
-	// field name for the soft delete field - if not set, the soft delete field will not be used
-	SoftDeleteField SchemaField
 	// A function to return a map of additional fields to be added to the schema when creating a record. e.g:
 	//  func(ctx context.Context) map[string]any {
 	// 		return map[string]any{
@@ -45,67 +43,66 @@ type UserSchema struct {
 
 type UserFields struct {
 	ID              string
-	FirstName       string
-	LastName        string
 	Email           string
 	Password        string
 	EmailVerifiedAt string
+	SoftDeleteField string
 }
 
-func (c *UserSchema) GetTableName() TableName {
-	if c.TableName == "" {
+func (u *UserSchema) GetTableName() TableName {
+	if u.TableName == "" {
 		return UserSchemaTableName
 	}
-	return c.TableName
+	return u.TableName
 }
 
-func (c *UserSchema) GetSoftDeleteField() SchemaField {
-	return c.SoftDeleteField
+func (u *UserSchema) GetSoftDeleteField() string {
+	return getFieldOrDefault(u.Fields.SoftDeleteField, "")
 }
 
-func (c *UserSchema) GetIDField() string {
-	return getFieldOrDefault(c.Fields.ID, SchemaIDField)
+func (u *UserSchema) GetIDField() string {
+	return getFieldOrDefault(u.Fields.ID, SchemaIDField)
 }
 
-func (c *UserSchema) GetEmailField() string {
-	return getFieldOrDefault(c.Fields.Email, UserSchemaEmailField)
+func (u *UserSchema) GetEmailField() string {
+	return getFieldOrDefault(u.Fields.Email, UserSchemaEmailField)
 }
 
-func (c *UserSchema) GetPasswordField() string {
-	return getFieldOrDefault(c.Fields.Password, UserSchemaPasswordField)
+func (u *UserSchema) GetPasswordField() string {
+	return getFieldOrDefault(u.Fields.Password, UserSchemaPasswordField)
 }
 
-func (c *UserSchema) GetEmailVerifiedAtField() string {
-	return getFieldOrDefault(c.Fields.EmailVerifiedAt, UserSchemaEmailVerifiedAtField)
+func (u *UserSchema) GetEmailVerifiedAtField() string {
+	return getFieldOrDefault(u.Fields.EmailVerifiedAt, UserSchemaEmailVerifiedAtField)
 }
 
-func (c *UserSchema) GetAdditionalFields() AdditionalFieldsFunc {
-	return c.AdditionalFields
+func (u *UserSchema) GetAdditionalFields() AdditionalFieldsFunc {
+	return u.AdditionalFields
 }
 
-func (c *UserSchema) FromStorage(data map[string]any) *User {
+func (u *UserSchema) FromStorage(data map[string]any) *User {
 	return &User{
-		ID:              data[c.GetIDField()],
-		Email:           data[c.GetEmailField()].(string),
-		Password:        data[c.GetPasswordField()].(string),
-		EmailVerifiedAt: getNullableValue[time.Time](data[c.GetEmailVerifiedAtField()]),
+		ID:              data[u.GetIDField()],
+		Email:           data[u.GetEmailField()].(string),
+		Password:        data[u.GetPasswordField()].(string),
+		EmailVerifiedAt: getNullableValue[time.Time](data[u.GetEmailVerifiedAtField()]),
 		raw:             data,
 	}
 }
 
-func (c *UserSchema) ToStorage(data *User) map[string]any {
+func (u *UserSchema) ToStorage(data *User) map[string]any {
 	return map[string]any{
-		c.GetEmailField():           data.Email,
-		c.GetPasswordField():        data.Password,
-		c.GetEmailVerifiedAtField(): data.EmailVerifiedAt,
+		u.GetEmailField():           data.Email,
+		u.GetPasswordField():        data.Password,
+		u.GetEmailVerifiedAtField(): data.EmailVerifiedAt,
 	}
 }
 
-func (c *UserSchema) Serialize(data *User) map[string]any {
-	if c.Serializer != nil {
-		return c.Serializer(data)
+func (u *UserSchema) Serialize(data *User) map[string]any {
+	if u.Serializer != nil {
+		return u.Serializer(data)
 	}
 	raw := data.Raw()
-	delete(raw, c.GetPasswordField())
+	delete(raw, u.GetPasswordField())
 	return raw
 }

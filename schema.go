@@ -83,13 +83,11 @@ type Schema[T Model] interface {
 	GetTableName() TableName
 	ToStorage(data *T) map[string]any
 	FromStorage(data map[string]any) *T
-	GetSoftDeleteField() SchemaField
+	GetSoftDeleteField() string
 	GetAdditionalFields() AdditionalFieldsFunc
 }
 
 type Model interface {
-	// Name returns the table name of the model
-	TableName() string
 	// Raw returns the model raw data as returned from the database
 	Raw() map[string]any
 }

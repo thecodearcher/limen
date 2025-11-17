@@ -90,15 +90,10 @@ func Update[T Model](ctx context.Context, core *AegisCore, schema Schema[T], upd
 }
 
 func applySoftDeleteFilter[T Model](ctx context.Context, core *AegisCore, schema Schema[T], conditions []Where) []Where {
-	softDeleteField := core.Schema.SoftDeleteField
-	if schema.GetSoftDeleteField() != "" {
-		softDeleteField = string(schema.GetSoftDeleteField())
-	}
-
+	softDeleteField := schema.GetSoftDeleteField()
 	if softDeleteField != "" {
 		conditions = append(conditions, IsNull(softDeleteField))
 	}
-
 	return conditions
 }
 

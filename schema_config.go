@@ -1,9 +1,6 @@
 package aegis
 
 type SchemaConfig struct {
-	// global field name for the soft delete field - if not set, the soft delete field will not be used
-	SoftDeleteField string
-
 	// A function to return a map of global fields to be added to all schemas when creating a record. e.g:
 	//  func(ctx context.Context) map[string]any {
 	// 		return map[string]any{
