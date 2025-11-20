@@ -74,6 +74,7 @@ type Router struct {
 	// Exact fast path for static routes: map["METHOD PATH"]handler
 	exactRoutes      map[string]http.HandlerFunc
 	globalMiddleware []Middleware
+	hooks            *Hooks
 }
 
 // Route represents a single route with its handler and metadata
@@ -89,13 +90,20 @@ type Route struct {
 // RouteID is a unique identifier for each route
 type RouteID string
 
+// RouterGroup represents a group of routes with a common prefix and middleware.
+// Routes added to a group automatically have the prefix prepended and group middleware applied.
+type RouterGroup struct {
+	router     *Router
+	prefix     string
+	middleware []Middleware
+}
+
 // NewRouter creates a new radix tree router instance
 func NewRouter(globalMiddleware ...Middleware) *Router {
 	return &Router{
 		root: &RadixNode{
 			children: make(map[string]*RadixNode),
 		},
-		exactRoutes:      make(map[string]http.HandlerFunc),
 		globalMiddleware: globalMiddleware,
 	}
 }
@@ -104,27 +112,27 @@ func NewRouter(globalMiddleware ...Middleware) *Router {
 // Middleware is applied in order: global middleware first, then route-specific middleware
 func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, middleware ...Middleware) {
 	route := &Route{
-		Method:  method,
-		Pattern: pattern,
-		Handler: handler,
-		RouteID: routeID,
-		// Description: description,
+		Method:     method,
+		Pattern:    pattern,
+		Handler:    handler,
+		RouteID:    routeID,
 		Middleware: middleware,
 	}
 
-	// Apply middleware to create wrapped handler
-	wrappedHandler := r.wrapHandler(handler, middleware)
-
-	// Check if this is a static route (no parameters)
-	if !strings.Contains(pattern, ":") && method != MethodANY {
-		// Add to exact fast path with middleware applied
-		key := string(method) + " " + pattern
-		r.exactRoutes[key] = wrappedHandler
-	}
-
-	// Split path into segments, removing empty segments
 	segments := r.splitPath(pattern)
 	r.insertRoute(route, segments)
+}
+
+// Group creates a new router group with the given prefix and middleware.
+// All routes added to the group will have the prefix prepended to their paths
+// and the group middleware applied before any route-specific middleware.
+func (r *Router) Group(prefix string, middleware ...Middleware) *RouterGroup {
+	prefix = NormalizeBasePath(prefix)
+	return &RouterGroup{
+		router:     r,
+		prefix:     prefix,
+		middleware: middleware,
+	}
 }
 
 // insertRoute iteratively inserts a route into the radix tree
@@ -190,24 +198,7 @@ func (r *Router) handleStaticSegment(current *RadixNode, segment string) *RadixN
 // ServeHTTP implements http.Handler
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	fmt.Printf("ServeHTTP called\n %s %s\n", req.Method, req.URL.Path)
-	fmt.Printf("Exact routes: %v\n", r.exactRoutes)
-	// Try exact fast path first (O(1) for static routes)
-	key := req.Method + " " + req.URL.Path
-	if handler, exists := r.exactRoutes[key]; exists {
-		handler(w, req)
-		return
-	}
 
-	// Try HEAD -> GET fallback for exact routes
-	if req.Method == "HEAD" {
-		key = "GET " + req.URL.Path
-		if handler, exists := r.exactRoutes[key]; exists {
-			handler(w, req)
-			return
-		}
-	}
-
-	// Try deterministic pattern matching (no backtracking)
 	segments := r.splitPath(req.URL.Path)
 	route, params := r.matchRoute(segments, HTTPMethod(req.Method))
 	if route != nil {
@@ -215,74 +206,54 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Try HEAD -> GET fallback for pattern routes
-	if req.Method == "HEAD" {
-		route, params = r.matchRoute(segments, MethodGET)
-		if route != nil {
-			r.handleRoute(w, req, route, params)
-			return
-		}
-	}
-
-	// 404 Not Found
 	http.NotFound(w, req)
 }
 
-// Mount attaches a whole handler subtree under a fixed prefix using StripPrefix.
-// No wildcard support needed; the mounted handler receives paths starting at its own root.
-func (rt *Router) Mount(prefix string, h http.Handler, perMountMW []Middleware, hooks *Hooks) {
-	prefix = NormalizeBasePath(prefix)
+// wrapHandler applies global middleware, route-specific middleware to a handler
+// and applies hooks to the request and response and this is where the request body is parsed and stored in the request context
+func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware, route *Route) http.HandlerFunc {
+	// Combine global and route middleware (global first, then route-specific)
+	allMiddleware := append(r.globalMiddleware, routeMiddleware...)
+	wrapped := r.applyMiddleware(allMiddleware, http.HandlerFunc(handler))
 
-	h = applyMiddleware(append(rt.globalMiddleware, perMountMW...), h)
-	stripped := http.StripPrefix(prefix, h)
-
-	rt.AddRoute(MethodANY, prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, rw *http.Request) {
 		hookCtx := &HookContext{
-			Context:  r.Context(),
-			Request:  r,
-			Response: w,
-			Method:   r.Method,
-			Path:     r.URL.Path,
+			Context:      rw.Context(),
+			Request:      rw,
+			Response:     w,
+			Method:       rw.Method,
+			Path:         rw.URL.Path,
+			RouteID:      string(route.RouteID),
+			RoutePattern: route.Pattern,
 		}
 
-		if hooks != nil && hooks.Before != nil {
-			if !hooks.Before(hookCtx) {
+		if r.hooks != nil && r.hooks.Before != nil {
+			if !r.hooks.Before(hookCtx) {
 				return
 			}
 
 			if hookCtx.bodyModified {
 				bodyBytes, _ := json.Marshal(hookCtx.modifiedData)
-				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-				r = r.WithContext(context.WithValue(r.Context(), bodyContextKey{}, hookCtx.modifiedData))
+				// restore the body for future handlers that need to read it
+				rw.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+				rw = rw.WithContext(context.WithValue(rw.Context(), bodyContextKey{}, hookCtx.modifiedData))
 			}
 		}
 
-		r, _ = parseAndStoreBody(r) // parse the body and store it in the request context
+		rw, _ = parseAndStoreBody(rw)
 
-		fmt.Printf("Mounted handler called\n %s %s\n %s\n", r.Method, r.URL.Path, prefix)
-		if !strings.HasPrefix(r.URL.Path, prefix) {
-			http.NotFound(w, r)
-			return
-		}
-		rw := &responseWriter{
+		responseWriter := &responseWriter{
 			ResponseWriter: w,
 			wroteHeader:    false,
 		}
-		fmt.Printf("Stripped handler called\n %s %s\n %s\n", r.Method, r.URL.Path, prefix)
-		stripped.ServeHTTP(rw, r)
-		if hooks != nil && hooks.After != nil {
-			hookCtx.StatusCode = rw.statusCode
-			hooks.After(hookCtx)
-		}
-	}), "")
-}
 
-// wrapHandler applies global middleware and route-specific middleware to a handler
-func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware) http.HandlerFunc {
-	// Combine global and route middleware (global first, then route-specific)
-	allMiddleware := append(r.globalMiddleware, routeMiddleware...)
-	wrapped := applyMiddleware(allMiddleware, http.HandlerFunc(handler))
-	return wrapped.ServeHTTP
+		wrapped.ServeHTTP(responseWriter, rw)
+
+		if r.hooks != nil && r.hooks.After != nil {
+			hookCtx.StatusCode = responseWriter.statusCode
+			r.hooks.After(hookCtx)
+		}
+	}
 }
 
 // handleRoute handles a matched route with parameters
@@ -294,7 +265,7 @@ func (r *Router) handleRoute(w http.ResponseWriter, req *http.Request, route *Ro
 	}
 
 	// Apply middleware (global + route-specific) to the handler
-	wrappedHandler := r.wrapHandler(route.Handler, route.Middleware)
+	wrappedHandler := r.wrapHandler(route.Handler, route.Middleware, route)
 	wrappedHandler(w, req)
 }
 
@@ -374,7 +345,16 @@ func (r *Router) splitPath(pathStr string) []string {
 	return strings.Split(pathStr, "/")
 }
 
-func applyMiddleware(mws []Middleware, h http.Handler) http.Handler {
+// AddRoute adds a route to the group with the group's prefix prepended.
+// Middleware is applied in order: router global middleware, group middleware, then route-specific middleware.
+func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, middleware ...Middleware) {
+	// Combine group middleware with route-specific middleware
+	allMiddleware := append(g.middleware, middleware...)
+	fullPattern := g.prefix + NormalizeBasePath(pattern)
+	g.router.AddRoute(method, fullPattern, handler, routeID, allMiddleware...)
+}
+
+func (r *Router) applyMiddleware(mws []Middleware, h http.Handler) http.Handler {
 	for i := len(mws) - 1; i >= 0; i-- {
 		if mw := mws[i]; mw != nil {
 			h = mw(h)

@@ -87,54 +87,7 @@ func main() {
 		log.Fatalf("Failed to create aegis: %v", err)
 	}
 
-	fmt.Printf("%+v\n", auth)
-	fmt.Println("Aegis instance created successfully!")
-	uuid := uuid.New().String()
-	fmt.Printf("UUID: %s\n", uuid)
-	// response, err := auth.EmailPassword.SignInWithEmailAndPassword(context.Background(), "johndoe4@gmail.com", "SecurePassword123@")
-	// if err != nil {
-	// 	log.Fatalf("Failed to sign in: %v", err)
-	// }
-
-	// fmt.Printf("User: %+v\n", response.User)
-
-	// verification, err := auth.EmailPassword.RequestPasswordReset(context.Background(), "johndoe4@gmail.com")
-	// if err != nil {
-	// 	log.Fatalf("Failed to request password reset: %v", err)
-	// }
-
-	// err = auth.EmailPassword.ResetPassword(context.Background(), verification.Value, "SecurePassword123@")
-	// if err != nil {
-	// 	log.Fatalf("Failed to reset password: %v", err)
-	// }
-
-	// fmt.Printf("Password reset: %+v\n", verification)
-	// err = auth.EmailPassword.UpdatePassword(context.Background(), &aegis.User{
-	// 	ID:       "1",
-	// 	Password: "$argon2id$v=19$m=65536,t=3,p=4$kKVedyD9X35xm/1tI53dQQ$jmVCO+QvCrFG+i6rt4rU0VxwTtm1aF/FsLX5bnqfcbE"},
-	// 	"SecurePassword123@",
-	// 	"SecurePassword123AndMore@",
-	// )
-	// if err != nil {
-	// 	log.Fatalf("Failed to update password: %v", err)
-	// }
-
-	// verification, err := auth.EmailPassword.RequestEmailVerification(context.Background(), &aegis.User{
-	// 	ID:    "1",
-	// 	Email: "johndoe42@gmail.com",
-	// })
-
-	// if err != nil {
-	// 	log.Fatalf("Failed to request email verification: %v", err)
-	// }
-
-	// err = auth.EmailPassword.VerifyEmail(context.Background(), verification.Value)
-	// if err != nil {
-	// 	log.Fatalf("Failed to verify email: %v", err)
-	// }
-
-	handler := auth.Handler(aegis.WithHTTPBasePath("/api/auth")) // aegis.WithHTTPHooks(&httpx.Hooks{
-	// 	Before: httpx.HookFunc(func(ctx *httpx.HookContext) {
+	handler := auth.Handler(aegis.WithHTTPBasePath("/api/auth"))
 	// 		fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
 	// 		fmt.Printf("Before request body: %+v\n", ctx.BodyData)
 	// 	}),
@@ -146,12 +99,12 @@ func main() {
 
 	r := gin.Default()
 	r.GET("/", func(c *gin.Context) {
-		session, err := auth.GetSession(c.Request)
-		if err != nil {
-			c.JSON(500, gin.H{"message": "Failed to get session"})
-			return
-		}
-		fmt.Printf("Session: %+v\n", session)
+		// session, err := auth.GetSession(c.Request)
+		// if err != nil {
+		// 	c.JSON(500, gin.H{"message": "Failed to get session"})
+		// 	return
+		// }
+		// fmt.Printf("Session: %+v\n", session)
 		c.JSON(200, gin.H{"message": "Hello, World!"})
 	})
 

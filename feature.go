@@ -17,18 +17,24 @@ const (
 )
 
 type Feature interface {
+	// Unique identifier for the feature.
 	Name() FeatureName
+	// Initialize initializes the feature.
 	Initialize(core *AegisCore) error
-	HTTPMount(httpCore *AegisHTTPCore) HTTPMount
+	// PluginHTTPConfig returns the configuration for the plugin's HTTP surface.
+	PluginHTTPConfig() PluginHTTPConfig
+	// RegisterRoutes registers routes for the plugin.
+	RegisterRoutes(routeBuilder *RouteBuilder)
 }
 
-// HTTPMount is how the plugin exposes its HTTP surface.
-type HTTPMount struct {
-	Handler *httpx.Router
-
-	// Your default mount base. The end user can override this in Aegis config.
-	// Example: "/magic" => routes live under /auth/magic/* by default.
-	DefaultBase string
+// PluginHTTPConfig is the configuration for the plugin's HTTP surface.
+//
+// Note: The base path is relative to the Aegis base path and can be overridden by the end user.
+type PluginHTTPConfig struct {
+	// The base path where the plugin's routes will be mounted.
+	BasePath string
+	// Middleware to be applied to the plugin's routes.
+	Middleware []httpx.Middleware
 }
 
 type EmailPasswordFeature interface {

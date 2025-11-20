@@ -13,6 +13,7 @@ type Aegis struct {
 	JWT            TokenGenerator
 	config         *Config
 	sessionManager *SessionManager
+	core           *AegisCore
 }
 
 type AegisCore struct {
@@ -65,6 +66,7 @@ func New(config *Config) (*Aegis, error) {
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
 	aegis.sessionManager = sessionManager
+	aegis.core = core
 
 	for _, feature := range config.Features {
 		if err := feature.Initialize(core); err != nil {
@@ -81,38 +83,54 @@ func New(config *Config) (*Aegis, error) {
 }
 
 func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
-	config := &HTTPConfig{}
-	for _, opt := range opts {
-		opt(config)
-	}
-
-	if config.basePath == "" {
-		config.basePath = "/auth"
-	}
+	config := NewDefaultHTTPConfig(opts...)
 
 	config.basePath = httpx.NormalizeBasePath(config.basePath)
+	router := httpx.NewRouter(config.middleware...)
+
 	httpCore := &AegisHTTPCore{
 		Responder:    NewResponder(config),
 		AuthInstance: a,
 		Config:       config,
 	}
-	router := httpx.NewRouter(config.middleware...)
+
+	registerBaseRoutes(router, httpCore, a.core, config.basePath)
 
 	for _, feature := range a.config.Features {
-		mount := feature.HTTPMount(httpCore)
-		basePath := mount.DefaultBase
+		featureConfig := feature.PluginHTTPConfig()
+		basePath := featureConfig.BasePath
 		override := config.overrides[string(feature.Name())]
 		if override != nil && override.BasePath != "" {
-			basePath = httpx.NormalizeBasePath(override.BasePath)
+			basePath = override.BasePath
 		}
 
 		normalizedBasePath := config.basePath + httpx.NormalizeBasePath(basePath)
-		if override != nil && len(override.Middleware) > 0 {
-			router.Mount(normalizedBasePath, mount.Handler, override.Middleware, config.hooks)
-		} else {
-			router.Mount(normalizedBasePath, mount.Handler, []httpx.Middleware{}, config.hooks)
+		routeBuilder := &RouteBuilder{
+			group:         router.Group(normalizedBasePath, featureConfig.Middleware...),
+			AegisHTTPCore: httpCore,
 		}
+		feature.RegisterRoutes(routeBuilder)
 	}
 
 	return router
+}
+
+func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
+	sessionValidateResult, err := a.sessionManager.ValidateSession(req.Context(), req)
+	if err != nil {
+		return nil, err
+	}
+	return &AegisSession{
+		User:    sessionValidateResult.User,
+		Session: sessionValidateResult.Session,
+	}, nil
+}
+
+func registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore, core *AegisCore, basePath string) {
+	routeBuilder := &RouteBuilder{
+		group:         router.Group(basePath),
+		AegisHTTPCore: httpCore,
+	}
+	api := NewAegisAPI(httpCore, core)
+	api.RegisterRoutes(routeBuilder)
 }

@@ -122,18 +122,20 @@ func (m *SessionManager) RefreshSession(ctx context.Context, request *http.Reque
 }
 
 // Revoke revokes a session
-func (s *ServerSideStrategy) Revoke(ctx context.Context, sessionID string) error {
-	if !s.IsStateful() {
+func (m *SessionManager) Revoke(ctx context.Context, request *http.Request, sessionID string) error {
+	strategy := m.determineStrategyForRequest(request)
+	if !strategy.IsStateful() {
 		return fmt.Errorf("cannot revoke stateless session")
 	}
-	return s.store.Delete(ctx, sessionID)
+	return m.store.Delete(ctx, sessionID)
 }
 
-func (s *ServerSideStrategy) RevokeAll(ctx context.Context, userID string) error {
-	if !s.IsStateful() {
+func (m *SessionManager) RevokeAll(ctx context.Context, request *http.Request, userID string) error {
+	strategy := m.determineStrategyForRequest(request)
+	if !strategy.IsStateful() {
 		return fmt.Errorf("cannot revoke stateless session")
 	}
-	return s.store.DeleteByUserID(ctx, userID)
+	return m.store.DeleteByUserID(ctx, userID)
 }
 
 func (m *SessionManager) determineTokenModeFromRequest(request *http.Request) SessionStrategyType {

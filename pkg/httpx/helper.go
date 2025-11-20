@@ -16,6 +16,8 @@ func NormalizeBasePath(basePath string) string {
 	if !strings.HasPrefix(basePath, "/") {
 		basePath = "/" + basePath
 	}
+
+	basePath = strings.TrimSuffix(basePath, "/")
 	return basePath
 }
 

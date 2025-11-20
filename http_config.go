@@ -15,8 +15,8 @@ type HTTPConfig struct {
 	basePath string
 	// overrides for specific plugins
 	overrides map[string]*PluginHTTPOverride
-	// Paths to be disabled by their ID
-	disabledPathIDs []string
+	// Paths to be disabled by their ID or pattern
+	disabledPaths []string
 	// Response envelope configuration
 	responseEnvelope *responseEnvelopeConfig
 	// SessionTransformer customizes the session response payload before it's sent to the client.
@@ -54,6 +54,22 @@ type PluginHTTPOverride struct {
 	Middleware []httpx.Middleware
 }
 
+func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *HTTPConfig {
+	config := &HTTPConfig{
+		middleware:    []httpx.Middleware{},
+		basePath:      "/auth",
+		overrides:     map[string]*PluginHTTPOverride{},
+		disabledPaths: []string{},
+		responseEnvelope: &responseEnvelopeConfig{
+			mode: EnvelopeOff,
+		},
+	}
+	for _, opt := range opts {
+		opt(config)
+	}
+	return config
+}
+
 func WithHTTPBasePath(basePath string) HTTPConfigOption {
 	return func(c *HTTPConfig) {
 		c.basePath = basePath
@@ -72,37 +88,27 @@ func WithHTTPOverrides(overrides map[string]*PluginHTTPOverride) HTTPConfigOptio
 	}
 }
 
-func WithHTTPDisabledPathIDs(disabledPathIDs []string) HTTPConfigOption {
+// WithHTTPDisabledPaths adds paths to be disabled by their ID or pattern
+func WithHTTPDisabledPaths(disabledPaths []string) HTTPConfigOption {
 	return func(c *HTTPConfig) {
-		c.disabledPathIDs = disabledPathIDs
+		c.disabledPaths = disabledPaths
 	}
 }
 
 func WithHTTPResponseEnvelopeMode(mode EnvelopeMode) HTTPConfigOption {
 	return func(c *HTTPConfig) {
-		if c.responseEnvelope == nil {
-			c.responseEnvelope = &responseEnvelopeConfig{}
-		}
 		c.responseEnvelope.mode = mode
 	}
 }
 
 func WithHTTPResponseEnvelopeFields(fields EnvelopeFields) HTTPConfigOption {
 	return func(c *HTTPConfig) {
-		if c.responseEnvelope == nil {
-			c.responseEnvelope = &responseEnvelopeConfig{
-				mode: EnvelopeAlways,
-			}
-		}
 		c.responseEnvelope.fields = fields
 	}
 }
 
 func WithHTTPResponseEnvelopeSerializer(serializer EnvelopeSerializer) HTTPConfigOption {
 	return func(c *HTTPConfig) {
-		if c.responseEnvelope == nil {
-			c.responseEnvelope = &responseEnvelopeConfig{}
-		}
 		c.responseEnvelope.serializer = serializer
 	}
 }

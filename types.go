@@ -9,6 +9,11 @@ import (
 // this file contains the types for the aegis library
 // NO FEATURES SHOULD BE ADDED TO THIS FILE those go in the feature.go file
 
+type AegisSession struct {
+	User    *User
+	Session *Session
+}
+
 // TokenGenerator defines the interface for JWT token generation and validation
 type TokenGenerator interface {
 	// GenerateToken generates a JWT token with the given claims and duration
