@@ -125,8 +125,9 @@ func (m *SessionManager) RefreshSession(ctx context.Context, request *http.Reque
 func (m *SessionManager) Revoke(ctx context.Context, request *http.Request, sessionID string) error {
 	strategy := m.determineStrategyForRequest(request)
 	if !strategy.IsStateful() {
-		return fmt.Errorf("cannot revoke stateless session")
+		return nil
 	}
+
 	return m.store.Delete(ctx, sessionID)
 }
 
@@ -136,6 +137,20 @@ func (m *SessionManager) RevokeAll(ctx context.Context, request *http.Request, u
 		return fmt.Errorf("cannot revoke stateless session")
 	}
 	return m.store.DeleteByUserID(ctx, userID)
+}
+
+func (m *SessionManager) RevokeAllCookies(responseWriter http.ResponseWriter) {
+	sessionCookie := &http.Cookie{
+		Name:     m.config.CookieOptions.Name,
+		Value:    "",
+		MaxAge:   -1,
+		HttpOnly: m.config.CookieOptions.HTTPOnly,
+		Secure:   m.config.CookieOptions.Secure,
+		SameSite: m.config.CookieOptions.SameSite,
+		Path:     m.config.CookieOptions.Path,
+	}
+
+	http.SetCookie(responseWriter, sessionCookie)
 }
 
 func (m *SessionManager) determineTokenModeFromRequest(request *http.Request) SessionStrategyType {

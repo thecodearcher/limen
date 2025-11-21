@@ -47,5 +47,7 @@ func (api *aegisAPI) SignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	api.authInstance.sessionManager.RevokeAllCookies(w)
+
 	api.responder.JSON(w, r, http.StatusOK, "OK")
 }
