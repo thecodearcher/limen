@@ -21,7 +21,6 @@ type AegisCore struct {
 	DBAction       *DatabaseActionHelper
 	Schema         SchemaConfig
 	JWT            *JwtHandler
-	Session        *SessionConfig
 	SessionManager *SessionManager
 	Responder      *Responder
 }
@@ -56,13 +55,12 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	core := &AegisCore{
-		DB:      config.Database,
-		Schema:  config.Schema,
-		JWT:     jwtHandler,
-		Session: config.Session,
+		DB:     config.Database,
+		Schema: config.Schema,
+		JWT:    jwtHandler,
 	}
 
-	sessionManager := newSessionManager(core)
+	sessionManager := newSessionManager(core, config.Session)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
 	aegis.sessionManager = sessionManager
@@ -121,8 +119,9 @@ func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
 		return nil, err
 	}
 	return &AegisSession{
-		User:    sessionValidateResult.User,
-		Session: sessionValidateResult.Session,
+		User:          sessionValidateResult.User,
+		Session:       sessionValidateResult.Session,
+		RefreshCookie: sessionValidateResult.RefreshCookie,
 	}, nil
 }
 

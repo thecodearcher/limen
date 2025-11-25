@@ -3,3 +3,5 @@ specs
 .kiro
 .cursor
 .DS_Store
+tmp/
+.air.toml

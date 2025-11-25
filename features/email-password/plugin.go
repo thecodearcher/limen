@@ -210,7 +210,7 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 		return ErrResetTokenInvalid
 	}
 
-	if verification.ExpiresAt.Before(time.Now().UTC()) {
+	if verification.ExpiresAt.Before(time.Now()) {
 		return ErrResetTokenInvalid
 	}
 
@@ -328,11 +328,11 @@ func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) er
 		return ErrResetTokenInvalid
 	}
 
-	if verification.ExpiresAt.Before(time.Now().UTC()) {
+	if verification.ExpiresAt.Before(time.Now()) {
 		return ErrResetTokenInvalid
 	}
 
-	now := time.Now().UTC()
+	now := time.Now()
 	if err = p.dbAction.UpdateUser(ctx, &aegis.User{EmailVerifiedAt: &now},
 		[]aegis.Where{
 			aegis.Eq(p.userSchema.GetEmailField(), identifier),

@@ -51,9 +51,9 @@ func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 	if err := Create(ctx, i.core, &verificationSchema, &Verification{
 		Subject:   actionValue,
 		Value:     token,
-		ExpiresAt: time.Now().Add(expiresAt).UTC(),
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		ExpiresAt: time.Now().Add(expiresAt),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}, nil); err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (i *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context,
 	return FindOne(ctx, i.core, &verificationSchema,
 		[]Where{
 			Eq(verificationSchema.GetValueField(), token),
-			Gt(verificationSchema.GetExpiresAtField(), time.Now().UTC()),
+			Gt(verificationSchema.GetExpiresAtField(), time.Now()),
 		},
 		[]OrderBy{
 			{
@@ -100,6 +100,13 @@ func (i *DatabaseActionHelper) DeleteVerificationToken(ctx context.Context, toke
 
 func (i *DatabaseActionHelper) CreateSession(ctx context.Context, data *Session, additionalFields map[string]any) error {
 	if err := Create(ctx, i.core, &i.core.Schema.Session, data, additionalFields); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i *DatabaseActionHelper) UpdateSession(ctx context.Context, data *Session, conditions []Where) error {
+	if err := Update(ctx, i.core, &i.core.Schema.Session, data, conditions); err != nil {
 		return err
 	}
 	return nil

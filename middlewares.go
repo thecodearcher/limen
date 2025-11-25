@@ -22,10 +22,15 @@ func GetCurrentSessionFromCtx(r *http.Request) (*AegisSession, error) {
 func (httpCore *AegisHTTPCore) MiddlewareRequireSession() httpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			session, err := httpCore.AuthInstance.sessionManager.ValidateSession(r.Context(), r)
+			session, err := httpCore.AuthInstance.GetSession(r)
 			if err != nil {
+				httpCore.AuthInstance.sessionManager.RevokeAllCookies(w)
 				httpCore.Responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 				return
+			}
+
+			if session.RefreshCookie != nil {
+				http.SetCookie(w, session.RefreshCookie)
 			}
 
 			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &AegisSession{

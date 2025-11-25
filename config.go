@@ -6,7 +6,7 @@ type Config struct {
 	Features []Feature
 	Schema   SchemaConfig
 	JWT      *jWTConfig
-	Session  *SessionConfig
+	Session  *sessionConfig
 }
 
 func (c *Config) validate() error {

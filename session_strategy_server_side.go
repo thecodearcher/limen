@@ -10,10 +10,10 @@ import (
 
 type ServerSideStrategy struct {
 	store  SessionStore
-	config *SessionConfig
+	config *sessionConfig
 }
 
-func NewServerSideStrategy(store SessionStore, config *SessionConfig) *ServerSideStrategy {
+func NewServerSideStrategy(store SessionStore, config *sessionConfig) *ServerSideStrategy {
 	return &ServerSideStrategy{
 		store:  store,
 		config: config,
@@ -28,6 +28,10 @@ func (s *ServerSideStrategy) IsStateful() bool {
 	return true
 }
 
+func (s *ServerSideStrategy) SupportsSlidingWindowRefresh() bool {
+	return true
+}
+
 func (s *ServerSideStrategy) Create(ctx context.Context, user *User, temporaryAuth bool) (*SessionResult, error) {
 	sessionToken, err := GenerateCryptoSecureRandomString()
 	if err != nil {
@@ -35,8 +39,7 @@ func (s *ServerSideStrategy) Create(ctx context.Context, user *User, temporaryAu
 	}
 
 	return &SessionResult{
-		Token:  sessionToken,
-		Cookie: s.createCookie(sessionToken, temporaryAuth),
+		Token: sessionToken,
 	}, nil
 }
 
@@ -58,7 +61,7 @@ func (s *ServerSideStrategy) Validate(ctx context.Context, request *http.Request
 
 	if s.config.ActivityCheckInterval > 0 && time.Now().After(session.LastAccess.Add(s.config.ActivityCheckInterval)) {
 		session.Touch()
-		if err := s.store.Update(ctx, session); err != nil {
+		if err := s.store.Update(ctx, session.ID, session); err != nil {
 			//TODO: add logger
 			// This is a non-critical operation
 		}
@@ -121,25 +124,4 @@ func (s *ServerSideStrategy) extractSessionToken(request *http.Request) (string,
 	}
 
 	return sessionID, nil
-}
-
-func (s *ServerSideStrategy) createCookie(token string, temporaryAuth bool) *http.Cookie {
-	cookieOptions := s.config.CookieOptions
-
-	cookie := &http.Cookie{
-		Name:        cookieOptions.Name,
-		Value:       token,
-		Path:        cookieOptions.Path,
-		MaxAge:      int(s.config.Duration.Seconds()),
-		HttpOnly:    cookieOptions.HTTPOnly,
-		Secure:      cookieOptions.Secure,
-		SameSite:    cookieOptions.SameSite,
-		Partitioned: cookieOptions.Partitioned,
-	}
-
-	if temporaryAuth {
-		cookie.MaxAge = int(s.config.TemporaryAuthDuration.Seconds())
-	}
-
-	return cookie
 }

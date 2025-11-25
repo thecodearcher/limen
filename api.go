@@ -26,11 +26,17 @@ func (api *aegisAPI) RegisterRoutes(routeBuilder *RouteBuilder) {
 }
 
 func (api *aegisAPI) GetSession(w http.ResponseWriter, r *http.Request) {
-	session, err := api.authInstance.GetSession(r)
+	session, err := GetCurrentSessionFromCtx(r)
 	if err != nil {
+		api.authInstance.sessionManager.RevokeAllCookies(w)
 		api.responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 		return
 	}
+
+	if session.RefreshCookie != nil {
+		http.SetCookie(w, session.RefreshCookie)
+	}
+
 	api.responder.SessionResponse(w, r, api.core, &AuthenticationResult{User: session.User}, nil)
 }
 

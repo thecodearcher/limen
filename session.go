@@ -6,6 +6,7 @@ import (
 )
 
 type Session struct {
+	ID         any
 	Token      string
 	UserID     any
 	CreatedAt  time.Time
@@ -33,7 +34,8 @@ func (s *Session) ShouldRefresh(refreshInterval time.Duration) bool {
 	if refreshInterval == 0 {
 		return false
 	}
-	return time.Now().After(s.CreatedAt.Add(refreshInterval))
+	// Slide-in window: refresh if we're within refreshInterval before expiration
+	return time.Now().After(s.ExpiresAt.Add(-refreshInterval))
 }
 
 // Touch updates the last access time
@@ -106,6 +108,7 @@ func (s *SessionSchema) GetAdditionalFields() AdditionalFieldsFunc {
 
 func (s *SessionSchema) FromStorage(data map[string]any) *Session {
 	return &Session{
+		ID:         data[s.GetIDField()],
 		Token:      data[s.GetTokenField()].(string),
 		UserID:     data[s.GetUserIDField()],
 		CreatedAt:  data[s.GetCreatedAtField()].(time.Time),

@@ -79,7 +79,14 @@ func main() {
 				},
 			},
 		},
-		Session: aegis.NewDefaultSessionConfig(aegis.WithSessionStoreType(aegis.SessionStoreTypeDatabase)),
+		Session: aegis.NewDefaultSessionConfig(
+			aegis.WithSessionStoreType(aegis.SessionStoreTypeDatabase),
+			aegis.WithSessionRefreshInterval(50*time.Second),
+			aegis.WithSessionDuration(1*time.Minute),
+			aegis.WithSessionIdleTimeout(55*time.Second),
+			aegis.WithSessionActivityCheckInterval(10*time.Second),
+			aegis.WithSessionCookieName("default_session"),
+		),
 	}
 
 	auth, err := aegis.New(config)

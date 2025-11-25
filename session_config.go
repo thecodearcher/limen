@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type SessionConfig struct {
+type sessionConfig struct {
 	Strategy SessionStrategyType
 	// Duration: the absolute duration of the session
 	Duration time.Duration
@@ -57,8 +57,8 @@ type CrossDomainConfig struct {
 	Domain  string
 }
 
-func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
-	config := &SessionConfig{
+func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
+	config := &sessionConfig{
 		Strategy:              SessionStrategyServerSide,
 		Duration:              1 * time.Hour,
 		TemporaryAuthDuration: 5 * time.Minute,
@@ -99,72 +99,85 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *SessionConfig {
 	return config
 }
 
-func (c *SessionConfig) validate() error {
+func (c *sessionConfig) validate() error {
 	if c.CookieOptions.CrossDomain && len(c.TrustedOrigins) == 0 {
 		return fmt.Errorf("trusted origins are required when cross domain is enabled")
 	}
+
+	if c.RefreshInterval > c.Duration {
+		return fmt.Errorf("refresh interval cannot be greater than duration")
+	}
+
+	if c.IdleTimeout > c.Duration {
+		return fmt.Errorf("idle timeout cannot be greater than duration")
+	}
+
+	if c.ActivityCheckInterval > c.Duration {
+		return fmt.Errorf("activity check interval cannot be greater than duration")
+	}
+
 	return nil
 }
 
-type SessionConfigOption func(*SessionConfig)
+type SessionConfigOption func(*sessionConfig)
 
 func WithSessionStrategy(strategy SessionStrategyType) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.Strategy = strategy
 	}
 }
 
 func WithCustomSessionStore(store SessionStore) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CustomStore = store
 	}
 }
 
 func WithSessionStoreType(storeType SessionStoreType) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.StoreType = storeType
 	}
 }
 
 func WithSessionDuration(duration time.Duration) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.Duration = duration
 	}
 }
 
 func WithSessionRefreshInterval(refreshInterval time.Duration) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.RefreshInterval = refreshInterval
 	}
 }
 
 func WithSessionIdleTimeout(idleTimeout time.Duration) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.IdleTimeout = idleTimeout
 	}
 }
 
 func WithSessionCookieName(cookieName string) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions.Name = cookieName
 	}
 }
 
 func WithSessionCookieOptions(cookieOptions *CookieConfig) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions = cookieOptions
 	}
 }
 
 func WithSessionCookieCrossSubdomainEnabled(subdomain string) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions.CrossSubdomain.Enabled = true
 		c.CookieOptions.CrossSubdomain.Domain = subdomain
 	}
 }
 
 func WithSessionCookieCrossDomainEnabled() SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions.CrossDomain = true
 		c.CookieOptions.SameSite = http.SameSiteNoneMode
 		c.CookieOptions.Secure = true
@@ -173,49 +186,55 @@ func WithSessionCookieCrossDomainEnabled() SessionConfigOption {
 }
 
 func WithSessionTrustedOrigins(origins []string) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.TrustedOrigins = origins
 	}
 }
 
 func WithSessionCookiePath(cookiePath string) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions.Path = cookiePath
 	}
 }
 
 func WithSessionCookieSecure(cookieSecure bool) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions.Secure = cookieSecure
 	}
 }
 
 func WithSessionCookieHTTPOnly(cookieHTTPOnly bool) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions.HTTPOnly = cookieHTTPOnly
 	}
 }
 
 func WithSessionCookieSameSite(cookieSameSite http.SameSite) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.CookieOptions.SameSite = cookieSameSite
 	}
 }
 
 func WithSessionIPAddressExtractor(ipAddressExtractor func(request *http.Request) string) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.IPAddressExtractor = ipAddressExtractor
 	}
 }
 
 func WithSessionUserAgentExtractor(userAgentExtractor func(request *http.Request) string) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.UserAgentExtractor = userAgentExtractor
 	}
 }
 
 func WithSessionTemporaryAuthDuration(temporaryAuthDuration time.Duration) SessionConfigOption {
-	return func(c *SessionConfig) {
+	return func(c *sessionConfig) {
 		c.TemporaryAuthDuration = temporaryAuthDuration
+	}
+}
+
+func WithSessionActivityCheckInterval(activityCheckInterval time.Duration) SessionConfigOption {
+	return func(c *sessionConfig) {
+		c.ActivityCheckInterval = activityCheckInterval
 	}
 }

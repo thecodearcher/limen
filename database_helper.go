@@ -102,7 +102,7 @@ func Delete[T Model](ctx context.Context, core *AegisCore, schema Schema[T], con
 	// otherwise we delete the record directly
 	if schema.GetSoftDeleteField() != "" {
 		if err := core.DB.Update(ctx, schema.GetTableName(), conditions, map[string]any{
-			string(schema.GetSoftDeleteField()): time.Now().UTC(),
+			string(schema.GetSoftDeleteField()): time.Now(),
 		}); err != nil {
 			return err
 		}

@@ -60,16 +60,16 @@ func (s *MemorySessionStore) Get(ctx context.Context, sessionID string) (*Sessio
 }
 
 // Update updates an existing session
-func (s *MemorySessionStore) Update(ctx context.Context, session *Session) error {
+func (s *MemorySessionStore) Update(ctx context.Context, id any, session *Session) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.sessions[session.Token]; !exists {
+	if _, exists := s.sessions[s.userIDToString(id)]; !exists {
 		return ErrSessionNotFound
 	}
 
 	// If UserID changed, update the index
-	oldSession := s.sessions[session.Token]
+	oldSession := s.sessions[s.userIDToString(id)]
 	oldUserIDStr := s.userIDToString(oldSession.UserID)
 	newUserIDStr := s.userIDToString(session.UserID)
 

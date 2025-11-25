@@ -12,6 +12,10 @@ import (
 type AegisSession struct {
 	User    *User
 	Session *Session
+
+	RefreshCookie         *http.Cookie
+	RefreshedToken        string
+	RefreshedRefreshToken string
 }
 
 // TokenGenerator defines the interface for JWT token generation and validation
@@ -53,6 +57,10 @@ type SessionValidateResult struct {
 	User     *User
 	Session  *Session
 	Metadata map[string]interface{}
+
+	// Refresh information (set only if the session was refreshed)
+	RefreshToken  string       // New refresh token if refreshed (JWT/hybrid strategies)
+	RefreshCookie *http.Cookie // New refresh cookie if refreshed
 }
 
 // SessionStore defines the interface for session storage backends
@@ -64,7 +72,7 @@ type SessionStore interface {
 	Get(ctx context.Context, sessionToken string) (*Session, error)
 
 	// Update updates an existing session
-	Update(ctx context.Context, session *Session) error
+	Update(ctx context.Context, id any, session *Session) error
 
 	// Delete removes a session by token
 	Delete(ctx context.Context, sessionToken string) error
@@ -89,4 +97,7 @@ type SessionStrategy interface {
 
 	// IsStateful returns whether the strategy is stateful
 	IsStateful() bool
+
+	// SupportsSlidingWindow returns whether the strategy supports sliding window refresh
+	SupportsSlidingWindowRefresh() bool
 }

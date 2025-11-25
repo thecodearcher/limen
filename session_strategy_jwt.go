@@ -9,11 +9,11 @@ import (
 
 type JWTStrategy struct {
 	jwtHandler *JwtHandler
-	config     *SessionConfig
+	config     *sessionConfig
 	dbAction   *DatabaseActionHelper
 }
 
-func NewJWTStrategy(core *AegisCore, config *SessionConfig) *JWTStrategy {
+func NewJWTStrategy(core *AegisCore, config *sessionConfig) *JWTStrategy {
 	return &JWTStrategy{
 		jwtHandler: core.JWT,
 		config:     config,
@@ -26,6 +26,10 @@ func (s *JWTStrategy) GetName() string {
 }
 
 func (s *JWTStrategy) IsStateful() bool {
+	return false
+}
+
+func (s *JWTStrategy) SupportsSlidingWindowRefresh() bool {
 	return false
 }
 

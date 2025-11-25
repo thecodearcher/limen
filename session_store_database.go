@@ -29,21 +29,10 @@ func (s *DatabaseSessionStore) Get(ctx context.Context, sessionToken string) (*S
 }
 
 // Update updates an existing session
-func (s *DatabaseSessionStore) Update(ctx context.Context, session *Session) error {
-	conditions := []Where{
-		Eq(s.schema.GetIDField(), session.Token),
-	}
-
-	payload := s.schema.ToStorage(session)
-
-	// Remove empty values to avoid accidental NULL updates
-	for key, value := range payload {
-		if value == "" || value == 0 || value == nil {
-			delete(payload, key)
-		}
-	}
-
-	return s.core.DB.Update(ctx, s.schema.GetTableName(), conditions, payload)
+func (s *DatabaseSessionStore) Update(ctx context.Context, id any, session *Session) error {
+	return s.core.DBAction.UpdateSession(ctx, session, []Where{
+		Eq(s.schema.GetIDField(), id),
+	})
 }
 
 // Delete removes a session by ID

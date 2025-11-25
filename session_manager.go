@@ -9,17 +9,17 @@ import (
 
 type SessionManager struct {
 	store      SessionStore
-	config     *SessionConfig
+	config     *sessionConfig
 	core       *AegisCore
 	strategies map[SessionStrategyType]SessionStrategy
 }
 
 const temporaryAuthKey = "temp_auth"
 
-func newSessionManager(core *AegisCore) *SessionManager {
+func newSessionManager(core *AegisCore, config *sessionConfig) *SessionManager {
 	return &SessionManager{
-		store:  determineStore(core.Session, core),
-		config: core.Session,
+		store:  determineStore(config, core),
+		config: config,
 		core:   core,
 	}
 }
@@ -46,6 +46,8 @@ func (m *SessionManager) CreateSession(ctx context.Context, request *http.Reques
 	if !strategy.IsStateful() {
 		return result, nil
 	}
+
+	result.Cookie = m.createCookie(result.Token, temporaryAuth)
 
 	session := &Session{
 		Token:      result.Token,
@@ -84,11 +86,28 @@ func (m *SessionManager) ValidateSession(ctx context.Context, request *http.Requ
 		return nil, err
 	}
 
+	if strategy.SupportsSlidingWindowRefresh() && validateResult.Session.ShouldRefresh(m.config.RefreshInterval) {
+		result, err := strategy.Refresh(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+
+		validateResult.Session.Token = result.Token
+		validateResult.Session.ExpiresAt = time.Now().Add(m.config.Duration)
+		validateResult.Session.LastAccess = time.Now()
+		if err := m.store.Update(ctx, validateResult.Session.ID, validateResult.Session); err != nil {
+			return nil, fmt.Errorf("failed to update session: %w", err)
+		}
+		validateResult.RefreshCookie = m.createCookie(result.Token, false)
+	}
+
 	return &SessionValidateResult{
-		UserID:   validateResult.UserID,
-		User:     user,
-		Session:  validateResult.Session,
-		Metadata: validateResult.Metadata,
+		UserID:        validateResult.UserID,
+		User:          user,
+		Session:       validateResult.Session,
+		Metadata:      validateResult.Metadata,
+		RefreshToken:  validateResult.RefreshToken,
+		RefreshCookie: validateResult.RefreshCookie,
 	}, nil
 }
 
@@ -177,7 +196,32 @@ func (m *SessionManager) determineStrategyForRequest(request *http.Request) Sess
 	return m.determineStrategy(strategy)
 }
 
-func determineStore(config *SessionConfig, core *AegisCore) SessionStore {
+func (m *SessionManager) createCookie(token string, temporaryAuth bool) *http.Cookie {
+	cookieOptions := m.config.CookieOptions
+
+	cookie := &http.Cookie{
+		Name:        cookieOptions.Name,
+		Value:       token,
+		Path:        cookieOptions.Path,
+		MaxAge:      int(m.config.Duration.Seconds()),
+		HttpOnly:    cookieOptions.HTTPOnly,
+		Secure:      cookieOptions.Secure,
+		SameSite:    cookieOptions.SameSite,
+		Partitioned: cookieOptions.Partitioned,
+	}
+
+	if temporaryAuth {
+		cookie.MaxAge = int(m.config.TemporaryAuthDuration.Seconds())
+	}
+
+	if cookieOptions.CrossSubdomain != nil && cookieOptions.CrossSubdomain.Enabled {
+		cookie.Domain = cookieOptions.CrossSubdomain.Domain
+	}
+
+	return cookie
+}
+
+func determineStore(config *sessionConfig, core *AegisCore) SessionStore {
 	if config.CustomStore != nil {
 		return config.CustomStore
 	}
