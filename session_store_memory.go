@@ -7,159 +7,159 @@ import (
 	"sync"
 )
 
-// MemorySessionStore implements SessionStore using in-memory storage
+// MemorySessionStore implements SessionStore using in-memory storage.
 type MemorySessionStore struct {
-	sessions map[string]*Session // map[sessionID]*Session
-	users    map[string][]string // map[userID][]sessionID for efficient lookup
-	mu       sync.RWMutex
+	sessions     map[string]*Session
+	userSessions map[string]map[string]bool
+	mu           sync.RWMutex
 }
 
-// NewMemorySessionStore creates a new in-memory session store
+// NewMemorySessionStore creates a new in-memory session store.
 func NewMemorySessionStore() *MemorySessionStore {
 	return &MemorySessionStore{
-		sessions: make(map[string]*Session),
-		users:    make(map[string][]string),
+		sessions:     make(map[string]*Session),
+		userSessions: make(map[string]map[string]bool),
 	}
 }
 
-// Create creates a new session with the given ID and data
+// Create creates a new session with the given data.
+// If a session with the same token already exists, it returns nil (idempotent).
 func (s *MemorySessionStore) Create(ctx context.Context, session *Session) error {
+	if session == nil {
+		return fmt.Errorf("session cannot be nil")
+	}
+	if session.Token == "" {
+		return fmt.Errorf("session token cannot be empty")
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Check if session already exists
 	if _, exists := s.sessions[session.Token]; exists {
-		return nil // Session already exists, treat as success (idempotent)
+		return nil
 	}
 
-	// Create a copy of the session to avoid external modifications
-	sessionCopy := s.copySession(session)
+	s.sessions[session.Token] = s.copySession(session)
 
-	// Store the session
-	s.sessions[session.Token] = sessionCopy
-
-	// Index by userID
 	userIDStr := s.userIDToString(session.UserID)
-	s.users[userIDStr] = append(s.users[userIDStr], session.Token)
+	if s.userSessions[userIDStr] == nil {
+		s.userSessions[userIDStr] = make(map[string]bool)
+	}
+	s.userSessions[userIDStr][session.Token] = true
 
 	return nil
 }
 
-// Get retrieves a session by ID
-func (s *MemorySessionStore) Get(ctx context.Context, sessionID string) (*Session, error) {
+// Get retrieves a session by token.
+// Returns ErrSessionNotFound if the session does not exist.
+func (s *MemorySessionStore) Get(ctx context.Context, sessionToken string) (*Session, error) {
+	if sessionToken == "" {
+		return nil, ErrSessionNotFound
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	session, exists := s.sessions[sessionID]
+	session, exists := s.sessions[sessionToken]
 	if !exists {
 		return nil, ErrSessionNotFound
 	}
 
-	// Return a copy to prevent external modifications
 	return s.copySession(session), nil
 }
 
-// Update updates an existing session
+// Update updates an existing session.
 func (s *MemorySessionStore) Update(ctx context.Context, id any, session *Session) error {
+	if session == nil {
+		return fmt.Errorf("session cannot be nil")
+	}
+	if session.Token == "" {
+		return fmt.Errorf("session token cannot be empty")
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.sessions[s.userIDToString(id)]; !exists {
+	if _, exists := s.sessions[session.Token]; !exists {
 		return ErrSessionNotFound
 	}
 
-	// If UserID changed, update the index
-	oldSession := s.sessions[s.userIDToString(id)]
-	oldUserIDStr := s.userIDToString(oldSession.UserID)
-	newUserIDStr := s.userIDToString(session.UserID)
-
-	if oldUserIDStr != newUserIDStr {
-		// Remove from old user index
-		s.removeFromUserIndex(oldUserIDStr, session.Token)
-		// Add to new user index
-		s.users[newUserIDStr] = append(s.users[newUserIDStr], session.Token)
-	}
-
-	// Update the session
 	s.sessions[session.Token] = s.copySession(session)
 
 	return nil
 }
 
-// Delete removes a session by ID
-func (s *MemorySessionStore) Delete(ctx context.Context, sessionID string) error {
+// Delete removes a session by token.
+// Returns ErrSessionNotFound if the session does not exist.
+func (s *MemorySessionStore) Delete(ctx context.Context, sessionToken string) error {
+	if sessionToken == "" {
+		return ErrSessionNotFound
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	session, exists := s.sessions[sessionID]
+	session, exists := s.sessions[sessionToken]
 	if !exists {
 		return ErrSessionNotFound
 	}
 
-	// Remove from user index
 	userIDStr := s.userIDToString(session.UserID)
-	s.removeFromUserIndex(userIDStr, sessionID)
+	if sessions, ok := s.userSessions[userIDStr]; ok {
+		delete(sessions, sessionToken)
+		if len(sessions) == 0 {
+			delete(s.userSessions, userIDStr)
+		}
+	}
 
-	// Delete the session
-	delete(s.sessions, sessionID)
+	delete(s.sessions, sessionToken)
 
 	return nil
 }
 
-// DeleteByUserID removes all sessions for a specific user
+// DeleteByUserID removes all sessions for a specific user.
+// Returns nil if the user has no sessions (idempotent operation).
 func (s *MemorySessionStore) DeleteByUserID(ctx context.Context, userID any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	userIDStr := s.userIDToString(userID)
-	sessionIDs, exists := s.users[userIDStr]
+	sessionTokens, exists := s.userSessions[userIDStr]
 	if !exists {
-		return nil // No sessions for this user, treat as success
+		return nil
 	}
 
-	// Delete all sessions for this user
-	for _, sessionID := range sessionIDs {
-		delete(s.sessions, sessionID)
+	for token := range sessionTokens {
+		delete(s.sessions, token)
 	}
 
-	// Clear the user index
-	delete(s.users, userIDStr)
+	delete(s.userSessions, userIDStr)
 
 	return nil
 }
 
-func (s *MemorySessionStore) List(ctx context.Context) (map[string]*Session, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.sessions, nil
-}
-
-// Helper methods
-
-// copySession creates a deep copy of a session
 func (s *MemorySessionStore) copySession(session *Session) *Session {
+	if session == nil {
+		return nil
+	}
+
 	copy := &Session{
+		ID:         session.ID,
 		Token:      session.Token,
 		UserID:     session.UserID,
 		CreatedAt:  session.CreatedAt,
 		ExpiresAt:  session.ExpiresAt,
 		LastAccess: session.LastAccess,
-		Metadata:   session.Metadata,
+		Metadata:   make(map[string]any),
 	}
 
-	// Copy maps
 	if session.Metadata != nil {
-		copy.Metadata = make(map[string]interface{})
 		maps.Copy(copy.Metadata, session.Metadata)
-	} else {
-		copy.Metadata = make(map[string]interface{})
 	}
 
 	return copy
 }
 
-// userIDToString converts a userID (which can be any type) to a string for indexing
 func (s *MemorySessionStore) userIDToString(userID any) string {
 	if userID == nil {
 		return ""
@@ -167,23 +167,5 @@ func (s *MemorySessionStore) userIDToString(userID any) string {
 	if str, ok := userID.(string); ok {
 		return str
 	}
-	// For non-string userIDs, convert to string representation
 	return fmt.Sprintf("%v", userID)
-}
-
-// removeFromUserIndex removes a sessionID from a user's session list
-func (s *MemorySessionStore) removeFromUserIndex(userIDStr, sessionID string) {
-	sessionIDs := s.users[userIDStr]
-	newSessionIDs := make([]string, 0, len(sessionIDs))
-	for _, id := range sessionIDs {
-		if id != sessionID {
-			newSessionIDs = append(newSessionIDs, id)
-		}
-	}
-
-	if len(newSessionIDs) == 0 {
-		delete(s.users, userIDStr)
-	} else {
-		s.users[userIDStr] = newSessionIDs
-	}
 }

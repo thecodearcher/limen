@@ -76,7 +76,7 @@ func main() {
 			},
 		},
 		Session: aegis.NewDefaultSessionConfig(
-			aegis.WithSessionStoreType(aegis.SessionStoreTypeDatabase),
+			// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
 			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
 
 			aegis.WithSessionCookieName("default_session"),

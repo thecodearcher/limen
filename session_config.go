@@ -68,6 +68,7 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 		IdleTimeout:           0,                                             // no idle timeout
 		ActivityCheckInterval: 0,                                             // no activity check interval
 		TokenDeliveryMethod:   TokenDeliveryCookie,
+		StoreType:             SessionStoreTypeDatabase,
 		CookieOptions: &CookieConfig{
 			Name:        "aegis_session",
 			Path:        "/",
