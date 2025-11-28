@@ -3,7 +3,6 @@ module github.com/thecodearcher/aegis
 go 1.23
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/mock v1.6.0
 	github.com/stretchr/testify v1.11.1
 )
