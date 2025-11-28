@@ -5,8 +5,8 @@ type Config struct {
 	Database DatabaseAdapter
 	Features []Feature
 	Schema   SchemaConfig
-	JWT      *jWTConfig
-	Session  *sessionConfig
+
+	Session *sessionConfig
 }
 
 func (c *Config) validate() error {
@@ -14,19 +14,11 @@ func (c *Config) validate() error {
 		return ErrDatabaseAdapterRequired
 	}
 
-	if c.JWT == nil {
-		c.JWT = NewDefaultJWTConfig()
-	}
-
 	if c.Session == nil {
 		c.Session = NewDefaultSessionConfig()
 	}
 
 	if err := c.Session.validate(); err != nil {
-		return err
-	}
-
-	if err := c.JWT.validate(); err != nil {
 		return err
 	}
 

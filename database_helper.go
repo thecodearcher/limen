@@ -78,8 +78,9 @@ func Update[T Model](ctx context.Context, core *AegisCore, schema Schema[T], upd
 
 	maps.Copy(payload, schema.ToStorage(updatedData))
 	for key, value := range payload {
+		concreteValue := reflect.ValueOf(value)
 		//we remove any empty strings or zeros to avoid accidental NULL updates
-		if reflect.ValueOf(value).IsZero() {
+		if !concreteValue.IsValid() || concreteValue.IsZero() {
 			delete(payload, key)
 		}
 	}

@@ -1,4 +1,4 @@
-package aegis
+package jwt
 
 import (
 	"context"
@@ -33,19 +33,18 @@ func (s *JWTStrategy) SupportsSlidingWindowRefresh() bool {
 	return false
 }
 
-func (s *JWTStrategy) Create(ctx context.Context, user *User, temporaryAuth bool) (*SessionResult, error) {
+func (s *JWTStrategy) Create(ctx context.Context, user *User, options *SessionCreateOptions) (*SessionResult, error) {
 	sessionID, err := GenerateCryptoSecureRandomString()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
 	}
 
 	additionalClaims := map[string]any{}
-	duration := s.config.Duration
-	if temporaryAuth {
+
+	if options.TemporaryAuth {
 		additionalClaims[temporaryAuthKey] = true
-		duration = s.config.TemporaryAuthDuration
 	}
-	token, refreshToken, err := s.jwtHandler.GenerateAccessToken(sessionID, user, &duration, additionalClaims)
+	token, refreshToken, err := s.jwtHandler.GenerateAccessToken(sessionID, user, &options.Duration, additionalClaims)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate JWT token: %w", err)
 	}
@@ -70,14 +69,23 @@ func (s *JWTStrategy) Validate(ctx context.Context, request *http.Request) (*Ses
 		return nil, ErrSessionInvalid
 	}
 	fmt.Println(claims)
+	fmt.Printf("user id type: %T\n", claims["sub"])
+
+	s.jwtHandler.CustomUserFromSubjectFn()
+
+	user, err := s.findUserWithSubject(ctx, claims["sub"])
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user data: %w", err)
+	}
 
 	return &SessionValidateResult{
 		UserID:   claims["sub"],
 		Metadata: claims,
+		User:     user,
 	}, nil
 }
 
-func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*SessionRefreshResult, error) {
+func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*SessionExtensionResult, error) {
 	refreshToken, err := s.extractRefreshToken(request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract refresh token: %w", err)
@@ -123,7 +131,7 @@ func (s *JWTStrategy) Refresh(ctx context.Context, request *http.Request) (*Sess
 		return nil, fmt.Errorf("failed to generate new JWT tokens: %w", err)
 	}
 
-	return &SessionRefreshResult{
+	return &SessionExtensionResult{
 		Token:          token,
 		StaleSessionID: sessionID,
 		UserID:         userID,
@@ -174,7 +182,7 @@ func (s *JWTStrategy) extractRefreshToken(request *http.Request) (string, error)
 	return "", fmt.Errorf("no refresh token found in request")
 }
 
-func (s *JWTStrategy) findUserWithSubject(ctx context.Context, userID string) (*User, error) {
+func (s *JWTStrategy) findUserWithSubject(ctx context.Context, userID any) (*User, error) {
 	if userFn := s.jwtHandler.CustomUserFromSubjectFn(); userFn != nil {
 		user, err := userFn(userID)
 		if err != nil {
@@ -183,7 +191,9 @@ func (s *JWTStrategy) findUserWithSubject(ctx context.Context, userID string) (*
 		return user, nil
 	}
 
-	user, err := s.dbAction.FindUserByEmail(ctx, userID)
+	user, err := s.dbAction.FindUser(ctx, []Where{
+		Eq(s.jwtHandler.config.claims.subjectField, userID),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user data: %w", err)
 	}

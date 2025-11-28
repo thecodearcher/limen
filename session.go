@@ -29,13 +29,16 @@ func (s *Session) IsExpired(idleTimeout time.Duration) bool {
 	return time.Now().After(s.ExpiresAt) || time.Now().After(s.LastAccess.Add(idleTimeout))
 }
 
-// ShouldRefresh checks if the session should be refreshed
-func (s *Session) ShouldRefresh(refreshInterval time.Duration) bool {
-	if refreshInterval == 0 {
+// ShouldExtendExpiration checks if the session should be extended
+func (s *Session) ShouldExtendExpiration(expiresIn, updateAge time.Duration) bool {
+	if updateAge == 0 {
 		return false
 	}
-	// Slide-in window: refresh if we're within refreshInterval before expiration
-	return time.Now().After(s.ExpiresAt.Add(-refreshInterval))
+
+	lastExtendedAt := s.ExpiresAt.Add(-expiresIn)
+	nextExtensionAt := lastExtendedAt.Add(updateAge)
+
+	return time.Now().After(nextExtensionAt) || time.Now().Equal(nextExtensionAt)
 }
 
 // Touch updates the last access time

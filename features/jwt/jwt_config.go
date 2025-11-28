@@ -1,4 +1,4 @@
-package aegis
+package jwt
 
 import (
 	"fmt"
@@ -17,8 +17,7 @@ type jWTConfig struct {
 
 // accessTokenConfig configures access token properties
 type accessTokenConfig struct {
-	duration time.Duration
-	issuer   string
+	issuer string
 }
 
 // refreshTokenConfig configures refresh token properties
@@ -45,8 +44,8 @@ type signingConfig struct {
 // claimsConfig configures JWT claims
 type claimsConfig struct {
 	subjectField    string
-	subjectValue    func(user *User) string
-	userFromSubject func(subject string) (*User, error)
+	subjectValue    func(user *User) any
+	userFromSubject func(subject any) (*User, error)
 	customClaims    func(user *User) map[string]any // map of custom claims
 }
 
@@ -55,11 +54,10 @@ func NewDefaultJWTConfig(opts ...jWTConfigOption) *jWTConfig {
 	config := &jWTConfig{
 		enabled: true,
 		accessToken: accessTokenConfig{
-			duration: 60 * time.Minute,
-			issuer:   "aegis",
+			issuer: "aegis",
 		},
 		refreshToken: refreshTokenConfig{
-			enabled:  true,
+			enabled:  false,
 			duration: 7 * 24 * time.Hour,
 			rotate:   true,
 		},
@@ -101,16 +99,8 @@ func (c *jWTConfig) validate() error {
 		return err
 	}
 
-	if c.accessToken.duration <= 0 {
-		return ErrJWTInvalidDuration
-	}
-
 	if c.refreshToken.enabled && c.refreshToken.duration <= 0 {
 		return ErrJWTInvalidDuration
-	}
-
-	if c.refreshToken.enabled && c.refreshToken.duration <= c.accessToken.duration {
-		return ErrJWTInvalidRefreshDuration
 	}
 
 	if c.accessToken.issuer == "" {
@@ -187,15 +177,6 @@ type jWTConfigOption func(*jWTConfig)
 func WithJWTEnabled(enabled bool) jWTConfigOption {
 	return func(c *jWTConfig) {
 		c.enabled = enabled
-	}
-}
-
-// WithJWTAccessTokenDuration sets the duration of the access token
-//
-//	@default: 1hr
-func WithJWTAccessTokenDuration(duration time.Duration) jWTConfigOption {
-	return func(c *jWTConfig) {
-		c.accessToken.duration = duration
 	}
 }
 
@@ -295,7 +276,7 @@ func WithClaimsCustomClaims(customClaims func(user *User) map[string]any) jWTCon
 // WithClaimsSubjectValue sets the value of the subject field of the JWT.
 //
 // Useful for customizing the subject field value when the subject is not a direct field of the user
-func WithClaimsSubjectValue(subjectValue func(user *User) string) jWTConfigOption {
+func WithClaimsSubjectValue(subjectValue func(user *User) any) jWTConfigOption {
 	return func(c *jWTConfig) {
 		c.claims.subjectValue = subjectValue
 	}
@@ -303,7 +284,7 @@ func WithClaimsSubjectValue(subjectValue func(user *User) string) jWTConfigOptio
 
 // WithClaimsUserFromSubject sets the function to get the user from the subject field when the subject is not a direct field of the user
 // i.e when WithClaimsSubjectValue is used
-func WithClaimsUserFromSubject(userFromSubject func(subject string) (*User, error)) jWTConfigOption {
+func WithClaimsUserFromSubject(userFromSubject func(subject any) (*User, error)) jWTConfigOption {
 	return func(c *jWTConfig) {
 		c.claims.userFromSubject = userFromSubject
 	}

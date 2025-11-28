@@ -14,8 +14,8 @@ type sessionConfig struct {
 	// TemporaryAuthDuration: the duration of the temporary auth session i.e: for two-factor authentication, email verification etc.
 	// If not set, the duration will be set to 5 minutes
 	TemporaryAuthDuration time.Duration
-	// RefreshInterval: the interval at which the session will be refreshed
-	RefreshInterval time.Duration
+	// UpdateAge: the time before expiration when session should be extended on use
+	UpdateAge time.Duration
 	// IdleTimeout: the time after which the session will be considered expired if no activity is detected
 	IdleTimeout time.Duration
 	// ActivityCheckInterval: the interval at which the session last access time will be updated
@@ -28,12 +28,14 @@ type sessionConfig struct {
 	CookieOptions *CookieConfig
 	// TrustedOrigins: list of allowed origins for cross-site credentialed requests (CORS + CSRF header).
 	TrustedOrigins []string
-	// TokenGenerator: the token generator to use
-	TokenGenerator TokenGenerator
 	// IPAddressExtractor: the function to extract the IP address from the request
 	IPAddressExtractor func(request *http.Request) string
 	// UserAgentExtractor: the function to extract the user agent from the request
 	UserAgentExtractor func(request *http.Request) string
+	// TokenDeliveryMethod: the method to deliver the tokens
+	TokenDeliveryMethod TokenDeliveryMethod
+	// TokenDeliveryMethodDetector allows custom detection logic for the token delivery method
+	TokenDeliveryMethodDetector func(request *http.Request) TokenDeliveryMethod
 }
 
 type CookieConfig struct {
@@ -59,12 +61,13 @@ type CrossDomainConfig struct {
 
 func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 	config := &sessionConfig{
-		Strategy:              SessionStrategyServerSide,
-		Duration:              1 * time.Hour,
-		TemporaryAuthDuration: 5 * time.Minute,
-		RefreshInterval:       0,
-		IdleTimeout:           0,
-		ActivityCheckInterval: 1 * time.Hour,
+		Strategy:              SessionStrategyOpaqueToken,
+		Duration:              time.Duration(60 * 60 * 24 * 7 * time.Second), // 7 days in seconds
+		TemporaryAuthDuration: time.Duration(5 * time.Minute),                // 5 minutes
+		UpdateAge:             time.Duration(60 * 60 * 24 * time.Second),     // 1 day in seconds
+		IdleTimeout:           0,                                             // no idle timeout
+		ActivityCheckInterval: 0,                                             // no activity check interval
+		TokenDeliveryMethod:   TokenDeliveryCookie,
 		CookieOptions: &CookieConfig{
 			Name:        "aegis_session",
 			Path:        "/",
@@ -104,8 +107,8 @@ func (c *sessionConfig) validate() error {
 		return fmt.Errorf("trusted origins are required when cross domain is enabled")
 	}
 
-	if c.RefreshInterval > c.Duration {
-		return fmt.Errorf("refresh interval cannot be greater than duration")
+	if c.UpdateAge > c.Duration {
+		return fmt.Errorf("update age cannot be greater than duration")
 	}
 
 	if c.IdleTimeout > c.Duration {
@@ -121,9 +124,9 @@ func (c *sessionConfig) validate() error {
 
 type SessionConfigOption func(*sessionConfig)
 
-func WithSessionStrategy(strategy SessionStrategyType) SessionConfigOption {
+func WithSessionStrategy(strategy string) SessionConfigOption {
 	return func(c *sessionConfig) {
-		c.Strategy = strategy
+		c.Strategy = SessionStrategyType(strategy)
 	}
 }
 
@@ -145,9 +148,9 @@ func WithSessionDuration(duration time.Duration) SessionConfigOption {
 	}
 }
 
-func WithSessionRefreshInterval(refreshInterval time.Duration) SessionConfigOption {
+func WithSessionUpdateAge(updateAge time.Duration) SessionConfigOption {
 	return func(c *sessionConfig) {
-		c.RefreshInterval = refreshInterval
+		c.UpdateAge = updateAge
 	}
 }
 
@@ -236,5 +239,17 @@ func WithSessionTemporaryAuthDuration(temporaryAuthDuration time.Duration) Sessi
 func WithSessionActivityCheckInterval(activityCheckInterval time.Duration) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.ActivityCheckInterval = activityCheckInterval
+	}
+}
+
+func WithSessionTokenDeliveryMethod(tokenDeliveryMethod TokenDeliveryMethod) SessionConfigOption {
+	return func(c *sessionConfig) {
+		c.TokenDeliveryMethod = tokenDeliveryMethod
+	}
+}
+
+func WithSessionTokenDeliveryMethodDetector(tokenDeliveryMethodDetector func(request *http.Request) TokenDeliveryMethod) SessionConfigOption {
+	return func(c *sessionConfig) {
+		c.TokenDeliveryMethodDetector = tokenDeliveryMethodDetector
 	}
 }

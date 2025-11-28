@@ -18,62 +18,74 @@ const temporaryAuthKey = "temp_auth"
 
 func newSessionManager(core *AegisCore, config *sessionConfig) *SessionManager {
 	return &SessionManager{
-		store:  determineStore(config, core),
-		config: config,
-		core:   core,
+		store:      determineStore(config, core),
+		config:     config,
+		core:       core,
+		strategies: make(map[SessionStrategyType]SessionStrategy),
 	}
 }
 
 func (m *SessionManager) determineStrategy(config SessionStrategyType) SessionStrategy {
-	switch config {
-	case SessionStrategyJWT:
-		return NewJWTStrategy(m.core, m.config)
-	case SessionStrategyServerSide:
-		fallthrough
-	default:
-		return NewServerSideStrategy(m.store, m.config)
+	if strategy, ok := m.strategies[config]; ok {
+		return strategy
 	}
+
+	return NewOpaqueTokenStrategy(m.store, m.config)
+}
+
+// Add new method after determineStrategy
+func (m *SessionManager) RegisterStrategy(strategyType SessionStrategyType, strategy SessionStrategy) {
+	m.strategies[strategyType] = strategy
 }
 
 func (m *SessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult) (*SessionResult, error) {
 	strategy := m.determineStrategyForRequest(request)
 	temporaryAuth := len(authResult.PendingActions) > 0
-	result, err := strategy.Create(ctx, authResult.User, temporaryAuth)
-	if err != nil {
-		return nil, err
-	}
-
-	if !strategy.IsStateful() {
-		return result, nil
-	}
-
-	result.Cookie = m.createCookie(result.Token, temporaryAuth)
-
-	session := &Session{
-		Token:      result.Token,
-		UserID:     authResult.User.ID,
-		CreatedAt:  time.Now(),
-		ExpiresAt:  time.Now().Add(m.config.Duration),
-		LastAccess: time.Now(),
-		Metadata: map[string]any{
-			"ip_address": m.config.IPAddressExtractor(request),
-			"user_agent": m.config.UserAgentExtractor(request),
-		},
+	options := &SessionCreateOptions{
+		Duration:      m.config.Duration,
+		TemporaryAuth: temporaryAuth,
 	}
 
 	if temporaryAuth {
-		session.Metadata[temporaryAuthKey] = true
-		session.ExpiresAt = time.Now().Add(m.config.TemporaryAuthDuration)
+		options.Duration = m.config.TemporaryAuthDuration
 	}
 
-	if err := m.store.Create(ctx, session); err != nil {
-		return nil, fmt.Errorf("failed to store session: %w", err)
+	createResult, err := strategy.Create(ctx, authResult.User, options)
+	if err != nil {
+		return nil, err
+	}
+	sessionOptions := createResult.SessionOptions
+
+	if sessionOptions == nil {
+		sessionOptions = &SessionOptions{
+			Duration: options.Duration,
+		}
+	}
+
+	if createResult.SessionValue != "" {
+		duration := sessionOptions.Duration
+		if duration == 0 {
+			duration = options.Duration
+		}
+		if err := m.storeSession(ctx, request, authResult.User.ID, createResult.SessionValue, duration, temporaryAuth); err != nil {
+			return nil, fmt.Errorf("failed to store session: %w", err)
+		}
+	}
+
+	deliveryMethod := m.determineDeliveryMethod(request)
+	result := &SessionResult{
+		Token:               createResult.Token,
+		TokenDeliveryMethod: deliveryMethod,
+	}
+
+	if deliveryMethod == TokenDeliveryCookie {
+		result.Cookie = m.createSessionCookie(result.Token, time.Now().Add(m.config.Duration))
 	}
 
 	return result, nil
 }
 
-func (m *SessionManager) ValidateSession(ctx context.Context, request *http.Request) (*SessionValidateResult, error) {
+func (m *SessionManager) ValidateSession(ctx context.Context, request *http.Request) (*AegisSession, error) {
 	strategy := m.determineStrategyForRequest(request)
 
 	validateResult, err := strategy.Validate(ctx, request)
@@ -81,60 +93,22 @@ func (m *SessionManager) ValidateSession(ctx context.Context, request *http.Requ
 		return nil, err
 	}
 
-	user, err := m.core.DBAction.FindUserByID(ctx, validateResult.UserID)
+	user, err := m.findUserFromValidSession(ctx, validateResult)
 	if err != nil {
 		return nil, err
 	}
 
-	if strategy.SupportsSlidingWindowRefresh() && validateResult.Session.ShouldRefresh(m.config.RefreshInterval) {
-		result, err := strategy.Refresh(ctx, request)
+	result := &AegisSession{
+		User:    user,
+		Session: validateResult.Session,
+	}
+
+	if strategy.SupportsExpirationExtension() && validateResult.Session.ShouldExtendExpiration(m.config.Duration, m.config.UpdateAge) {
+		extensionResult, err := m.extendSessionExpiration(ctx, strategy, validateResult.Session)
 		if err != nil {
 			return nil, err
 		}
-
-		validateResult.Session.Token = result.Token
-		validateResult.Session.ExpiresAt = time.Now().Add(m.config.Duration)
-		validateResult.Session.LastAccess = time.Now()
-		if err := m.store.Update(ctx, validateResult.Session.ID, validateResult.Session); err != nil {
-			return nil, fmt.Errorf("failed to update session: %w", err)
-		}
-		validateResult.RefreshCookie = m.createCookie(result.Token, false)
-	}
-
-	return &SessionValidateResult{
-		UserID:        validateResult.UserID,
-		User:          user,
-		Session:       validateResult.Session,
-		Metadata:      validateResult.Metadata,
-		RefreshToken:  validateResult.RefreshToken,
-		RefreshCookie: validateResult.RefreshCookie,
-	}, nil
-}
-
-func (m *SessionManager) RefreshSession(ctx context.Context, request *http.Request) (*SessionRefreshResult, error) {
-	strategy := m.determineStrategyForRequest(request)
-	result, err := strategy.Refresh(ctx, request)
-	if err != nil {
-		return nil, err
-	}
-
-	if result.ShouldStore {
-		session := &Session{
-			Token:      result.Token,
-			UserID:     result.UserID,
-			CreatedAt:  time.Now(),
-			ExpiresAt:  time.Now().Add(m.config.Duration),
-			LastAccess: time.Now(),
-			Metadata:   make(map[string]interface{}),
-		}
-
-		if err := m.store.Create(ctx, session); err != nil {
-			return nil, fmt.Errorf("failed to store session: %w", err)
-		}
-
-		if err := m.store.Delete(ctx, result.StaleSessionID); err != nil {
-			return nil, fmt.Errorf("failed to delete stale session: %w", err)
-		}
+		result.SessionExtensionResult = extensionResult
 	}
 
 	return result, nil
@@ -172,46 +146,49 @@ func (m *SessionManager) RevokeAllCookies(responseWriter http.ResponseWriter) {
 	http.SetCookie(responseWriter, sessionCookie)
 }
 
-func (m *SessionManager) determineTokenModeFromRequest(request *http.Request) SessionStrategyType {
-	transport := request.Header.Get("X-Session-Transport")
-
-	switch transport {
-	case "jwt":
-		return SessionStrategyJWT
-	case "cookie":
-		return SessionStrategyServerSide
-	case "hybrid":
-		return SessionStrategyHybrid
-	default:
-		return ""
-	}
+func (m *SessionManager) determineStrategyForRequest(_ *http.Request) SessionStrategy {
+	return m.determineStrategy(m.config.Strategy)
 }
 
-func (m *SessionManager) determineStrategyForRequest(request *http.Request) SessionStrategy {
-	strategy := m.determineTokenModeFromRequest(request)
-	if strategy == "" {
-		strategy = m.config.Strategy
+// extendSessionExpiration extends the session expiration time if the strategy
+// supports sliding window extension and the session is due for extension i.e UpdateAge is reached.
+// Returns a SessionExtensionResult if the session was extended, nil otherwise.
+func (m *SessionManager) extendSessionExpiration(ctx context.Context, strategy SessionStrategy, session *Session) (*SessionExtensionResult, error) {
+	if !strategy.SupportsExpirationExtension() {
+		return nil, nil
 	}
 
-	return m.determineStrategy(strategy)
+	if !session.ShouldExtendExpiration(m.config.Duration, m.config.UpdateAge) {
+		return nil, nil
+	}
+
+	session.ExpiresAt = time.Now().Add(m.config.Duration)
+	session.LastAccess = time.Now()
+
+	if err := m.store.Update(ctx, session.ID, &Session{
+		ExpiresAt:  session.ExpiresAt,
+		LastAccess: session.LastAccess,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update session: %w", err)
+	}
+
+	return &SessionExtensionResult{
+		Token:  session.Token,
+		Cookie: m.createSessionCookie(session.Token, session.ExpiresAt),
+	}, nil
 }
 
-func (m *SessionManager) createCookie(token string, temporaryAuth bool) *http.Cookie {
+func (m *SessionManager) createSessionCookie(token string, expiresAt time.Time) *http.Cookie {
 	cookieOptions := m.config.CookieOptions
-
 	cookie := &http.Cookie{
 		Name:        cookieOptions.Name,
 		Value:       token,
 		Path:        cookieOptions.Path,
-		MaxAge:      int(m.config.Duration.Seconds()),
+		MaxAge:      int(time.Until(expiresAt).Seconds()),
 		HttpOnly:    cookieOptions.HTTPOnly,
 		Secure:      cookieOptions.Secure,
 		SameSite:    cookieOptions.SameSite,
 		Partitioned: cookieOptions.Partitioned,
-	}
-
-	if temporaryAuth {
-		cookie.MaxAge = int(m.config.TemporaryAuthDuration.Seconds())
 	}
 
 	if cookieOptions.CrossSubdomain != nil && cookieOptions.CrossSubdomain.Enabled {
@@ -219,6 +196,51 @@ func (m *SessionManager) createCookie(token string, temporaryAuth bool) *http.Co
 	}
 
 	return cookie
+}
+
+func (m *SessionManager) findUserFromValidSession(ctx context.Context, result *SessionValidateResult) (*User, error) {
+	if result.User != nil {
+		return result.User, nil
+	}
+
+	return m.core.DBAction.FindUserByID(ctx, result.UserID)
+}
+
+func (m *SessionManager) storeSession(ctx context.Context, request *http.Request, userID any, value string, duration time.Duration, temporaryAuth bool) error {
+	session := &Session{
+		Token:      value,
+		UserID:     userID,
+		CreatedAt:  time.Now(),
+		ExpiresAt:  time.Now().Add(duration),
+		LastAccess: time.Now(),
+		Metadata: map[string]any{
+			"ip_address": m.config.IPAddressExtractor(request),
+			"user_agent": m.config.UserAgentExtractor(request),
+		},
+	}
+
+	if temporaryAuth {
+		session.Metadata[temporaryAuthKey] = true
+		session.ExpiresAt = time.Now().Add(m.config.TemporaryAuthDuration)
+	}
+
+	return m.store.Create(ctx, session)
+}
+
+func (m *SessionManager) determineDeliveryMethod(request *http.Request) TokenDeliveryMethod {
+	// Check for explicit override in request header
+	if delivery := request.Header.Get("X-Token-Transport"); delivery != "" {
+		switch TokenDeliveryMethod(delivery) {
+		case TokenDeliveryCookie, TokenDeliveryHeader:
+			return TokenDeliveryMethod(delivery)
+		}
+	}
+
+	if m.config.TokenDeliveryMethodDetector != nil {
+		return m.config.TokenDeliveryMethodDetector(request)
+	}
+
+	return m.config.TokenDeliveryMethod
 }
 
 func determineStore(config *sessionConfig, core *AegisCore) SessionStore {

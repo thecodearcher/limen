@@ -10,7 +10,6 @@ import (
 
 type Aegis struct {
 	EmailPassword  EmailPasswordFeature
-	JWT            TokenGenerator
 	config         *Config
 	sessionManager *SessionManager
 	core           *AegisCore
@@ -20,7 +19,6 @@ type AegisCore struct {
 	DB             DatabaseAdapter
 	DBAction       *DatabaseActionHelper
 	Schema         SchemaConfig
-	JWT            *JwtHandler
 	SessionManager *SessionManager
 	Responder      *Responder
 }
@@ -40,24 +38,17 @@ func New(config *Config) (*Aegis, error) {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	jwtHandler, err := newJwtHandler(config.JWT)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create jwt handler: %w", err)
-	}
-
 	if config.Features == nil {
 		config.Features = []Feature{}
 	}
 
 	aegis := &Aegis{
-		JWT:    jwtHandler,
 		config: config,
 	}
 
 	core := &AegisCore{
 		DB:     config.Database,
 		Schema: config.Schema,
-		JWT:    jwtHandler,
 	}
 
 	sessionManager := newSessionManager(core, config.Session)
@@ -119,9 +110,8 @@ func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
 		return nil, err
 	}
 	return &AegisSession{
-		User:          sessionValidateResult.User,
-		Session:       sessionValidateResult.Session,
-		RefreshCookie: sessionValidateResult.RefreshCookie,
+		User:    sessionValidateResult.User,
+		Session: sessionValidateResult.Session,
 	}, nil
 }
 

@@ -9,29 +9,12 @@ const (
 	PendingActionTwoFactorVerification PendingAction = "two_factor_verification"
 )
 
-type JWTAlgorithm string
-
-// jwt algorithms
-const (
-	JWTAlgorithmHS256 JWTAlgorithm = "HS256"
-	JWTAlgorithmHS384 JWTAlgorithm = "HS384"
-	JWTAlgorithmHS512 JWTAlgorithm = "HS512"
-	JWTAlgorithmRS256 JWTAlgorithm = "RS256"
-	JWTAlgorithmRS384 JWTAlgorithm = "RS384"
-	JWTAlgorithmRS512 JWTAlgorithm = "RS512"
-	JWTAlgorithmES256 JWTAlgorithm = "ES256"
-	JWTAlgorithmES384 JWTAlgorithm = "ES384"
-	JWTAlgorithmES512 JWTAlgorithm = "ES512"
-)
-
 // SessionStrategyType represents the type of session strategy
 type SessionStrategyType string
 
 // Session strategy types
 const (
-	SessionStrategyServerSide SessionStrategyType = "server_side"
-	SessionStrategyJWT        SessionStrategyType = "jwt"
-	SessionStrategyHybrid     SessionStrategyType = "hybrid"
+	SessionStrategyOpaqueToken SessionStrategyType = "opaque_token"
 )
 
 type EnvelopeMode int
@@ -47,4 +30,14 @@ type SessionStoreType string
 const (
 	SessionStoreTypeMemory   SessionStoreType = "in_memory"
 	SessionStoreTypeDatabase SessionStoreType = "database"
+)
+
+// TokenDeliveryMethod specifies how tokens should be delivered
+type TokenDeliveryMethod string
+
+const (
+	// TokenDeliveryCookie delivers tokens via HttpOnly cookies
+	TokenDeliveryCookie TokenDeliveryMethod = "cookie"
+	// TokenDeliveryHeader delivers tokens in response headers
+	TokenDeliveryHeader TokenDeliveryMethod = "header"
 )

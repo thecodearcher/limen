@@ -35,7 +35,7 @@ type EnvelopeSerializer func(
 ) error
 
 // SessionTransformer is a function to serialize the session data to a map[string]any for the response body
-type SessionTransformer func(user map[string]any, pendingActions []PendingAction, token string, refreshToken string) (map[string]any, *AegisError)
+type SessionTransformer func(user map[string]any, pendingActions []PendingAction, sessionResult *SessionResult) (map[string]any, *AegisError)
 
 type EnvelopeFields struct {
 	Data    string

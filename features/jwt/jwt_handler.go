@@ -1,4 +1,4 @@
-package aegis
+package jwt
 
 import (
 	"errors"
@@ -31,7 +31,7 @@ func newJwtHandler(config *jWTConfig) (*JwtHandler, error) {
 }
 
 // GenerateToken generates a JWT token with the given claims and duration
-func (s *JwtHandler) GenerateToken(claims map[string]interface{}, duration time.Duration) (string, error) {
+func (s *JwtHandler) GenerateToken(claims map[string]any, duration time.Duration) (string, error) {
 	signingMethod := s.keyProvider.getSigningMethod()
 	token := jwt.New(signingMethod)
 
@@ -97,10 +97,6 @@ func (s *JwtHandler) GenerateAccessToken(sessionID string, user *User, duration 
 		maps.Copy(claims, customClaims)
 	}
 
-	if duration == nil {
-		duration = &s.config.accessToken.duration
-	}
-
 	accessToken, err := s.GenerateToken(claims, *duration)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to generate access token: %w", err)
@@ -120,6 +116,6 @@ func (s *JwtHandler) GenerateAccessToken(sessionID string, user *User, duration 
 	return accessToken, "", nil
 }
 
-func (s *JwtHandler) CustomUserFromSubjectFn() func(string) (*User, error) {
+func (s *JwtHandler) CustomUserFromSubjectFn() func(any) (*User, error) {
 	return s.config.claims.userFromSubject
 }

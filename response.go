@@ -84,30 +84,41 @@ func (rs Responder) Error(w http.ResponseWriter, r *http.Request, ae *AegisError
 }
 
 func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core *AegisCore, result *AuthenticationResult, sessionResult *SessionResult) error {
-	if sessionResult != nil && sessionResult.Cookie != nil {
-		http.SetCookie(w, sessionResult.Cookie)
+	if sessionResult != nil && sessionResult.TokenDeliveryMethod == TokenDeliveryCookie {
+		rs.setCookies(w, sessionResult)
+	}
+
+	if sessionResult != nil && sessionResult.TokenDeliveryMethod == TokenDeliveryHeader {
+		rs.setHeaders(w, sessionResult)
 	}
 
 	if rs.sessionTransformer != nil {
-		payload, err := rs.sessionTransformer(result.User.Raw(), result.PendingActions, sessionResult.Token, sessionResult.RefreshToken)
-		if err != nil {
-			return rs.Error(w, r, err)
-		}
-		return rs.JSON(w, r, http.StatusOK, payload)
+		return rs.handleSessionTransformer(w, r, result, sessionResult)
 	}
 
-	payload := map[string]any{
+	return rs.JSON(w, r, http.StatusOK, map[string]any{
 		"pending_actions": result.PendingActions,
 		"user":            core.Schema.User.Serialize(result.User),
-	}
+	})
+}
 
-	if sessionResult != nil && sessionResult.Cookie == nil && sessionResult.Token != "" {
-		payload["token"] = sessionResult.Token
+func (rs Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Request, result *AuthenticationResult, sessionResult *SessionResult) error {
+	payload, err := rs.sessionTransformer(result.User.Raw(), result.PendingActions, sessionResult)
+	if err != nil {
+		return rs.Error(w, r, err)
 	}
-
-	if sessionResult != nil && sessionResult.Cookie == nil && sessionResult.RefreshToken != "" {
-		payload["refresh_token"] = sessionResult.RefreshToken
-	}
-
 	return rs.JSON(w, r, http.StatusOK, payload)
+}
+
+func (rs Responder) setCookies(w http.ResponseWriter, sessionResult *SessionResult) {
+	if sessionResult.Cookie != nil {
+		http.SetCookie(w, sessionResult.Cookie)
+	}
+}
+
+func (rs Responder) setHeaders(w http.ResponseWriter, sessionResult *SessionResult) {
+	if sessionResult.Token != "" {
+		w.Header().Set("Set-Aegis-Token", sessionResult.Token)
+	}
+
 }

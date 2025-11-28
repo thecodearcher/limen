@@ -33,10 +33,6 @@ func (api *aegisAPI) GetSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if session.RefreshCookie != nil {
-		http.SetCookie(w, session.RefreshCookie)
-	}
-
 	api.responder.SessionResponse(w, r, api.core, &AuthenticationResult{User: session.User}, nil)
 }
 

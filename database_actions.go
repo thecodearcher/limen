@@ -20,6 +20,10 @@ func (i *DatabaseActionHelper) FindUserByEmail(ctx context.Context, email string
 	}, nil)
 }
 
+func (i *DatabaseActionHelper) FindUser(ctx context.Context, conditions []Where) (*User, error) {
+	return FindOne(ctx, i.core, &i.core.Schema.User, conditions, nil)
+}
+
 func (i *DatabaseActionHelper) FindUserByID(ctx context.Context, id any) (*User, error) {
 	return FindOne(ctx, i.core, &i.core.Schema.User, []Where{
 		Eq(i.core.Schema.User.GetIDField(), id),

@@ -1,4 +1,4 @@
-package aegis
+package jwt
 
 import (
 	"crypto/ecdsa"

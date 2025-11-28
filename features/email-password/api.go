@@ -110,7 +110,7 @@ func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *
 	}
 
 	if !p.feature.config.autoSignInOnSignUp {
-		p.responder.SessionResponse(w, r, p.feature.core, result, &aegis.SessionResult{})
+		p.responder.SessionResponse(w, r, p.feature.core, result, nil)
 		return
 	}
 

@@ -29,10 +29,6 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() httpx.Middleware {
 				return
 			}
 
-			if session.RefreshCookie != nil {
-				http.SetCookie(w, session.RefreshCookie)
-			}
-
 			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &AegisSession{
 				User:    session.User,
 				Session: session.Session,
