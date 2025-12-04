@@ -30,7 +30,7 @@ func (p *emailPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 
 		Middleware: []httpx.Middleware{},
 		RateLimitRules: []*aegis.RateLimitRule{
-			aegis.NewRateLimitRule("/signin/email", 3, 10*time.Second),
+			aegis.NewRateLimitRule("/signin/email", 5, 10*time.Second),
 		},
 	}
 }
