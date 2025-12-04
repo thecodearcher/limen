@@ -3,7 +3,10 @@ package aegis
 
 import (
 	"fmt"
+	"log"
+	"maps"
 	"net/http"
+	"path"
 
 	"github.com/thecodearcher/aegis/pkg/httpx"
 )
@@ -74,8 +77,11 @@ func New(config *Config) (*Aegis, error) {
 func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 	config := NewDefaultHTTPConfig(opts...)
 
-	config.basePath = httpx.NormalizeBasePath(config.basePath)
-	router := httpx.NewRouter(config.middleware...)
+	if config.rateLimiter != nil {
+		config.rateLimiter.validate()
+	}
+
+	config.basePath = httpx.NormalizePath(config.basePath)
 
 	httpCore := &AegisHTTPCore{
 		Responder:    NewResponder(config),
@@ -83,17 +89,19 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 		Config:       config,
 	}
 
+	rateLimiterRules := a.prepareRateLimiterRules(config.basePath, config)
+
+	rateLimiter := NewRateLimiter(config.rateLimiter, httpCore, rateLimiterRules)
+	globalMiddlewares := append([]httpx.Middleware{rateLimiter.Handle}, config.middleware...)
+
+	router := httpx.NewRouter(globalMiddlewares...)
 	registerBaseRoutes(router, httpCore, a.core, config.basePath)
 
 	for _, feature := range a.config.Features {
 		featureConfig := feature.PluginHTTPConfig()
 		basePath := featureConfig.BasePath
 		override := config.overrides[string(feature.Name())]
-		if override != nil && override.BasePath != "" {
-			basePath = override.BasePath
-		}
-
-		normalizedBasePath := config.basePath + httpx.NormalizeBasePath(basePath)
+		normalizedBasePath := a.normalizePluginPath(config.basePath, basePath, override)
 		routeBuilder := &RouteBuilder{
 			group:         router.Group(normalizedBasePath, featureConfig.Middleware...),
 			AegisHTTPCore: httpCore,
@@ -113,6 +121,96 @@ func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
 		User:    sessionValidateResult.User,
 		Session: sessionValidateResult.Session,
 	}, nil
+}
+
+func (a *Aegis) normalizePluginPath(basePath string, pluginBasePath string, override *PluginHTTPOverride) string {
+	if override != nil && override.BasePath != "" {
+		pluginBasePath = override.BasePath
+	}
+
+	return path.Join(basePath, httpx.NormalizePath(pluginBasePath))
+}
+
+func (a *Aegis) prepareRateLimiterRules(basePath string, config *HTTPConfig) map[string]*RateLimitRule {
+	rules := make(map[string]*RateLimitRule)
+
+	customRules := config.rateLimiter.customRules
+
+	// Process feature rules
+	for _, feature := range a.config.Features {
+		featureRules := a.processFeatureRateLimitRules(feature, basePath, config, customRules)
+		maps.Copy(rules, featureRules)
+	}
+
+	resolvedCustomRules := a.processCustomRateLimitRules(basePath, customRules)
+	maps.Copy(rules, resolvedCustomRules)
+
+	return rules
+}
+
+func (a *Aegis) processFeatureRateLimitRules(
+	feature Feature,
+	basePath string,
+	config *HTTPConfig,
+	customRules map[string]*RateLimitRule,
+) map[string]*RateLimitRule {
+	rules := make(map[string]*RateLimitRule)
+	featureConfig := feature.PluginHTTPConfig()
+	override := config.overrides[string(feature.Name())]
+	normalizedBasePath := a.normalizePluginPath(basePath, featureConfig.BasePath, override)
+
+	if len(featureConfig.RateLimitRules) == 0 {
+		return rules
+	}
+
+	for _, rule := range featureConfig.RateLimitRules {
+		finalRule := a.resolveRuleOverride(rule, customRules)
+		completePath := path.Join(normalizedBasePath, rule.path)
+
+		if err := a.compileAndSetRulePattern(finalRule, completePath); err != nil {
+			log.Panicf("failed to compile pattern for path %s: %v", completePath, err)
+		}
+
+		rules[completePath] = finalRule
+	}
+
+	return rules
+}
+
+func (a *Aegis) processCustomRateLimitRules(basePath string, customRules map[string]*RateLimitRule) map[string]*RateLimitRule {
+	rules := make(map[string]*RateLimitRule)
+
+	for pattern, rule := range customRules {
+		completePath := path.Join(basePath, pattern)
+
+		if err := a.compileAndSetRulePattern(rule, completePath); err != nil {
+			log.Panicf("failed to compile pattern for path %s: %v", completePath, err)
+		}
+
+		rules[completePath] = rule
+	}
+
+	return rules
+}
+
+// compileAndSetRulePattern compiles the pattern and sets it on the rule
+func (a *Aegis) compileAndSetRulePattern(rule *RateLimitRule, completePath string) error {
+	compiledPattern, err := compilePattern(completePath)
+	if err != nil {
+		return fmt.Errorf("failed to compile pattern: %w", err)
+	}
+
+	rule.path = completePath
+	rule.pathRegex = compiledPattern
+	return nil
+}
+
+func (a *Aegis) resolveRuleOverride(rule *RateLimitRule, customRules map[string]*RateLimitRule) *RateLimitRule {
+	if customRule, exists := customRules[rule.path]; exists {
+		delete(customRules, rule.path)
+		return customRule
+	}
+	return rule
 }
 
 func registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore, core *AegisCore, basePath string) {

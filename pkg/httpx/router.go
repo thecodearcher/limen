@@ -127,7 +127,7 @@ func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.Handle
 // All routes added to the group will have the prefix prepended to their paths
 // and the group middleware applied before any route-specific middleware.
 func (r *Router) Group(prefix string, middleware ...Middleware) *RouterGroup {
-	prefix = NormalizeBasePath(prefix)
+	prefix = NormalizePath(prefix)
 	return &RouterGroup{
 		router:     r,
 		prefix:     prefix,
@@ -350,7 +350,7 @@ func (r *Router) splitPath(pathStr string) []string {
 func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, middleware ...Middleware) {
 	// Combine group middleware with route-specific middleware
 	allMiddleware := append(g.middleware, middleware...)
-	fullPattern := g.prefix + NormalizeBasePath(pattern)
+	fullPattern := g.prefix + NormalizePath(pattern)
 	g.router.AddRoute(method, fullPattern, handler, routeID, allMiddleware...)
 }
 

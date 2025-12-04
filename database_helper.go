@@ -74,14 +74,20 @@ func ParseVerificationAction(action string) (string, string) {
 }
 
 func Update[T Model](ctx context.Context, core *AegisCore, schema Schema[T], updatedData *T, conditions []Where) error {
+	return UpdateRaw(ctx, core, schema, updatedData, conditions, true)
+}
+
+func UpdateRaw[T Model](ctx context.Context, core *AegisCore, schema Schema[T], updatedData *T, conditions []Where, removeEmptyValues bool) error {
 	payload := make(map[string]any)
 
 	maps.Copy(payload, schema.ToStorage(updatedData))
-	for key, value := range payload {
-		concreteValue := reflect.ValueOf(value)
-		//we remove any empty strings or zeros to avoid accidental NULL updates
-		if !concreteValue.IsValid() || concreteValue.IsZero() {
-			delete(payload, key)
+	if removeEmptyValues {
+		for key, value := range payload {
+			concreteValue := reflect.ValueOf(value)
+			//we remove any empty strings or zeros to avoid accidental NULL updates
+			if !concreteValue.IsValid() || concreteValue.IsZero() {
+				delete(payload, key)
+			}
 		}
 	}
 

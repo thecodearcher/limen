@@ -24,6 +24,8 @@ type HTTPConfig struct {
 	sessionTransformer SessionTransformer
 	// HTTPHooks are functions that are called before and after the request is processed
 	hooks *httpx.Hooks
+	// RateLimiter configuration
+	rateLimiter *RateLimiterConfig
 }
 
 type EnvelopeSerializer func(
@@ -63,6 +65,7 @@ func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *HTTPConfig {
 		responseEnvelope: &responseEnvelopeConfig{
 			mode: EnvelopeOff,
 		},
+		rateLimiter: NewDefaultRateLimiterConfig(),
 	}
 	for _, opt := range opts {
 		opt(config)
@@ -122,5 +125,11 @@ func WithHTTPSessionTransformer(transformer SessionTransformer) HTTPConfigOption
 func WithHTTPHooks(hooks *httpx.Hooks) HTTPConfigOption {
 	return func(c *HTTPConfig) {
 		c.hooks = hooks
+	}
+}
+
+func WithHTTPRateLimiter(opts ...RateLimiterOption) HTTPConfigOption {
+	return func(c *HTTPConfig) {
+		c.rateLimiter = NewDefaultRateLimiterConfig(opts...)
 	}
 }

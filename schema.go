@@ -14,6 +14,7 @@ const (
 	UserSchemaTableName         TableName = "users"
 	VerificationSchemaTableName TableName = "verifications"
 	SessionSchemaTableName      TableName = "sessions"
+	RateLimitSchemaTableName    TableName = "rate_limits"
 )
 
 // defaults for schemas fields
@@ -38,6 +39,10 @@ const (
 	SessionSchemaExpiresAtField  SchemaField = "expires_at"
 	SessionSchemaLastAccessField SchemaField = "last_access"
 	SessionSchemaMetadataField   SchemaField = "metadata"
+
+	RateLimitSchemaKeyField           SchemaField = "key"
+	RateLimitSchemaCountField         SchemaField = "count"
+	RateLimitSchemaLastRequestAtField SchemaField = "last_request_at"
 )
 
 type AdditionalFieldsFunc func(ctx *AdditionalFieldsContext) (map[string]any, *AegisError)

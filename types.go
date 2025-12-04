@@ -115,3 +115,9 @@ type SessionStrategy interface {
 	// Only applies to stateful strategies where expiration can be modified.
 	SupportsExpirationExtension() bool
 }
+
+type RateLimiterStore interface {
+	Get(ctx context.Context, key string) (*RateLimit, error)
+	Create(ctx context.Context, value *RateLimit) error
+	Update(ctx context.Context, key string, value *RateLimit) error
+}

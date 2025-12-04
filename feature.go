@@ -35,6 +35,9 @@ type PluginHTTPConfig struct {
 	BasePath string
 	// Middleware to be applied to the plugin's routes.
 	Middleware []httpx.Middleware
+	// Specific rate limit rules to be applied to the plugin's routes.
+	// These rules can be overridden by the end user.
+	RateLimitRules []*RateLimitRule
 }
 
 type EmailPasswordFeature interface {

@@ -18,4 +18,6 @@ type SchemaConfig struct {
 	Verification VerificationSchema
 	// Session schema configuration
 	Session SessionSchema
+	// Rate limit schema configuration
+	RateLimit RateLimitSchema
 }

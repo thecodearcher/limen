@@ -3,6 +3,7 @@ package emailpassword
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/thecodearcher/aegis"
 	"github.com/thecodearcher/aegis/pkg/httpx"
@@ -26,8 +27,11 @@ func NewEmailPasswordAPI(emailPasswordFeature *emailPasswordFeature, routeBuilde
 func (p *emailPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	// api := NewEmailPasswordAPI(p, httpCore)
 	return aegis.PluginHTTPConfig{
-		BasePath:   "/",
+
 		Middleware: []httpx.Middleware{},
+		RateLimitRules: []*aegis.RateLimitRule{
+			aegis.NewRateLimitRule("/signin/email", 3, 10*time.Second),
+		},
 	}
 }
 

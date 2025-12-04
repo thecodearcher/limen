@@ -33,7 +33,6 @@ func (m *SessionManager) determineStrategy(config SessionStrategyType) SessionSt
 	return NewOpaqueTokenStrategy(m.store, m.config)
 }
 
-// Add new method after determineStrategy
 func (m *SessionManager) RegisterStrategy(strategyType SessionStrategyType, strategy SessionStrategy) {
 	m.strategies[strategyType] = strategy
 }

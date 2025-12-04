@@ -2,10 +2,11 @@ package aegis
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 )
+
+type RequestExtractorFn func(request *http.Request) string
 
 type sessionConfig struct {
 	Strategy SessionStrategyType
@@ -29,9 +30,9 @@ type sessionConfig struct {
 	// TrustedOrigins: list of allowed origins for cross-site credentialed requests (CORS + CSRF header).
 	TrustedOrigins []string
 	// IPAddressExtractor: the function to extract the IP address from the request
-	IPAddressExtractor func(request *http.Request) string
+	IPAddressExtractor RequestExtractorFn
 	// UserAgentExtractor: the function to extract the user agent from the request
-	UserAgentExtractor func(request *http.Request) string
+	UserAgentExtractor RequestExtractorFn
 	// TokenDeliveryMethod: the method to deliver the tokens
 	TokenDeliveryMethod TokenDeliveryMethod
 	// TokenDeliveryMethodDetector allows custom detection logic for the token delivery method
@@ -81,16 +82,7 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 			},
 			CrossDomain: false,
 		},
-		IPAddressExtractor: func(request *http.Request) string {
-			if ip := request.Header.Get("X-Forwarded-For"); ip != "" {
-				return ip
-			}
-			if ip := request.Header.Get("X-Real-IP"); ip != "" {
-				return ip
-			}
-			ip, _, _ := net.SplitHostPort(request.RemoteAddr)
-			return ip
-		},
+		IPAddressExtractor: ipExtractorFromRemoteAddr,
 		UserAgentExtractor: func(request *http.Request) string {
 			return request.UserAgent()
 		},

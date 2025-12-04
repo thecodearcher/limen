@@ -41,3 +41,10 @@ const (
 	// TokenDeliveryHeader delivers tokens in response headers
 	TokenDeliveryHeader TokenDeliveryMethod = "header"
 )
+
+type RateLimiterStoreType string
+
+const (
+	RateLimiterStoreTypeMemory   RateLimiterStoreType = "in_memory"
+	RateLimiterStoreTypeDatabase RateLimiterStoreType = "database"
+)

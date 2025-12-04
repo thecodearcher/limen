@@ -24,6 +24,12 @@ var (
 	ErrSessionInvalid  = errors.New("session is invalid")
 )
 
+// Rate limiting errors
+var (
+	ErrRateLimitExceeded = errors.New("rate limit exceeded")
+	ErrRateLimitNotFound = errors.New("rate limit not found")
+)
+
 type AegisErrorImpl struct {
 	message string
 	details any

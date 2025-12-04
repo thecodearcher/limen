@@ -11,8 +11,8 @@ import (
 
 type bodyContextKey struct{}
 
-// NormalizeBasePath normalizes the base path to start with a slash
-func NormalizeBasePath(basePath string) string {
+// NormalizePath normalizes the base path to start with a slash
+func NormalizePath(basePath string) string {
 	if !strings.HasPrefix(basePath, "/") {
 		basePath = "/" + basePath
 	}
