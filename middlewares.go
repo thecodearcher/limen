@@ -29,6 +29,14 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() httpx.Middleware {
 				return
 			}
 
+			if session.SessionExtensionResult != nil && session.SessionExtensionResult.Cookie != nil {
+				http.SetCookie(w, session.SessionExtensionResult.Cookie)
+			}
+
+			if session.SessionExtensionResult != nil && session.SessionExtensionResult.Token != "" {
+				w.Header().Set("Set-Aegis-Token", session.SessionExtensionResult.Token)
+			}
+
 			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &AegisSession{
 				User:    session.User,
 				Session: session.Session,
