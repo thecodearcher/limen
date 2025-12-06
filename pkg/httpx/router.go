@@ -13,10 +13,10 @@ import (
 )
 
 type paramsContextKey struct{}
+type currentRouteContextKey struct{}
 
 type HTTPMethod string
 
-// HTTP method constants for method table
 const (
 	MethodANY     HTTPMethod = "ANY"
 	MethodGET     HTTPMethod = "GET"
@@ -44,16 +44,10 @@ type Middleware func(http.Handler) http.Handler
 
 // RadixNode represents a node in the radix tree
 type RadixNode struct {
-	// The path segment this node represents
 	path string
 
-	// Per-method handlers (7 methods: GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS)
-	// handlers [8]http.HandlerFunc
-
-	// Per-method route metadata
 	routes [8]*Route
 
-	// Child nodes keyed by their path segments
 	children map[string]*RadixNode
 
 	// Parameter child (for :param routes)
@@ -70,11 +64,14 @@ type RadixNode struct {
 // - :param (single segment parameters)
 // - HEAD -> GET fallback
 type Router struct {
-	root *RadixNode
-	// Exact fast path for static routes: map["METHOD PATH"]handler
+	root             *RadixNode
 	exactRoutes      map[string]http.HandlerFunc
 	globalMiddleware []Middleware
 	hooks            *Hooks
+}
+
+type RouteMetadata struct {
+	AllowedContentTypes []string
 }
 
 // Route represents a single route with its handler and metadata
@@ -85,6 +82,7 @@ type Route struct {
 	RouteID     RouteID
 	Description string
 	Middleware  []Middleware
+	Metadata    *RouteMetadata
 }
 
 // RouteID is a unique identifier for each route
@@ -108,15 +106,16 @@ func NewRouter(globalMiddleware ...Middleware) *Router {
 	}
 }
 
-// AddRoute adds a new route to the radix tree
-// Middleware is applied in order: global middleware first, then route-specific middleware
-func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, middleware ...Middleware) {
+// AddRoute adds a new route to the radix tree.
+// Middleware is applied in order: global middleware first, then route-specific middleware.
+func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
 	route := &Route{
 		Method:     method,
 		Pattern:    pattern,
 		Handler:    handler,
 		RouteID:    routeID,
 		Middleware: middleware,
+		Metadata:   metadata,
 	}
 
 	segments := r.splitPath(pattern)
@@ -124,8 +123,7 @@ func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.Handle
 }
 
 // Group creates a new router group with the given prefix and middleware.
-// All routes added to the group will have the prefix prepended to their paths
-// and the group middleware applied before any route-specific middleware.
+// All routes added to the group will have the prefix prepended to their paths.
 func (r *Router) Group(prefix string, middleware ...Middleware) *RouterGroup {
 	prefix = NormalizePath(prefix)
 	return &RouterGroup{
@@ -139,21 +137,16 @@ func (r *Router) Group(prefix string, middleware ...Middleware) *RouterGroup {
 func (r *Router) insertRoute(route *Route, segments []string) {
 	current := r.root
 
-	// Iterate through each segment
 	for _, segment := range segments {
-		// Handle parameter segments
 		if strings.HasPrefix(segment, ":") {
 			current = r.handleParameterSegment(current, segment)
 			continue
 		}
 
-		// Handle static segments
 		current = r.handleStaticSegment(current, segment)
 	}
 
-	// Set the handler and route at the final node for the specific method
 	methodIdx := methodIndex[route.Method]
-	// current.handlers[methodIdx] = route.Handler
 	current.routes[methodIdx] = route
 }
 
@@ -161,7 +154,6 @@ func (r *Router) insertRoute(route *Route, segments []string) {
 func (r *Router) handleParameterSegment(current *RadixNode, segment string) *RadixNode {
 	paramName := segment[1:]
 
-	// If we already have a parameter child, validate and use it
 	if current.paramChild != nil {
 		if current.paramChild.paramName != paramName {
 			panic("conflicting parameter names at same path level")
@@ -169,7 +161,6 @@ func (r *Router) handleParameterSegment(current *RadixNode, segment string) *Rad
 		return current.paramChild
 	}
 
-	// Create new parameter child
 	current.paramChild = &RadixNode{
 		path:      segment,
 		children:  make(map[string]*RadixNode),
@@ -181,12 +172,10 @@ func (r *Router) handleParameterSegment(current *RadixNode, segment string) *Rad
 
 // handleStaticSegment handles static segments with early returns
 func (r *Router) handleStaticSegment(current *RadixNode, segment string) *RadixNode {
-	// Look for existing child with this segment
 	if child, exists := current.children[segment]; exists {
 		return child
 	}
 
-	// Create new child node
 	child := &RadixNode{
 		path:     segment,
 		children: make(map[string]*RadixNode),
@@ -212,7 +201,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // wrapHandler applies global middleware, route-specific middleware to a handler
 // and applies hooks to the request and response and this is where the request body is parsed and stored in the request context
 func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware, route *Route) http.HandlerFunc {
-	// Combine global and route middleware (global first, then route-specific)
 	allMiddleware := append(r.globalMiddleware, routeMiddleware...)
 	wrapped := r.applyMiddleware(allMiddleware, http.HandlerFunc(handler))
 
@@ -258,13 +246,14 @@ func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middlew
 
 // handleRoute handles a matched route with parameters
 func (r *Router) handleRoute(w http.ResponseWriter, req *http.Request, route *Route, params map[string]string) {
-	// Add parameters to request context if any
+	ctx := context.WithValue(req.Context(), currentRouteContextKey{}, route)
+	req = req.WithContext(ctx)
+
 	if len(params) > 0 {
 		ctx := context.WithValue(req.Context(), paramsContextKey{}, params)
 		req = req.WithContext(ctx)
 	}
 
-	// Apply middleware (global + route-specific) to the handler
 	wrappedHandler := r.wrapHandler(route.Handler, route.Middleware, route)
 	wrappedHandler(w, req)
 }
@@ -308,7 +297,6 @@ func (r *Router) matchRoute(segments []string, method HTTPMethod) (*Route, map[s
 		return nil, nil
 	}
 
-	// Check if we have a handler for this method at the final node
 	if route := current.routes[methodIdx]; route != nil {
 		return route, params
 	}
@@ -332,26 +320,22 @@ func copyParams(m map[string]string) map[string]string {
 
 // splitPath splits a path into segments, removing empty segments
 func (r *Router) splitPath(pathStr string) []string {
-	// Clean the path to handle // and ./.. shenanigans
 	pathStr = path.Clean(pathStr)
 
-	// Remove leading slash
 	if pathStr == "/" || pathStr == "" {
 		return []string{}
 	}
 
-	// Remove leading slash and split
 	pathStr = strings.TrimPrefix(pathStr, "/")
 	return strings.Split(pathStr, "/")
 }
 
 // AddRoute adds a route to the group with the group's prefix prepended.
 // Middleware is applied in order: router global middleware, group middleware, then route-specific middleware.
-func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, middleware ...Middleware) {
-	// Combine group middleware with route-specific middleware
+func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
 	allMiddleware := append(g.middleware, middleware...)
 	fullPattern := g.prefix + NormalizePath(pattern)
-	g.router.AddRoute(method, fullPattern, handler, routeID, allMiddleware...)
+	g.router.AddRoute(method, fullPattern, handler, routeID, metadata, allMiddleware...)
 }
 
 func (r *Router) applyMiddleware(mws []Middleware, h http.Handler) http.Handler {

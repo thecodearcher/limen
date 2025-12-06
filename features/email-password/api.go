@@ -16,18 +16,16 @@ type emailPasswordAPI struct {
 	responder *aegis.Responder
 }
 
-func NewEmailPasswordAPI(emailPasswordFeature *emailPasswordFeature, routeBuilder *aegis.RouteBuilder) *emailPasswordAPI {
+func NewEmailPasswordAPI(emailPasswordFeature *emailPasswordFeature, httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) *emailPasswordAPI {
 	return &emailPasswordAPI{
 		feature:   emailPasswordFeature,
 		builder:   routeBuilder,
-		responder: routeBuilder.Responder,
+		responder: httpCore.Responder,
 	}
 }
 
 func (p *emailPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
-	// api := NewEmailPasswordAPI(p, httpCore)
 	return aegis.PluginHTTPConfig{
-
 		Middleware: []httpx.Middleware{},
 		RateLimitRules: []*aegis.RateLimitRule{
 			aegis.NewRateLimitRule("/signin/email", 5, 10*time.Second),
@@ -35,8 +33,8 @@ func (p *emailPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	}
 }
 
-func (p *emailPasswordFeature) RegisterRoutes(routeBuilder *aegis.RouteBuilder) {
-	api := NewEmailPasswordAPI(p, routeBuilder)
+func (p *emailPasswordFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+	api := NewEmailPasswordAPI(p, httpCore, routeBuilder)
 	routes(api)
 }
 

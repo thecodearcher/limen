@@ -76,11 +76,12 @@ func main() {
 			},
 		},
 		Session: aegis.NewDefaultSessionConfig(
+
 			// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
 			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
 
 			aegis.WithSessionCookieName("default_session"),
-			// aegis.WithSessionTokenDeliveryMethod(aegis.TokenDeliveryHeader),
+			aegis.WithSessionTokenDeliveryMethod(aegis.TokenDeliveryHeader),
 		),
 	}
 
@@ -89,7 +90,22 @@ func main() {
 		log.Fatalf("Failed to create aegis: %v", err)
 	}
 
-	handler := auth.Handler(aegis.WithHTTPBasePath("/api/auth"))
+	handler := auth.Handler(aegis.WithHTTPBasePath("/api/auth"),
+		aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
+		aegis.WithHTTPTrustedOrigins([]string{
+			"*.localhost:3000", "https://localhost:3000",
+			"myapp://",                             // Mobile app scheme
+			"chrome-extension://YOUR_EXTENSION_ID", // Browser extension
+			"exp://*/*",                            // Trust all Expo development URLs
+			"exp://10.0.0.*:*/*",                   // Trust 10.0.0.x IP range with any port,
+			// "*.example.com",
+			"https://*.example.com",
+			"http://*.dev.example.com",
+		}),
+	) // 	aegis.WithRateLimiterWindow(time.Minute),
+	// 	aegis.WithRateLimiterDisableForPaths("/me", "/signin/email"),
+	// aegis.WithRateLimiterStore(aegis.RateLimiterStoreTypeDatabase),
+
 	// 		fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
 	// 		fmt.Printf("Before request body: %+v\n", ctx.BodyData)
 	// 	}),

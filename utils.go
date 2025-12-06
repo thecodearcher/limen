@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -154,4 +155,27 @@ func countWildcards(path string) int {
 func pathMatcher(req *http.Request, pathRegex *regexp.Regexp) bool {
 	normalizedPath := httpx.NormalizePath(req.URL.Path)
 	return pathRegex.MatchString(normalizedPath)
+}
+
+func originMatcher(request *http.Request, origins []*regexp.Regexp) bool {
+	requestOrigin := request.Header.Get("Origin")
+	referer := request.Header.Get("Referer")
+	if requestOrigin == "" && referer == "" {
+		return false
+	}
+	if requestOrigin == "" {
+		refererURL, err := url.Parse(referer)
+		if err != nil {
+			return false
+		}
+		requestOrigin = refererURL.Scheme + "://" + refererURL.Host
+	}
+
+	for _, pattern := range origins {
+		if pattern.MatchString(requestOrigin) {
+			return true
+		}
+	}
+
+	return false
 }

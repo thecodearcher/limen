@@ -26,6 +26,12 @@ type HTTPConfig struct {
 	hooks *httpx.Hooks
 	// RateLimiter configuration
 	rateLimiter *RateLimiterConfig
+	// trustedOrigins: list of trusted origins.
+	trustedOrigins []string
+	// CSRFProtection: enable CSRF protection.
+	csrfProtection bool
+	// OriginCheck: enable origin check.
+	originCheck bool
 }
 
 type EnvelopeSerializer func(
@@ -65,7 +71,10 @@ func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *HTTPConfig {
 		responseEnvelope: &responseEnvelopeConfig{
 			mode: EnvelopeOff,
 		},
-		rateLimiter: NewDefaultRateLimiterConfig(),
+		rateLimiter:    NewDefaultRateLimiterConfig(),
+		trustedOrigins: []string{},
+		csrfProtection: true,
+		originCheck:    true,
 	}
 	for _, opt := range opts {
 		opt(config)
@@ -76,6 +85,12 @@ func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *HTTPConfig {
 func WithHTTPBasePath(basePath string) HTTPConfigOption {
 	return func(c *HTTPConfig) {
 		c.basePath = basePath
+	}
+}
+
+func WithHTTPTrustedOrigins(trustedOrigins []string) HTTPConfigOption {
+	return func(c *HTTPConfig) {
+		c.trustedOrigins = trustedOrigins
 	}
 }
 
@@ -131,5 +146,17 @@ func WithHTTPHooks(hooks *httpx.Hooks) HTTPConfigOption {
 func WithHTTPRateLimiter(opts ...RateLimiterOption) HTTPConfigOption {
 	return func(c *HTTPConfig) {
 		c.rateLimiter = NewDefaultRateLimiterConfig(opts...)
+	}
+}
+
+func WithHTTPCSRFProtection(csrfProtection bool) HTTPConfigOption {
+	return func(c *HTTPConfig) {
+		c.csrfProtection = csrfProtection
+	}
+}
+
+func WithHTTPOriginCheck(originCheck bool) HTTPConfigOption {
+	return func(c *HTTPConfig) {
+		c.originCheck = originCheck
 	}
 }

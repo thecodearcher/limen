@@ -24,7 +24,7 @@ type Feature interface {
 	// PluginHTTPConfig returns the configuration for the plugin's HTTP surface.
 	PluginHTTPConfig() PluginHTTPConfig
 	// RegisterRoutes registers routes for the plugin.
-	RegisterRoutes(routeBuilder *RouteBuilder)
+	RegisterRoutes(httpCore *AegisHTTPCore, routeBuilder *RouteBuilder)
 }
 
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.

@@ -27,8 +27,6 @@ type sessionConfig struct {
 	CustomStore SessionStore
 	// CookieOptions: the cookie options to use
 	CookieOptions *CookieConfig
-	// TrustedOrigins: list of allowed origins for cross-site credentialed requests (CORS + CSRF header).
-	TrustedOrigins []string
 	// IPAddressExtractor: the function to extract the IP address from the request
 	IPAddressExtractor RequestExtractorFn
 	// UserAgentExtractor: the function to extract the user agent from the request
@@ -96,9 +94,6 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 }
 
 func (c *sessionConfig) validate() error {
-	if c.CookieOptions.CrossDomain && len(c.TrustedOrigins) == 0 {
-		return fmt.Errorf("trusted origins are required when cross domain is enabled")
-	}
 
 	if c.UpdateAge > c.Duration {
 		return fmt.Errorf("update age cannot be greater than duration")
@@ -178,12 +173,6 @@ func WithSessionCookieCrossDomainEnabled() SessionConfigOption {
 		c.CookieOptions.SameSite = http.SameSiteNoneMode
 		c.CookieOptions.Secure = true
 		c.CookieOptions.Partitioned = true
-	}
-}
-
-func WithSessionTrustedOrigins(origins []string) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.TrustedOrigins = origins
 	}
 }
 

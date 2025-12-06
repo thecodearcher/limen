@@ -106,3 +106,10 @@ func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context,
 		c.onPasswordResetSuccess = onPasswordResetSuccess
 	}
 }
+
+// WithEmailVerificationExpiration sets the expiration duration for the email verification
+func WithEmailVerificationExpiration(emailVerificationExpiration time.Duration) ConfigOption {
+	return func(c *config) {
+		c.emailVerificationExpiration = emailVerificationExpiration
+	}
+}

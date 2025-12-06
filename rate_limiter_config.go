@@ -58,6 +58,13 @@ func (c *RateLimiterConfig) validate() {
 	}
 }
 
+// WithRateLimiterEnabled sets whether the rate limiter is enabled
+func WithRateLimiterEnabled(enabled bool) RateLimiterOption {
+	return func(c *RateLimiterConfig) {
+		c.Enabled = enabled
+	}
+}
+
 // WithRateLimiterMaxRequests sets the maximum number of requests allowed within the window
 // default is 100
 func WithRateLimiterMaxRequests(maxRequests int) RateLimiterOption {
@@ -110,5 +117,12 @@ func WithRateLimiterDisableForPaths(paths ...string) RateLimiterOption {
 		for _, path := range paths {
 			c.customRules[path] = NewRateLimitRuleDisabledForPath(path)
 		}
+	}
+}
+
+// WithRateLimiterKeyGenerator sets the function to generate the key for the rate limiter
+func WithRateLimiterKeyGenerator(keyGenerator RequestExtractorFn) RateLimiterOption {
+	return func(c *RateLimiterConfig) {
+		c.KeyGenerator = keyGenerator
 	}
 }

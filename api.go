@@ -16,7 +16,7 @@ func NewAegisAPI(httpCore *AegisHTTPCore, core *AegisCore) *aegisAPI {
 		core:         core,
 		responder:    httpCore.Responder,
 		authInstance: httpCore.AuthInstance,
-		config:       httpCore.Config,
+		config:       httpCore.config,
 	}
 }
 

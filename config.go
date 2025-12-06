@@ -5,8 +5,7 @@ type Config struct {
 	Database DatabaseAdapter
 	Features []Feature
 	Schema   SchemaConfig
-
-	Session *sessionConfig
+	Session  *sessionConfig
 }
 
 func (c *Config) validate() error {

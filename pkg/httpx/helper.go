@@ -83,3 +83,10 @@ func parseAndStoreBody(req *http.Request) (*http.Request, bool) {
 
 	return req, true
 }
+
+func GetCurrentRouteFromContext(ctx context.Context) *Route {
+	if route, ok := ctx.Value(currentRouteContextKey{}).(*Route); ok {
+		return route
+	}
+	return nil
+}

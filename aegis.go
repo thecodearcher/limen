@@ -7,6 +7,8 @@ import (
 	"maps"
 	"net/http"
 	"path"
+	"regexp"
+	"strings"
 
 	"github.com/thecodearcher/aegis/pkg/httpx"
 )
@@ -27,9 +29,10 @@ type AegisCore struct {
 }
 
 type AegisHTTPCore struct {
-	Responder    *Responder
-	AuthInstance *Aegis
-	Config       *HTTPConfig
+	Responder              *Responder
+	AuthInstance           *Aegis
+	config                 *HTTPConfig
+	trustedOriginsPatterns []*regexp.Regexp
 }
 
 func New(config *Config) (*Aegis, error) {
@@ -84,30 +87,17 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 	config.basePath = httpx.NormalizePath(config.basePath)
 
 	httpCore := &AegisHTTPCore{
-		Responder:    NewResponder(config),
-		AuthInstance: a,
-		Config:       config,
+		Responder:              NewResponder(config),
+		AuthInstance:           a,
+		config:                 config,
+		trustedOriginsPatterns: a.compileTrustedOrigins(config),
 	}
 
-	rateLimiterRules := a.prepareRateLimiterRules(config.basePath, config)
-
-	rateLimiter := NewRateLimiter(config.rateLimiter, httpCore, rateLimiterRules)
-	globalMiddlewares := append([]httpx.Middleware{rateLimiter.Handle}, config.middleware...)
+	globalMiddlewares := a.prepareGlobalMiddlewares(config, httpCore)
 
 	router := httpx.NewRouter(globalMiddlewares...)
-	registerBaseRoutes(router, httpCore, a.core, config.basePath)
-
-	for _, feature := range a.config.Features {
-		featureConfig := feature.PluginHTTPConfig()
-		basePath := featureConfig.BasePath
-		override := config.overrides[string(feature.Name())]
-		normalizedBasePath := a.normalizePluginPath(config.basePath, basePath, override)
-		routeBuilder := &RouteBuilder{
-			group:         router.Group(normalizedBasePath, featureConfig.Middleware...),
-			AegisHTTPCore: httpCore,
-		}
-		feature.RegisterRoutes(routeBuilder)
-	}
+	a.registerBaseRoutes(router, httpCore, config.basePath)
+	a.registerPluginRoutes(router, httpCore, config)
 
 	return router
 }
@@ -121,6 +111,37 @@ func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
 		User:    sessionValidateResult.User,
 		Session: sessionValidateResult.Session,
 	}, nil
+}
+
+func (a *Aegis) registerPluginRoutes(router *httpx.Router, httpCore *AegisHTTPCore, config *HTTPConfig) {
+	for _, feature := range a.config.Features {
+		featureConfig := feature.PluginHTTPConfig()
+		basePath := featureConfig.BasePath
+		override := config.overrides[string(feature.Name())]
+		normalizedBasePath := a.normalizePluginPath(config.basePath, basePath, override)
+		routeBuilder := &RouteBuilder{
+			group: router.Group(normalizedBasePath, featureConfig.Middleware...),
+			core:  httpCore,
+		}
+		feature.RegisterRoutes(httpCore, routeBuilder)
+	}
+}
+
+func (a *Aegis) prepareGlobalMiddlewares(config *HTTPConfig, httpCore *AegisHTTPCore) []httpx.Middleware {
+	globalMiddlewares := []httpx.Middleware{}
+	if config.originCheck {
+		globalMiddlewares = append(globalMiddlewares, httpCore.middlewareCheckOrigin())
+	}
+	if config.csrfProtection {
+		globalMiddlewares = append(globalMiddlewares, httpCore.middlewareCSRFProtection())
+	}
+
+	rateLimiterRules := a.prepareRateLimiterRules(config.basePath, config)
+	rateLimiter := NewRateLimiter(config.rateLimiter, httpCore, rateLimiterRules)
+
+	globalMiddlewares = append(globalMiddlewares, rateLimiter.Handle)
+	globalMiddlewares = append(globalMiddlewares, config.middleware...)
+	return globalMiddlewares
 }
 
 func (a *Aegis) normalizePluginPath(basePath string, pluginBasePath string, override *PluginHTTPOverride) string {
@@ -213,11 +234,29 @@ func (a *Aegis) resolveRuleOverride(rule *RateLimitRule, customRules map[string]
 	return rule
 }
 
-func registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore, core *AegisCore, basePath string) {
+func (a *Aegis) registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore, basePath string) {
 	routeBuilder := &RouteBuilder{
-		group:         router.Group(basePath),
-		AegisHTTPCore: httpCore,
+		group: router.Group(basePath),
+		core:  httpCore,
 	}
-	api := NewAegisAPI(httpCore, core)
+	api := NewAegisAPI(httpCore, a.core)
 	api.RegisterRoutes(routeBuilder)
+}
+
+func (a *Aegis) compileTrustedOrigins(httpConfig *HTTPConfig) []*regexp.Regexp {
+	patterns := make([]*regexp.Regexp, 0, len(httpConfig.trustedOrigins))
+	for _, pattern := range httpConfig.trustedOrigins {
+		normalizedPattern := pattern
+		if !strings.Contains(pattern, "://") {
+			normalizedPattern = "*://" + pattern
+		}
+		regexPattern := globToRegex(normalizedPattern)
+		re, err := regexp.Compile(regexPattern)
+		if err != nil {
+			log.Panicf("failed to compile pattern for trusted origin %s: %v", pattern, err)
+		}
+		patterns = append(patterns, re)
+	}
+	return patterns
+
 }
