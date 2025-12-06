@@ -5,14 +5,12 @@ import (
 	"log"
 	"maps"
 	"net/http"
-	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"github.com/thecodearcher/aegis"
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
@@ -52,29 +50,29 @@ func main() {
 				}),
 			),
 		},
-		Schema: aegis.SchemaConfig{
-			// AdditionalFields: func(ctx *schemas.AdditionalFieldsContext) map[string]any {
-			// 	return map[string]any{
-			// 		"uuid":       uuid.New().String(),
-			// 		"created_at": time.Now(),
-			// 		"updated_at": time.Now(),
-			// 	}
-			// },
-			User: aegis.UserSchema{
-				Fields: aegis.UserFields{
-					EmailVerifiedAt: "email_verified",
-				},
-				AdditionalFields: func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
-					return map[string]any{
-						"uuid":       uuid.New().String(),
-						"created_at": time.Now().Format(time.RFC3339),
-						"updated_at": time.Now().Format(time.RFC3339),
-						"first_name": ctx.GetBodyValue("firstname"),
-						"last_name":  ctx.GetBodyValue("lastname"),
-					}, nil
-				},
-			},
-		},
+		// Schema: aegis.SchemaConfig{
+		// 	// AdditionalFields: func(ctx *schemas.AdditionalFieldsContext) map[string]any {
+		// 	// 	return map[string]any{
+		// 	// 		"uuid":       uuid.New().String(),
+		// 	// 		"created_at": time.Now(),
+		// 	// 		"updated_at": time.Now(),
+		// 	// 	}
+		// 	// },
+		// 	User: aegis.UserSchema{
+		// 		Fields: aegis.UserFields{
+		// 			EmailVerifiedAt: "email_verified",
+		// 		},
+		// 		AdditionalFields: func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
+		// 			return map[string]any{
+		// 				"uuid":       uuid.New().String(),
+		// 				"created_at": time.Now().Format(time.RFC3339),
+		// 				"updated_at": time.Now().Format(time.RFC3339),
+		// 				"first_name": ctx.GetBodyValue("firstname"),
+		// 				"last_name":  ctx.GetBodyValue("lastname"),
+		// 			}, nil
+		// 		},
+		// 	},
+		// },
 		Session: aegis.NewDefaultSessionConfig(
 			// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
 			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),

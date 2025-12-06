@@ -6,7 +6,7 @@ import "fmt"
 type Config struct {
 	Database DatabaseAdapter
 	Features []Feature
-	Schema   SchemaConfig
+	Schema   *SchemaConfig
 	Session  *sessionConfig
 	HTTP     *httpConfig
 }
@@ -14,6 +14,10 @@ type Config struct {
 func (c *Config) validate() error {
 	if c.Database == nil {
 		return ErrDatabaseAdapterRequired
+	}
+
+	if c.Schema == nil {
+		c.Schema = NewDefaultSchemaConfig()
 	}
 
 	if c.Session == nil {

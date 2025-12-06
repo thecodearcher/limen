@@ -65,10 +65,31 @@ type SessionFields struct {
 	Metadata   string
 }
 
-func (s *SessionSchema) GetTableName() TableName {
-	if s.TableName == "" {
-		return SessionSchemaTableName
+type SessionSchemaOption func(*SessionSchema)
+
+// NewDefaultSessionSchema creates a new SessionSchema with default values
+func NewDefaultSessionSchema(opts ...SessionSchemaOption) *SessionSchema {
+	schema := &SessionSchema{
+		TableName: SessionSchemaTableName,
+		Fields: SessionFields{
+			ID:         string(SchemaIDField),
+			Token:      string(SessionSchemaTokenField),
+			UserID:     string(SessionSchemaUserIDField),
+			CreatedAt:  string(SessionSchemaCreatedAtField),
+			ExpiresAt:  string(SessionSchemaExpiresAtField),
+			LastAccess: string(SessionSchemaLastAccessField),
+			Metadata:   string(SessionSchemaMetadataField),
+		},
 	}
+
+	for _, opt := range opts {
+		opt(schema)
+	}
+
+	return schema
+}
+
+func (s *SessionSchema) GetTableName() TableName {
 	return s.TableName
 }
 
@@ -78,31 +99,31 @@ func (s *SessionSchema) GetSoftDeleteField() string {
 }
 
 func (s *SessionSchema) GetIDField() string {
-	return getFieldOrDefault(s.Fields.ID, SchemaIDField)
+	return s.Fields.ID
 }
 
 func (s *SessionSchema) GetUserIDField() string {
-	return getFieldOrDefault(s.Fields.UserID, SessionSchemaUserIDField)
+	return s.Fields.UserID
 }
 
 func (s *SessionSchema) GetTokenField() string {
-	return getFieldOrDefault(s.Fields.Token, SessionSchemaTokenField)
+	return s.Fields.Token
 }
 
 func (s *SessionSchema) GetCreatedAtField() string {
-	return getFieldOrDefault(s.Fields.CreatedAt, SessionSchemaCreatedAtField)
+	return s.Fields.CreatedAt
 }
 
 func (s *SessionSchema) GetExpiresAtField() string {
-	return getFieldOrDefault(s.Fields.ExpiresAt, SessionSchemaExpiresAtField)
+	return s.Fields.ExpiresAt
 }
 
 func (s *SessionSchema) GetLastAccessField() string {
-	return getFieldOrDefault(s.Fields.LastAccess, SessionSchemaLastAccessField)
+	return s.Fields.LastAccess
 }
 
 func (s *SessionSchema) GetMetadataField() string {
-	return getFieldOrDefault(s.Fields.Metadata, SessionSchemaMetadataField)
+	return s.Fields.Metadata
 }
 
 func (s *SessionSchema) GetAdditionalFields() AdditionalFieldsFunc {
@@ -137,4 +158,64 @@ func (s *SessionSchema) ToStorage(data *Session) map[string]any {
 	}
 
 	return result
+}
+
+func WithSessionTableName(tableName TableName) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.TableName = tableName
+	}
+}
+
+func WithSessionAdditionalFields(fn AdditionalFieldsFunc) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.AdditionalFields = fn
+	}
+}
+
+func WithSessionFields(fields SessionFields) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields = fields
+	}
+}
+
+func WithSessionFieldID(fieldName string) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields.ID = fieldName
+	}
+}
+
+func WithSessionFieldToken(fieldName string) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields.Token = fieldName
+	}
+}
+
+func WithSessionFieldUserID(fieldName string) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields.UserID = fieldName
+	}
+}
+
+func WithSessionFieldCreatedAt(fieldName string) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields.CreatedAt = fieldName
+	}
+}
+
+func WithSessionFieldExpiresAt(fieldName string) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields.ExpiresAt = fieldName
+	}
+}
+
+func WithSessionFieldLastAccess(fieldName string) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields.LastAccess = fieldName
+	}
+}
+
+func WithSessionFieldMetadata(fieldName string) SessionSchemaOption {
+	return func(s *SessionSchema) {
+		s.Fields.Metadata = fieldName
+	}
 }

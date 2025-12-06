@@ -49,31 +49,50 @@ type UserFields struct {
 	SoftDeleteField string
 }
 
-func (u *UserSchema) GetTableName() TableName {
-	if u.TableName == "" {
-		return UserSchemaTableName
+type UserSchemaOption func(*UserSchema)
+
+// NewDefaultUserSchema creates a new UserSchema with default values
+func NewDefaultUserSchema(opts ...UserSchemaOption) *UserSchema {
+	schema := &UserSchema{
+		TableName: UserSchemaTableName,
+		Fields: UserFields{
+			ID:              string(SchemaIDField),
+			Email:           string(UserSchemaEmailField),
+			Password:        string(UserSchemaPasswordField),
+			EmailVerifiedAt: string(UserSchemaEmailVerifiedAtField),
+			SoftDeleteField: string(UserSchemaSoftDeleteField),
+		},
 	}
+
+	for _, opt := range opts {
+		opt(schema)
+	}
+
+	return schema
+}
+
+func (u *UserSchema) GetTableName() TableName {
 	return u.TableName
 }
 
 func (u *UserSchema) GetSoftDeleteField() string {
-	return getFieldOrDefault(u.Fields.SoftDeleteField, "")
+	return u.Fields.SoftDeleteField
 }
 
 func (u *UserSchema) GetIDField() string {
-	return getFieldOrDefault(u.Fields.ID, SchemaIDField)
+	return u.Fields.ID
 }
 
 func (u *UserSchema) GetEmailField() string {
-	return getFieldOrDefault(u.Fields.Email, UserSchemaEmailField)
+	return u.Fields.Email
 }
 
 func (u *UserSchema) GetPasswordField() string {
-	return getFieldOrDefault(u.Fields.Password, UserSchemaPasswordField)
+	return u.Fields.Password
 }
 
 func (u *UserSchema) GetEmailVerifiedAtField() string {
-	return getFieldOrDefault(u.Fields.EmailVerifiedAt, UserSchemaEmailVerifiedAtField)
+	return u.Fields.EmailVerifiedAt
 }
 
 func (u *UserSchema) GetAdditionalFields() AdditionalFieldsFunc {
@@ -105,4 +124,58 @@ func (u *UserSchema) Serialize(data *User) map[string]any {
 	raw := data.Raw()
 	delete(raw, u.GetPasswordField())
 	return raw
+}
+
+func WithUserTableName(tableName TableName) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.TableName = tableName
+	}
+}
+
+func WithUserAdditionalFields(fn AdditionalFieldsFunc) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.AdditionalFields = fn
+	}
+}
+
+func WithUserSerializer(serializer func(data *User) map[string]any) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.Serializer = serializer
+	}
+}
+
+func WithUserFields(fields UserFields) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.Fields = fields
+	}
+}
+
+func WithUserFieldID(fieldName string) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.Fields.ID = fieldName
+	}
+}
+
+func WithUserFieldEmail(fieldName string) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.Fields.Email = fieldName
+	}
+}
+
+func WithUserFieldPassword(fieldName string) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.Fields.Password = fieldName
+	}
+}
+
+func WithUserFieldEmailVerifiedAt(fieldName string) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.Fields.EmailVerifiedAt = fieldName
+	}
+}
+
+func WithUserFieldSoftDelete(fieldName string) UserSchemaOption {
+	return func(s *UserSchema) {
+		s.Fields.SoftDeleteField = fieldName
+	}
 }

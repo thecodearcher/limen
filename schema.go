@@ -97,13 +97,6 @@ type Model interface {
 	Raw() map[string]any
 }
 
-func getFieldOrDefault(fieldValue string, defaultValue SchemaField) string {
-	if fieldValue == "" {
-		return string(defaultValue)
-	}
-	return fieldValue
-}
-
 func getNullableValue[T any](value any) *T {
 	if value == nil {
 		return nil

@@ -69,7 +69,7 @@ func (p *emailPasswordFeature) Name() aegis.FeatureName {
 
 func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	p.core = core
-	p.userSchema = &core.Schema.User
+	p.userSchema = core.Schema.User
 	p.dbAction = core.DBAction
 	if p.config == nil {
 		return fmt.Errorf("config is required")

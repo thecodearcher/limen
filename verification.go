@@ -34,10 +34,31 @@ type VerificationFields struct {
 	SoftDeleteField string
 }
 
-func (v *VerificationSchema) GetTableName() TableName {
-	if v.TableName == "" {
-		return VerificationSchemaTableName
+type VerificationSchemaOption func(*VerificationSchema)
+
+// NewDefaultVerificationSchema creates a new VerificationSchema with default values
+func NewDefaultVerificationSchema(opts ...VerificationSchemaOption) *VerificationSchema {
+	schema := &VerificationSchema{
+		TableName: VerificationSchemaTableName,
+		Fields: VerificationFields{
+			ID:              string(SchemaIDField),
+			Subject:         string(VerificationSchemaSubjectField),
+			Value:           string(VerificationSchemaValueField),
+			ExpiresAt:       string(VerificationSchemaExpiresAtField),
+			CreatedAt:       string(VerificationSchemaCreatedAtField),
+			UpdatedAt:       string(VerificationSchemaUpdatedAtField),
+			SoftDeleteField: "",
+		},
 	}
+
+	for _, opt := range opts {
+		opt(schema)
+	}
+
+	return schema
+}
+
+func (v *VerificationSchema) GetTableName() TableName {
 	return v.TableName
 }
 
@@ -46,31 +67,31 @@ func (v *VerificationSchema) GetAdditionalFields() AdditionalFieldsFunc {
 }
 
 func (v *VerificationSchema) GetIDField() string {
-	return getFieldOrDefault(v.Fields.ID, SchemaIDField)
+	return v.Fields.ID
 }
 
 func (v *VerificationSchema) GetSubjectField() string {
-	return getFieldOrDefault(v.Fields.Subject, VerificationSchemaSubjectField)
+	return v.Fields.Subject
 }
 
 func (v *VerificationSchema) GetValueField() string {
-	return getFieldOrDefault(v.Fields.Value, VerificationSchemaValueField)
+	return v.Fields.Value
 }
 
 func (v *VerificationSchema) GetExpiresAtField() string {
-	return getFieldOrDefault(v.Fields.ExpiresAt, VerificationSchemaExpiresAtField)
+	return v.Fields.ExpiresAt
 }
 
 func (v *VerificationSchema) GetCreatedAtField() string {
-	return getFieldOrDefault(v.Fields.CreatedAt, VerificationSchemaCreatedAtField)
+	return v.Fields.CreatedAt
 }
 
 func (v *VerificationSchema) GetUpdatedAtField() string {
-	return getFieldOrDefault(v.Fields.UpdatedAt, VerificationSchemaUpdatedAtField)
+	return v.Fields.UpdatedAt
 }
 
 func (v *VerificationSchema) GetSoftDeleteField() string {
-	return getFieldOrDefault(v.Fields.SoftDeleteField, "")
+	return v.Fields.SoftDeleteField
 }
 
 func (v *VerificationSchema) FromStorage(data map[string]any) *Verification {
@@ -91,5 +112,65 @@ func (v *VerificationSchema) ToStorage(data *Verification) map[string]any {
 		v.GetExpiresAtField(): data.ExpiresAt,
 		v.GetCreatedAtField(): data.CreatedAt,
 		v.GetUpdatedAtField(): data.UpdatedAt,
+	}
+}
+
+func WithVerificationTableName(tableName TableName) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.TableName = tableName
+	}
+}
+
+func WithVerificationAdditionalFields(fn AdditionalFieldsFunc) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.AdditionalFields = fn
+	}
+}
+
+func WithVerificationFields(fields VerificationFields) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields = fields
+	}
+}
+
+func WithVerificationFieldID(fieldName string) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields.ID = fieldName
+	}
+}
+
+func WithVerificationFieldSubject(fieldName string) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields.Subject = fieldName
+	}
+}
+
+func WithVerificationFieldValue(fieldName string) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields.Value = fieldName
+	}
+}
+
+func WithVerificationFieldExpiresAt(fieldName string) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields.ExpiresAt = fieldName
+	}
+}
+
+func WithVerificationFieldCreatedAt(fieldName string) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields.CreatedAt = fieldName
+	}
+}
+
+func WithVerificationFieldUpdatedAt(fieldName string) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields.UpdatedAt = fieldName
+	}
+}
+
+func WithVerificationFieldSoftDelete(fieldName string) VerificationSchemaOption {
+	return func(s *VerificationSchema) {
+		s.Fields.SoftDeleteField = fieldName
 	}
 }
