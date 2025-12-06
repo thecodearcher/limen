@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// SessionManager manages session operations for plugins.
 type SessionManager struct {
 	store        SessionStore
 	config       *sessionConfig
@@ -32,7 +33,7 @@ func (m *SessionManager) determineStrategy(config SessionStrategyType) SessionSt
 		return strategy
 	}
 
-	return NewOpaqueTokenStrategy(m.store, m.config, m.cookieConfig)
+	return newOpaqueTokenStrategy(m.store, m.config, m.cookieConfig)
 }
 
 func (m *SessionManager) RegisterStrategy(strategyType SessionStrategyType, strategy SessionStrategy) {

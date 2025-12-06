@@ -30,12 +30,6 @@ var (
 	ErrRateLimitNotFound = errors.New("rate limit not found")
 )
 
-type AegisErrorImpl struct {
-	message string
-	details any
-	status  int
-}
-
 func NewAegisError(message string, status int, details any) *AegisError {
 	return &AegisError{message: message, details: details, status: status}
 }

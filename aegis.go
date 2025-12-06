@@ -1,4 +1,4 @@
-// Package aegis provides a framework for building authentication systems.
+// Package aegis is the main package for the Aegis authentication library.
 package aegis
 
 import (
@@ -152,7 +152,6 @@ func (a *Aegis) prepareRateLimiterRules(basePath string, config *httpConfig) map
 
 	customRules := config.rateLimiter.customRules
 
-	// Process feature rules
 	for _, feature := range a.config.Features {
 		featureRules := a.processFeatureRateLimitRules(feature, basePath, config, customRules)
 		maps.Copy(rules, featureRules)
@@ -234,7 +233,7 @@ func (a *Aegis) registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore
 		group: router.Group(basePath),
 		core:  httpCore,
 	}
-	api := NewAegisAPI(httpCore, a.core)
+	api := newAegisAPI(httpCore, a.core)
 	api.RegisterRoutes(routeBuilder)
 }
 

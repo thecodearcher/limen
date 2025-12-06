@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// DatabaseActionHelper provides common database operations for plugins.
 type DatabaseActionHelper struct {
 	core *AegisCore
 }

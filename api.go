@@ -10,7 +10,7 @@ type aegisAPI struct {
 	config    *httpConfig
 }
 
-func NewAegisAPI(httpCore *AegisHTTPCore, core *AegisCore) *aegisAPI {
+func newAegisAPI(httpCore *AegisHTTPCore, core *AegisCore) *aegisAPI {
 	return &aegisAPI{
 		core:      core,
 		responder: httpCore.Responder,
