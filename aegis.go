@@ -31,7 +31,7 @@ type AegisCore struct {
 type AegisHTTPCore struct {
 	Responder              *Responder
 	AuthInstance           *Aegis
-	config                 *HTTPConfig
+	config                 *httpConfig
 	trustedOriginsPatterns []*regexp.Regexp
 }
 
@@ -84,7 +84,13 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 		config.rateLimiter.validate()
 	}
 
+	if config.cookieConfig != nil && config.cookieConfig.crossDomain && len(config.trustedOrigins) == 0 {
+		log.Panicf("trusted origins are required when cross-domain cookies are enabled")
+	}
+
 	config.basePath = httpx.NormalizePath(config.basePath)
+
+	a.sessionManager.cookieConfig = config.cookieConfig
 
 	httpCore := &AegisHTTPCore{
 		Responder:              NewResponder(config),
@@ -113,7 +119,7 @@ func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
 	}, nil
 }
 
-func (a *Aegis) registerPluginRoutes(router *httpx.Router, httpCore *AegisHTTPCore, config *HTTPConfig) {
+func (a *Aegis) registerPluginRoutes(router *httpx.Router, httpCore *AegisHTTPCore, config *httpConfig) {
 	for _, feature := range a.config.Features {
 		featureConfig := feature.PluginHTTPConfig()
 		basePath := featureConfig.BasePath
@@ -127,7 +133,7 @@ func (a *Aegis) registerPluginRoutes(router *httpx.Router, httpCore *AegisHTTPCo
 	}
 }
 
-func (a *Aegis) prepareGlobalMiddlewares(config *HTTPConfig, httpCore *AegisHTTPCore) []httpx.Middleware {
+func (a *Aegis) prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore) []httpx.Middleware {
 	globalMiddlewares := []httpx.Middleware{}
 	if config.originCheck {
 		globalMiddlewares = append(globalMiddlewares, httpCore.middlewareCheckOrigin())
@@ -152,7 +158,7 @@ func (a *Aegis) normalizePluginPath(basePath string, pluginBasePath string, over
 	return path.Join(basePath, httpx.NormalizePath(pluginBasePath))
 }
 
-func (a *Aegis) prepareRateLimiterRules(basePath string, config *HTTPConfig) map[string]*RateLimitRule {
+func (a *Aegis) prepareRateLimiterRules(basePath string, config *httpConfig) map[string]*RateLimitRule {
 	rules := make(map[string]*RateLimitRule)
 
 	customRules := config.rateLimiter.customRules
@@ -172,7 +178,7 @@ func (a *Aegis) prepareRateLimiterRules(basePath string, config *HTTPConfig) map
 func (a *Aegis) processFeatureRateLimitRules(
 	feature Feature,
 	basePath string,
-	config *HTTPConfig,
+	config *httpConfig,
 	customRules map[string]*RateLimitRule,
 ) map[string]*RateLimitRule {
 	rules := make(map[string]*RateLimitRule)
@@ -243,7 +249,7 @@ func (a *Aegis) registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore
 	api.RegisterRoutes(routeBuilder)
 }
 
-func (a *Aegis) compileTrustedOrigins(httpConfig *HTTPConfig) []*regexp.Regexp {
+func (a *Aegis) compileTrustedOrigins(httpConfig *httpConfig) []*regexp.Regexp {
 	patterns := make([]*regexp.Regexp, 0, len(httpConfig.trustedOrigins))
 	for _, pattern := range httpConfig.trustedOrigins {
 		normalizedPattern := pattern
@@ -258,5 +264,4 @@ func (a *Aegis) compileTrustedOrigins(httpConfig *HTTPConfig) []*regexp.Regexp {
 		patterns = append(patterns, re)
 	}
 	return patterns
-
 }

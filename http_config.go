@@ -6,9 +6,9 @@ import (
 	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
-type HTTPConfigOption func(*HTTPConfig)
+type HTTPConfigOption func(*httpConfig)
 
-type HTTPConfig struct {
+type httpConfig struct {
 	// Global middleware
 	middleware []httpx.Middleware
 	// The base path where all the routes will be mounted
@@ -32,6 +32,28 @@ type HTTPConfig struct {
 	csrfProtection bool
 	// OriginCheck: enable origin check.
 	originCheck bool
+	// CookieConfig: configuration for session cookies
+	cookieConfig *cookieConfig
+}
+
+type cookieConfig struct {
+	name        string
+	path        string
+	secure      bool
+	httpOnly    bool
+	sameSite    http.SameSite
+	partitioned bool // optional: set true for browsers supporting CHIPS/partitioned cookies
+	// crossSubdomain: share cookies across subdomains while keeping SameSite=Lax.
+	// Set Cookie.Domain to ".example.com" (your eTLD+1) when true.
+	crossSubdomain *crossDomainConfig
+	// crossDomain: allow cookies to be sent from entirely different sites (requires SameSite=None; Secure=true).
+	// When enabled, Aegis will require TrustedOrigins.
+	crossDomain bool
+}
+
+type crossDomainConfig struct {
+	enabled bool
+	domain  string
 }
 
 type EnvelopeSerializer func(
@@ -62,8 +84,8 @@ type PluginHTTPOverride struct {
 	Middleware []httpx.Middleware
 }
 
-func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *HTTPConfig {
-	config := &HTTPConfig{
+func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *httpConfig {
+	config := &httpConfig{
 		middleware:    []httpx.Middleware{},
 		basePath:      "/auth",
 		overrides:     map[string]*PluginHTTPOverride{},
@@ -75,6 +97,18 @@ func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *HTTPConfig {
 		trustedOrigins: []string{},
 		csrfProtection: true,
 		originCheck:    true,
+		cookieConfig: &cookieConfig{
+			name:        "aegis_session",
+			path:        "/",
+			secure:      true,
+			httpOnly:    true,
+			sameSite:    http.SameSiteLaxMode,
+			partitioned: false,
+			crossSubdomain: &crossDomainConfig{
+				enabled: false,
+			},
+			crossDomain: false,
+		},
 	}
 	for _, opt := range opts {
 		opt(config)
@@ -83,80 +117,135 @@ func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *HTTPConfig {
 }
 
 func WithHTTPBasePath(basePath string) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.basePath = basePath
 	}
 }
 
 func WithHTTPTrustedOrigins(trustedOrigins []string) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.trustedOrigins = trustedOrigins
 	}
 }
 
 func WithHTTPMiddleware(globalMW ...httpx.Middleware) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.middleware = append(c.middleware, globalMW...)
 	}
 }
 
 func WithHTTPOverrides(overrides map[string]*PluginHTTPOverride) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.overrides = overrides
 	}
 }
 
 // WithHTTPDisabledPaths adds paths to be disabled by their ID or pattern
 func WithHTTPDisabledPaths(disabledPaths []string) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.disabledPaths = disabledPaths
 	}
 }
 
 func WithHTTPResponseEnvelopeMode(mode EnvelopeMode) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.responseEnvelope.mode = mode
 	}
 }
 
 func WithHTTPResponseEnvelopeFields(fields EnvelopeFields) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.responseEnvelope.fields = fields
 	}
 }
 
 func WithHTTPResponseEnvelopeSerializer(serializer EnvelopeSerializer) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.responseEnvelope.serializer = serializer
 	}
 }
 
 func WithHTTPSessionTransformer(transformer SessionTransformer) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.sessionTransformer = transformer
 	}
 }
 
 func WithHTTPHooks(hooks *httpx.Hooks) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.hooks = hooks
 	}
 }
 
 func WithHTTPRateLimiter(opts ...RateLimiterOption) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.rateLimiter = NewDefaultRateLimiterConfig(opts...)
 	}
 }
 
 func WithHTTPCSRFProtection(csrfProtection bool) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.csrfProtection = csrfProtection
 	}
 }
 
 func WithHTTPOriginCheck(originCheck bool) HTTPConfigOption {
-	return func(c *HTTPConfig) {
+	return func(c *httpConfig) {
 		c.originCheck = originCheck
+	}
+}
+
+func WithHTTPCookieName(name string) HTTPConfigOption {
+	return func(c *httpConfig) {
+		c.cookieConfig.name = name
+	}
+}
+
+func WithHTTPCookiePath(path string) HTTPConfigOption {
+	return func(c *httpConfig) {
+		c.cookieConfig.path = path
+	}
+}
+
+func WithHTTPCookieSecure(secure bool) HTTPConfigOption {
+	return func(c *httpConfig) {
+		c.cookieConfig.secure = secure
+	}
+}
+
+func WithHTTPCookieHTTPOnly(httpOnly bool) HTTPConfigOption {
+	return func(c *httpConfig) {
+		c.cookieConfig.httpOnly = httpOnly
+	}
+}
+
+func WithHTTPCookieSameSite(sameSite http.SameSite) HTTPConfigOption {
+	return func(c *httpConfig) {
+		c.cookieConfig.sameSite = sameSite
+	}
+}
+
+func WithHTTPCookiePartitioned(partitioned bool) HTTPConfigOption {
+	return func(c *httpConfig) {
+		c.cookieConfig.partitioned = partitioned
+	}
+}
+
+func WithHTTPCookieCrossSubdomainEnabled(subdomain string) HTTPConfigOption {
+	return func(c *httpConfig) {
+		if c.cookieConfig.crossSubdomain == nil {
+			c.cookieConfig.crossSubdomain = &crossDomainConfig{}
+		}
+		c.cookieConfig.crossSubdomain.enabled = true
+		c.cookieConfig.crossSubdomain.domain = subdomain
+	}
+}
+
+func WithHTTPCookieCrossDomainEnabled() HTTPConfigOption {
+	return func(c *httpConfig) {
+		c.cookieConfig.crossDomain = true
+		c.cookieConfig.sameSite = http.SameSiteNoneMode
+		c.cookieConfig.secure = true
+		c.cookieConfig.partitioned = true
 	}
 }

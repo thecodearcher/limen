@@ -8,10 +8,11 @@ import (
 )
 
 type SessionManager struct {
-	store      SessionStore
-	config     *sessionConfig
-	core       *AegisCore
-	strategies map[SessionStrategyType]SessionStrategy
+	store        SessionStore
+	config       *sessionConfig
+	core         *AegisCore
+	strategies   map[SessionStrategyType]SessionStrategy
+	cookieConfig *cookieConfig
 }
 
 const temporaryAuthKey = "temp_auth"
@@ -30,7 +31,7 @@ func (m *SessionManager) determineStrategy(config SessionStrategyType) SessionSt
 		return strategy
 	}
 
-	return NewOpaqueTokenStrategy(m.store, m.config)
+	return NewOpaqueTokenStrategy(m.store, m.config, m.cookieConfig)
 }
 
 func (m *SessionManager) RegisterStrategy(strategyType SessionStrategyType, strategy SessionStrategy) {
@@ -132,14 +133,17 @@ func (m *SessionManager) RevokeAll(ctx context.Context, request *http.Request, u
 }
 
 func (m *SessionManager) RevokeAllCookies(responseWriter http.ResponseWriter) {
+	if m.cookieConfig == nil {
+		return
+	}
 	sessionCookie := &http.Cookie{
-		Name:     m.config.CookieOptions.Name,
+		Name:     m.cookieConfig.name,
 		Value:    "",
 		MaxAge:   -1,
-		HttpOnly: m.config.CookieOptions.HTTPOnly,
-		Secure:   m.config.CookieOptions.Secure,
-		SameSite: m.config.CookieOptions.SameSite,
-		Path:     m.config.CookieOptions.Path,
+		HttpOnly: m.cookieConfig.httpOnly,
+		Secure:   m.cookieConfig.secure,
+		SameSite: m.cookieConfig.sameSite,
+		Path:     m.cookieConfig.path,
 	}
 
 	http.SetCookie(responseWriter, sessionCookie)
@@ -178,20 +182,23 @@ func (m *SessionManager) extendSessionExpiration(ctx context.Context, strategy S
 }
 
 func (m *SessionManager) createSessionCookie(token string, expiresAt time.Time) *http.Cookie {
-	cookieOptions := m.config.CookieOptions
+	if m.cookieConfig == nil {
+		return nil
+	}
+	cookieOptions := m.cookieConfig
 	cookie := &http.Cookie{
-		Name:        cookieOptions.Name,
+		Name:        cookieOptions.name,
 		Value:       token,
-		Path:        cookieOptions.Path,
+		Path:        cookieOptions.path,
 		MaxAge:      int(time.Until(expiresAt).Seconds()),
-		HttpOnly:    cookieOptions.HTTPOnly,
-		Secure:      cookieOptions.Secure,
-		SameSite:    cookieOptions.SameSite,
-		Partitioned: cookieOptions.Partitioned,
+		HttpOnly:    cookieOptions.httpOnly,
+		Secure:      cookieOptions.secure,
+		SameSite:    cookieOptions.sameSite,
+		Partitioned: cookieOptions.partitioned,
 	}
 
-	if cookieOptions.CrossSubdomain != nil && cookieOptions.CrossSubdomain.Enabled {
-		cookie.Domain = cookieOptions.CrossSubdomain.Domain
+	if cookieOptions.crossSubdomain != nil && cookieOptions.crossSubdomain.enabled {
+		cookie.Domain = cookieOptions.crossSubdomain.domain
 	}
 
 	return cookie

@@ -8,7 +8,7 @@ type aegisAPI struct {
 	core         *AegisCore
 	responder    *Responder
 	authInstance *Aegis
-	config       *HTTPConfig
+	config       *httpConfig
 }
 
 func NewAegisAPI(httpCore *AegisHTTPCore, core *AegisCore) *aegisAPI {

@@ -76,11 +76,8 @@ func main() {
 			},
 		},
 		Session: aegis.NewDefaultSessionConfig(
-
 			// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
 			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
-
-			aegis.WithSessionCookieName("default_session"),
 			aegis.WithSessionTokenDeliveryMethod(aegis.TokenDeliveryHeader),
 		),
 	}
@@ -92,6 +89,7 @@ func main() {
 
 	handler := auth.Handler(aegis.WithHTTPBasePath("/api/auth"),
 		aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
+		aegis.WithHTTPCookieName("default_session"),
 		aegis.WithHTTPTrustedOrigins([]string{
 			"*.localhost:3000", "https://localhost:3000",
 			"myapp://",                             // Mobile app scheme

@@ -25,8 +25,6 @@ type sessionConfig struct {
 	StoreType SessionStoreType
 	// CustomStore: a custom session store to use instead of the default store
 	CustomStore SessionStore
-	// CookieOptions: the cookie options to use
-	CookieOptions *CookieConfig
 	// IPAddressExtractor: the function to extract the IP address from the request
 	IPAddressExtractor RequestExtractorFn
 	// UserAgentExtractor: the function to extract the user agent from the request
@@ -35,27 +33,6 @@ type sessionConfig struct {
 	TokenDeliveryMethod TokenDeliveryMethod
 	// TokenDeliveryMethodDetector allows custom detection logic for the token delivery method
 	TokenDeliveryMethodDetector func(request *http.Request) TokenDeliveryMethod
-}
-
-type CookieConfig struct {
-	Name        string
-	Path        string
-	Secure      bool
-	HTTPOnly    bool
-	SameSite    http.SameSite
-	Partitioned bool // optional: set true for browsers supporting CHIPS/partitioned cookies
-	// CrossSubdomain: share cookies across subdomains while keeping SameSite=Lax.
-	// Set Cookie.Domain to ".example.com" (your eTLD+1) when true.
-	CrossSubdomain *CrossDomainConfig
-
-	// CrossDomain: allow cookies to be sent from entirely different sites (requires SameSite=None; Secure=true).
-	// When enabled, Aegis will require TrustedOrigins.
-	CrossDomain bool
-}
-
-type CrossDomainConfig struct {
-	Enabled bool
-	Domain  string
 }
 
 func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
@@ -68,19 +45,7 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 		ActivityCheckInterval: 0,                                             // no activity check interval
 		TokenDeliveryMethod:   TokenDeliveryCookie,
 		StoreType:             SessionStoreTypeDatabase,
-		CookieOptions: &CookieConfig{
-			Name:        "aegis_session",
-			Path:        "/",
-			Secure:      true,
-			HTTPOnly:    true,
-			SameSite:    http.SameSiteLaxMode,
-			Partitioned: false,
-			CrossSubdomain: &CrossDomainConfig{
-				Enabled: false,
-			},
-			CrossDomain: false,
-		},
-		IPAddressExtractor: ipExtractorFromRemoteAddr,
+		IPAddressExtractor:    ipExtractorFromRemoteAddr,
 		UserAgentExtractor: func(request *http.Request) string {
 			return request.UserAgent()
 		},
@@ -145,58 +110,6 @@ func WithSessionUpdateAge(updateAge time.Duration) SessionConfigOption {
 func WithSessionIdleTimeout(idleTimeout time.Duration) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.IdleTimeout = idleTimeout
-	}
-}
-
-func WithSessionCookieName(cookieName string) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions.Name = cookieName
-	}
-}
-
-func WithSessionCookieOptions(cookieOptions *CookieConfig) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions = cookieOptions
-	}
-}
-
-func WithSessionCookieCrossSubdomainEnabled(subdomain string) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions.CrossSubdomain.Enabled = true
-		c.CookieOptions.CrossSubdomain.Domain = subdomain
-	}
-}
-
-func WithSessionCookieCrossDomainEnabled() SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions.CrossDomain = true
-		c.CookieOptions.SameSite = http.SameSiteNoneMode
-		c.CookieOptions.Secure = true
-		c.CookieOptions.Partitioned = true
-	}
-}
-
-func WithSessionCookiePath(cookiePath string) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions.Path = cookiePath
-	}
-}
-
-func WithSessionCookieSecure(cookieSecure bool) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions.Secure = cookieSecure
-	}
-}
-
-func WithSessionCookieHTTPOnly(cookieHTTPOnly bool) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions.HTTPOnly = cookieHTTPOnly
-	}
-}
-
-func WithSessionCookieSameSite(cookieSameSite http.SameSite) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.CookieOptions.SameSite = cookieSameSite
 	}
 }
 

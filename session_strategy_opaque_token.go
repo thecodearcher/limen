@@ -9,14 +9,16 @@ import (
 )
 
 type OpaqueTokenStrategy struct {
-	store  SessionStore
-	config *sessionConfig
+	store        SessionStore
+	config       *sessionConfig
+	cookieConfig *cookieConfig
 }
 
-func NewOpaqueTokenStrategy(store SessionStore, config *sessionConfig) *OpaqueTokenStrategy {
+func NewOpaqueTokenStrategy(store SessionStore, config *sessionConfig, cookieConfig *cookieConfig) *OpaqueTokenStrategy {
 	return &OpaqueTokenStrategy{
-		store:  store,
-		config: config,
+		store:        store,
+		config:       config,
+		cookieConfig: cookieConfig,
 	}
 }
 
@@ -76,10 +78,12 @@ func (s *OpaqueTokenStrategy) Validate(ctx context.Context, request *http.Reques
 }
 
 func (s *OpaqueTokenStrategy) extractSessionToken(request *http.Request) (string, error) {
-	if cookie, err := request.Cookie(s.config.CookieOptions.Name); err == nil {
-		token := strings.TrimSpace(cookie.Value)
-		if token != "" {
-			return token, nil
+	if s.cookieConfig != nil {
+		if cookie, err := request.Cookie(s.cookieConfig.name); err == nil {
+			token := strings.TrimSpace(cookie.Value)
+			if token != "" {
+				return token, nil
+			}
 		}
 	}
 

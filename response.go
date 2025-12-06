@@ -10,9 +10,9 @@ type Responder struct {
 	sessionTransformer SessionTransformer
 }
 
-func NewResponder(cfg *HTTPConfig) *Responder {
+func NewResponder(cfg *httpConfig) *Responder {
 	if cfg == nil {
-		cfg = &HTTPConfig{}
+		cfg = &httpConfig{}
 	}
 
 	envelopeConfig := &responseEnvelopeConfig{
@@ -120,5 +120,4 @@ func (rs Responder) setHeaders(w http.ResponseWriter, sessionResult *SessionResu
 	if sessionResult.Token != "" {
 		w.Header().Set("Set-Aegis-Token", sessionResult.Token)
 	}
-
 }
