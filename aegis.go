@@ -14,10 +14,9 @@ import (
 )
 
 type Aegis struct {
-	EmailPassword  EmailPasswordFeature
-	config         *Config
-	sessionManager *SessionManager
-	core           *AegisCore
+	EmailPassword EmailPasswordFeature
+	config        *Config
+	core          *AegisCore
 }
 
 type AegisCore struct {
@@ -25,12 +24,12 @@ type AegisCore struct {
 	DBAction       *DatabaseActionHelper
 	Schema         SchemaConfig
 	SessionManager *SessionManager
-	Responder      *Responder
 }
 
 type AegisHTTPCore struct {
 	Responder              *Responder
-	AuthInstance           *Aegis
+	core                   *AegisCore
+	authInstance           *Aegis
 	config                 *httpConfig
 	trustedOriginsPatterns []*regexp.Regexp
 }
@@ -57,10 +56,9 @@ func New(config *Config) (*Aegis, error) {
 		Schema: config.Schema,
 	}
 
-	sessionManager := newSessionManager(core, config.Session)
+	sessionManager := newSessionManager(core, config.Session, config.HTTP.cookieConfig)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
-	aegis.sessionManager = sessionManager
 	aegis.core = core
 
 	for _, feature := range config.Features {
@@ -77,25 +75,16 @@ func New(config *Config) (*Aegis, error) {
 	return aegis, nil
 }
 
-func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
-	config := NewDefaultHTTPConfig(opts...)
-
-	if config.rateLimiter != nil {
-		config.rateLimiter.validate()
-	}
-
-	if config.cookieConfig != nil && config.cookieConfig.crossDomain && len(config.trustedOrigins) == 0 {
-		log.Panicf("trusted origins are required when cross-domain cookies are enabled")
-	}
+func (a *Aegis) Handler() http.Handler {
+	config := a.config.HTTP
 
 	config.basePath = httpx.NormalizePath(config.basePath)
 
-	a.sessionManager.cookieConfig = config.cookieConfig
-
 	httpCore := &AegisHTTPCore{
 		Responder:              NewResponder(config),
-		AuthInstance:           a,
+		authInstance:           a,
 		config:                 config,
+		core:                   a.core,
 		trustedOriginsPatterns: a.compileTrustedOrigins(config),
 	}
 
@@ -109,7 +98,7 @@ func (a *Aegis) Handler(opts ...HTTPConfigOption) http.Handler {
 }
 
 func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
-	sessionValidateResult, err := a.sessionManager.ValidateSession(req.Context(), req)
+	sessionValidateResult, err := a.core.SessionManager.ValidateSession(req.Context(), req)
 	if err != nil {
 		return nil, err
 	}
@@ -143,9 +132,9 @@ func (a *Aegis) prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTP
 	}
 
 	rateLimiterRules := a.prepareRateLimiterRules(config.basePath, config)
-	rateLimiter := NewRateLimiter(config.rateLimiter, httpCore, rateLimiterRules)
+	rateLimiter := newRateLimiter(config.rateLimiter, httpCore, rateLimiterRules)
 
-	globalMiddlewares = append(globalMiddlewares, rateLimiter.Handle)
+	globalMiddlewares = append(globalMiddlewares, rateLimiter.handle)
 	globalMiddlewares = append(globalMiddlewares, config.middleware...)
 	return globalMiddlewares
 }

@@ -24,9 +24,9 @@ func GetCurrentSessionFromCtx(r *http.Request) (*AegisSession, error) {
 func (httpCore *AegisHTTPCore) MiddlewareRequireSession() httpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			session, err := httpCore.AuthInstance.GetSession(r)
+			session, err := httpCore.authInstance.GetSession(r)
 			if err != nil {
-				httpCore.AuthInstance.sessionManager.RevokeAllCookies(w)
+				httpCore.core.SessionManager.RevokeAllCookies(w)
 				httpCore.Responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 				return
 			}

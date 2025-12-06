@@ -17,12 +17,13 @@ type SessionManager struct {
 
 const temporaryAuthKey = "temp_auth"
 
-func newSessionManager(core *AegisCore, config *sessionConfig) *SessionManager {
+func newSessionManager(core *AegisCore, config *sessionConfig, cookieConfig *cookieConfig) *SessionManager {
 	return &SessionManager{
-		store:      determineStore(config, core),
-		config:     config,
-		core:       core,
-		strategies: make(map[SessionStrategyType]SessionStrategy),
+		store:        determineStore(config, core),
+		config:       config,
+		core:         core,
+		strategies:   make(map[SessionStrategyType]SessionStrategy),
+		cookieConfig: cookieConfig,
 	}
 }
 

@@ -5,18 +5,16 @@ import (
 )
 
 type aegisAPI struct {
-	core         *AegisCore
-	responder    *Responder
-	authInstance *Aegis
-	config       *httpConfig
+	core      *AegisCore
+	responder *Responder
+	config    *httpConfig
 }
 
 func NewAegisAPI(httpCore *AegisHTTPCore, core *AegisCore) *aegisAPI {
 	return &aegisAPI{
-		core:         core,
-		responder:    httpCore.Responder,
-		authInstance: httpCore.AuthInstance,
-		config:       httpCore.config,
+		core:      core,
+		responder: httpCore.Responder,
+		config:    httpCore.config,
 	}
 }
 
@@ -28,7 +26,7 @@ func (api *aegisAPI) RegisterRoutes(routeBuilder *RouteBuilder) {
 func (api *aegisAPI) GetSession(w http.ResponseWriter, r *http.Request) {
 	session, err := GetCurrentSessionFromCtx(r)
 	if err != nil {
-		api.authInstance.sessionManager.RevokeAllCookies(w)
+		api.core.SessionManager.RevokeAllCookies(w)
 		api.responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 		return
 	}
@@ -43,13 +41,13 @@ func (api *aegisAPI) SignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = api.authInstance.sessionManager.Revoke(r.Context(), r, session.Session.Token)
+	err = api.core.SessionManager.Revoke(r.Context(), r, session.Session.Token)
 	if err != nil {
 		api.responder.Error(w, r, NewAegisError(err.Error(), http.StatusBadRequest, nil))
 		return
 	}
 
-	api.authInstance.sessionManager.RevokeAllCookies(w)
+	api.core.SessionManager.RevokeAllCookies(w)
 
 	api.responder.JSON(w, r, http.StatusOK, "OK")
 }

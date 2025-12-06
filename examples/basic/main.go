@@ -80,6 +80,23 @@ func main() {
 			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
 			aegis.WithSessionTokenDeliveryMethod(aegis.TokenDeliveryHeader),
 		),
+		HTTP: aegis.NewDefaultHTTPConfig(
+			aegis.WithHTTPBasePath("/api/auth"),
+			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
+			aegis.WithHTTPCookieName("default_session"),
+			aegis.WithHTTPTrustedOrigins([]string{
+				"*.localhost:3000", "https://localhost:3000",
+				"myapp://",                             // Mobile app scheme
+				"chrome-extension://YOUR_EXTENSION_ID", // Browser extension
+				"exp://*/*",                            // Trust all Expo development URLs
+				"exp://10.0.0.*:*/*",                   // Trust 10.0.0.x IP range with any port,
+				// "*.example.com",
+				"https://*.example.com",
+				"http://*.dev.example.com",
+			}),
+		), // 	aegis.WithRateLimiterWindow(time.Minute),
+		// 	aegis.WithRateLimiterDisableForPaths("/me", "/signin/email"),
+		// aegis.WithRateLimiterStore(aegis.RateLimiterStoreTypeDatabase),
 	}
 
 	auth, err := aegis.New(config)
@@ -87,22 +104,7 @@ func main() {
 		log.Fatalf("Failed to create aegis: %v", err)
 	}
 
-	handler := auth.Handler(aegis.WithHTTPBasePath("/api/auth"),
-		aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
-		aegis.WithHTTPCookieName("default_session"),
-		aegis.WithHTTPTrustedOrigins([]string{
-			"*.localhost:3000", "https://localhost:3000",
-			"myapp://",                             // Mobile app scheme
-			"chrome-extension://YOUR_EXTENSION_ID", // Browser extension
-			"exp://*/*",                            // Trust all Expo development URLs
-			"exp://10.0.0.*:*/*",                   // Trust 10.0.0.x IP range with any port,
-			// "*.example.com",
-			"https://*.example.com",
-			"http://*.dev.example.com",
-		}),
-	) // 	aegis.WithRateLimiterWindow(time.Minute),
-	// 	aegis.WithRateLimiterDisableForPaths("/me", "/signin/email"),
-	// aegis.WithRateLimiterStore(aegis.RateLimiterStoreTypeDatabase),
+	handler := auth.Handler()
 
 	// 		fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
 	// 		fmt.Printf("Before request body: %+v\n", ctx.BodyData)
@@ -124,7 +126,7 @@ func main() {
 		c.JSON(200, gin.H{"message": "Hello, World!"})
 	})
 
-	r.Any("/api/*path", func(c *gin.Context) {
+	r.Any("/api/auth/*path", func(c *gin.Context) {
 		handler.ServeHTTP(c.Writer, c.Request)
 	})
 

@@ -2,7 +2,6 @@ package aegis
 
 import (
 	"context"
-	"log"
 	"maps"
 	"net/http"
 	"regexp"
@@ -11,7 +10,7 @@ import (
 	"time"
 )
 
-type RateLimiter struct {
+type rateLimiter struct {
 	config          *RateLimiterConfig
 	store           RateLimiterStore
 	httpCore        *AegisHTTPCore
@@ -19,14 +18,14 @@ type RateLimiter struct {
 	disableForPaths []*regexp.Regexp
 }
 
-func NewRateLimiter(config *RateLimiterConfig, httpCore *AegisHTTPCore, rules map[string]*RateLimitRule) *RateLimiter {
+func newRateLimiter(config *RateLimiterConfig, httpCore *AegisHTTPCore, rules map[string]*RateLimitRule) *rateLimiter {
 	sortedRules := slices.Collect(maps.Values(rules))
 	sortRulesBySpecificity(sortedRules)
 
-	return &RateLimiter{
+	return &rateLimiter{
 		config:   config,
 		httpCore: httpCore,
-		store:    determineRateLimiterStore(config, httpCore.AuthInstance.core),
+		store:    determineRateLimiterStore(config, httpCore.core),
 		rules:    sortedRules,
 	}
 }
@@ -46,19 +45,7 @@ func determineRateLimiterStore(config *RateLimiterConfig, core *AegisCore) RateL
 	}
 }
 
-func compileDisableForPaths(disableForPaths []string) []*regexp.Regexp {
-	disableForPathsRegexp := make([]*regexp.Regexp, len(disableForPaths))
-	for i, path := range disableForPaths {
-		pattern, err := compilePattern(path)
-		if err != nil {
-			log.Panicf("failed to compile pattern for path %s: %v", path, err)
-		}
-		disableForPathsRegexp[i] = pattern
-	}
-	return disableForPathsRegexp
-}
-
-func (r *RateLimiter) Check(ctx context.Context, key string, rule *RateLimitRule) (time.Duration, error) {
+func (r *rateLimiter) Check(ctx context.Context, key string, rule *RateLimitRule) (time.Duration, error) {
 	limit, err := r.store.Get(ctx, key)
 
 	if err == ErrRateLimitNotFound {
@@ -84,7 +71,7 @@ func (r *RateLimiter) Check(ctx context.Context, key string, rule *RateLimitRule
 	return remainingTime, nil
 }
 
-func (r *RateLimiter) createNewLimit(ctx context.Context, key string) (time.Duration, error) {
+func (r *rateLimiter) createNewLimit(ctx context.Context, key string) (time.Duration, error) {
 	limit := &RateLimit{
 		Key:           key,
 		Count:         1,
@@ -98,7 +85,7 @@ func (r *RateLimiter) createNewLimit(ctx context.Context, key string) (time.Dura
 	return r.config.Window, nil
 }
 
-func (r *RateLimiter) resetAndIncrement(ctx context.Context, limit *RateLimit, window time.Duration) (time.Duration, error) {
+func (r *rateLimiter) resetAndIncrement(ctx context.Context, limit *RateLimit, window time.Duration) (time.Duration, error) {
 	limit.ResetCounter()
 	limit.Touch()
 
@@ -109,12 +96,12 @@ func (r *RateLimiter) resetAndIncrement(ctx context.Context, limit *RateLimit, w
 	return window, nil
 }
 
-func (r *RateLimiter) incrementCounter(ctx context.Context, limit *RateLimit) error {
+func (r *rateLimiter) incrementCounter(ctx context.Context, limit *RateLimit) error {
 	limit.Touch()
 	return r.store.Update(ctx, limit.Key, limit)
 }
 
-func (r *RateLimiter) computeRemainingTime(limit *RateLimit, window time.Duration) time.Duration {
+func (r *rateLimiter) computeRemainingTime(limit *RateLimit, window time.Duration) time.Duration {
 	remainingTime := window - time.Since(time.UnixMilli(limit.LastRequestAt))
 	if remainingTime < 0 {
 		return 0
@@ -122,7 +109,7 @@ func (r *RateLimiter) computeRemainingTime(limit *RateLimit, window time.Duratio
 	return remainingTime
 }
 
-func (r *RateLimiter) findApplicableRule(req *http.Request) *RateLimitRule {
+func (r *rateLimiter) findApplicableRule(req *http.Request) *RateLimitRule {
 	for _, rule := range r.rules {
 		if pathMatcher(req, rule.pathRegex) {
 			if rule.limitProvider != nil {
@@ -136,7 +123,7 @@ func (r *RateLimiter) findApplicableRule(req *http.Request) *RateLimitRule {
 	return NewRateLimitRule("", r.config.MaxRequests, r.config.Window)
 }
 
-func (rl *RateLimiter) Handle(next http.Handler) http.Handler {
+func (rl *rateLimiter) handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !rl.config.Enabled {
 			next.ServeHTTP(w, r)

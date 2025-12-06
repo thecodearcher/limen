@@ -10,7 +10,7 @@ import (
 )
 
 func FindOne[T Model](ctx context.Context, core *AegisCore, schema Schema[T], conditions []Where, orderBy []OrderBy) (*T, error) {
-	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
+	conditions = applySoftDeleteFilter(schema, conditions)
 	result, err := core.DB.FindOne(ctx, schema.GetTableName(), conditions, orderBy)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func Create[T Model](ctx context.Context, core *AegisCore, schema Schema[T], dat
 }
 
 func Exists[T Model](ctx context.Context, core *AegisCore, schema Schema[T], conditions []Where) (bool, error) {
-	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
+	conditions = applySoftDeleteFilter(schema, conditions)
 
 	return core.DB.Exists(ctx, schema.GetTableName(), conditions)
 }
@@ -91,12 +91,12 @@ func UpdateRaw[T Model](ctx context.Context, core *AegisCore, schema Schema[T], 
 		}
 	}
 
-	conditions = applySoftDeleteFilter(ctx, core, schema, conditions)
+	conditions = applySoftDeleteFilter(schema, conditions)
 
 	return core.DB.Update(ctx, schema.GetTableName(), conditions, payload)
 }
 
-func applySoftDeleteFilter[T Model](ctx context.Context, core *AegisCore, schema Schema[T], conditions []Where) []Where {
+func applySoftDeleteFilter[T Model](schema Schema[T], conditions []Where) []Where {
 	softDeleteField := schema.GetSoftDeleteField()
 	if softDeleteField != "" {
 		conditions = append(conditions, IsNull(softDeleteField))
