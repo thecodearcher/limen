@@ -67,6 +67,25 @@ func (p *emailPasswordFeature) Name() aegis.FeatureName {
 	return aegis.FeatureEmailPassword
 }
 
+func (p *emailPasswordFeature) GetSchemas() map[string]aegis.SchemaIntrospector {
+	// Email-password plugin doesn't add new schemas or extend existing ones
+	// It uses the core User and Verification schemas
+	schemas := make(map[string]aegis.SchemaIntrospector)
+	extension := aegis.SchemaExtension{
+		Extends: "users",
+		Fields: []aegis.FieldDefinition{
+			{
+				Name:       "name",
+				Type:       "string",
+				IsNullable: false,
+			},
+		},
+	}
+	schemas["users"] = extension.ToSchemaIntrospector("users")
+	// schemas["verifications"] = p.verificationSchema.Introspect()
+	return schemas
+}
+
 func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	p.core = core
 	p.userSchema = core.Schema.User

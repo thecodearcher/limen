@@ -179,3 +179,89 @@ func WithUserFieldSoftDelete(fieldName string) UserSchemaOption {
 		s.Fields.SoftDeleteField = fieldName
 	}
 }
+
+// Introspect implements SchemaIntrospector for UserSchema
+func (u *UserSchema) Introspect() SchemaIntrospector {
+	return &userSchemaIntrospector{schema: u}
+}
+
+type userSchemaIntrospector struct {
+	schema *UserSchema
+}
+
+func (u *userSchemaIntrospector) GetTableName() TableName {
+	return u.schema.TableName
+}
+
+func (u *userSchemaIntrospector) GetFields() []FieldDefinition {
+	fields := []FieldDefinition{
+		{
+			Name:         u.schema.Fields.ID,
+			Type:         "any",
+			IsNullable:   false,
+			IsPrimaryKey: true,
+			Tags: map[string]string{
+				"json": "id",
+			},
+		},
+		{
+			Name:         u.schema.Fields.Email,
+			Type:         "string",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "email",
+			},
+		},
+		{
+			Name:         u.schema.Fields.Password,
+			Type:         "string",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "-",
+			},
+		},
+		{
+			Name:         u.schema.Fields.EmailVerifiedAt,
+			Type:         "*time.Time",
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "email_verified_at",
+			},
+		},
+	}
+
+	if u.schema.Fields.SoftDeleteField != "" {
+		fields = append(fields, FieldDefinition{
+			Name:         u.schema.Fields.SoftDeleteField,
+			Type:         "*time.Time",
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "deleted_at",
+			},
+		})
+	}
+
+	return fields
+}
+
+func (u *userSchemaIntrospector) GetIndexes() []IndexDefinition {
+	return []IndexDefinition{
+		{
+			Name:    "idx_users_email",
+			Columns: []string{u.schema.Fields.Email},
+			Unique:  true,
+		},
+	}
+}
+
+func (u *userSchemaIntrospector) GetForeignKeys() []ForeignKeyDefinition {
+	return []ForeignKeyDefinition{}
+}
+
+func (u *userSchemaIntrospector) GetExtends() string {
+	return ""
+}

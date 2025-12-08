@@ -25,6 +25,12 @@ type Feature interface {
 	PluginHTTPConfig() PluginHTTPConfig
 	// RegisterRoutes registers routes for the plugin.
 	RegisterRoutes(httpCore *AegisHTTPCore, routeBuilder *RouteBuilder)
+	// GetSchemas returns all schemas provided by this feature.
+	// Returns a map of schema name to SchemaIntrospector.
+	// Plugins can extend core schemas by setting Extends field, or create new tables.
+	// If a plugin extends a core schema, it should return a schema with the same name
+	// and set Extends to the core schema name (e.g., "users").
+	GetSchemas() map[string]SchemaIntrospector
 }
 
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.

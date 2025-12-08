@@ -103,7 +103,25 @@ func main() {
 	}
 
 	handler := auth.Handler()
+	schemas, err := aegis.DiscoverAllSchemasFromConfig(config)
+	if err != nil {
+		log.Fatalf("Failed to discover all schemas: %v", err)
+	}
 
+	fmt.Printf("Schemas: %+v\n", schemas)
+	migrations, err := aegis.GenerateMigrations(config, adapter.NewMigrationGenerator("postgres"))
+	if err != nil {
+		log.Fatalf("Failed to generate migrations: %v", err)
+	}
+	fmt.Printf("Migrations: %+v\n", migrations)
+	code, err := aegis.GenerateGoStructsFromConfig(config, aegis.GenerateOptions{
+		PackageName: "models",
+		Tags:        []string{"json", "gorm"},
+	})
+	if err != nil {
+		log.Fatalf("Failed to generate Go structs: %v", err)
+	}
+	fmt.Printf("Code: %+v\n", code)
 	// 		fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
 	// 		fmt.Printf("Before request body: %+v\n", ctx.BodyData)
 	// 	}),

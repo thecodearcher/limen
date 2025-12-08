@@ -140,3 +140,75 @@ func WithRateLimitFieldLastRequestAt(fieldName string) RateLimitSchemaOption {
 		s.Fields.LastRequestAt = fieldName
 	}
 }
+
+// Introspect implements SchemaIntrospector for RateLimitSchema
+func (r *RateLimitSchema) Introspect() SchemaIntrospector {
+	return &rateLimitSchemaIntrospector{schema: r}
+}
+
+type rateLimitSchemaIntrospector struct {
+	schema *RateLimitSchema
+}
+
+func (r *rateLimitSchemaIntrospector) GetTableName() TableName {
+	return r.schema.TableName
+}
+
+func (r *rateLimitSchemaIntrospector) GetFields() []FieldDefinition {
+	return []FieldDefinition{
+		{
+			Name:         r.schema.Fields.ID,
+			Type:         "any",
+			IsNullable:   false,
+			IsPrimaryKey: true,
+			Tags: map[string]string{
+				"json": "id",
+			},
+		},
+		{
+			Name:         r.schema.Fields.Key,
+			Type:         "string",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "key",
+			},
+		},
+		{
+			Name:         r.schema.Fields.Count,
+			Type:         "int",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "count",
+			},
+		},
+		{
+			Name:         r.schema.Fields.LastRequestAt,
+			Type:         "int64",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "last_request_at",
+			},
+		},
+	}
+}
+
+func (r *rateLimitSchemaIntrospector) GetIndexes() []IndexDefinition {
+	return []IndexDefinition{
+		{
+			Name:    "idx_rate_limits_key",
+			Columns: []string{r.schema.Fields.Key},
+			Unique:  true,
+		},
+	}
+}
+
+func (r *rateLimitSchemaIntrospector) GetForeignKeys() []ForeignKeyDefinition {
+	return []ForeignKeyDefinition{}
+}
+
+func (r *rateLimitSchemaIntrospector) GetExtends() string {
+	return ""
+}

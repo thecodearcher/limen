@@ -174,3 +174,112 @@ func WithVerificationFieldSoftDelete(fieldName string) VerificationSchemaOption 
 		s.Fields.SoftDeleteField = fieldName
 	}
 }
+
+// Introspect implements SchemaIntrospector for VerificationSchema
+func (v *VerificationSchema) Introspect() SchemaIntrospector {
+	return &verificationSchemaIntrospector{schema: v}
+}
+
+type verificationSchemaIntrospector struct {
+	schema *VerificationSchema
+}
+
+func (v *verificationSchemaIntrospector) GetTableName() TableName {
+	return v.schema.TableName
+}
+
+func (v *verificationSchemaIntrospector) GetFields() []FieldDefinition {
+	fields := []FieldDefinition{
+		{
+			Name:         v.schema.Fields.ID,
+			Type:         "any",
+			IsNullable:   false,
+			IsPrimaryKey: true,
+			Tags: map[string]string{
+				"json": "id",
+			},
+		},
+		{
+			Name:         v.schema.Fields.Subject,
+			Type:         "string",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "subject",
+			},
+		},
+		{
+			Name:         v.schema.Fields.Value,
+			Type:         "string",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "value",
+			},
+		},
+		{
+			Name:         v.schema.Fields.ExpiresAt,
+			Type:         "time.Time",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "expires_at",
+			},
+		},
+		{
+			Name:         v.schema.Fields.CreatedAt,
+			Type:         "time.Time",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "created_at",
+			},
+		},
+		{
+			Name:         v.schema.Fields.UpdatedAt,
+			Type:         "time.Time",
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "updated_at",
+			},
+		},
+	}
+
+	if v.schema.Fields.SoftDeleteField != "" {
+		fields = append(fields, FieldDefinition{
+			Name:         v.schema.Fields.SoftDeleteField,
+			Type:         "*time.Time",
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "deleted_at",
+			},
+		})
+	}
+
+	return fields
+}
+
+func (v *verificationSchemaIntrospector) GetIndexes() []IndexDefinition {
+	return []IndexDefinition{
+		{
+			Name:    "idx_verifications_value",
+			Columns: []string{v.schema.Fields.Value},
+			Unique:  true,
+		},
+		{
+			Name:    "idx_verifications_subject",
+			Columns: []string{v.schema.Fields.Subject},
+			Unique:  false,
+		},
+	}
+}
+
+func (v *verificationSchemaIntrospector) GetForeignKeys() []ForeignKeyDefinition {
+	return []ForeignKeyDefinition{}
+}
+
+func (v *verificationSchemaIntrospector) GetExtends() string {
+	return ""
+}
