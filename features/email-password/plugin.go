@@ -71,17 +71,28 @@ func (p *emailPasswordFeature) GetSchemas() map[string]aegis.SchemaIntrospector 
 	// Email-password plugin doesn't add new schemas or extend existing ones
 	// It uses the core User and Verification schemas
 	schemas := make(map[string]aegis.SchemaIntrospector)
-	extension := aegis.SchemaExtension{
-		Extends: "users",
-		Fields: []aegis.FieldDefinition{
-			{
-				Name:       "name",
-				Type:       "string",
-				IsNullable: false,
-			},
+	extension := aegis.NewPluginSchemaForExtension(aegis.CoreSchemaUsers)
+	extension.Fields = []aegis.ColumnDefinition{
+		{
+			Name:         "ids",
+			LogicalField: "id", // Logical identifier for plugin fields is the field name
+			Type:         aegis.ColumnTypeString,
+			IsNullable:   false,
+			IsPrimaryKey: true,
 		},
 	}
-	schemas["users"] = extension.ToSchemaIntrospector("users")
+
+	table := aegis.NewPluginSchemaForTable(aegis.TableName("somethings"))
+	table.Fields = []aegis.ColumnDefinition{
+		{
+			Name:         "name",
+			LogicalField: "name", // Logical identifier for plugin fields is the field name
+			Type:         aegis.ColumnTypeString,
+			IsNullable:   false,
+		},
+	}
+	schemas["users"] = extension.ToSchemaIntrospector()
+	schemas["something_map_name"] = table.ToSchemaIntrospector()
 	// schemas["verifications"] = p.verificationSchema.Introspect()
 	return schemas
 }

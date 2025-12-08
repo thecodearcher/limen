@@ -66,13 +66,13 @@ func GenerateGoStructs(schemas map[string]SchemaDefinition, opts GenerateOptions
 		if schema.PluginName != "" {
 			buf.WriteString(fmt.Sprintf("// This schema is provided by plugin: %s\n", schema.PluginName))
 		}
-		if schema.Extends != "" {
-			buf.WriteString(fmt.Sprintf("// This schema extends: %s\n", schema.Extends))
+		if schema.Extends != nil {
+			buf.WriteString(fmt.Sprintf("// This schema extends: %s\n", string(*schema.Extends)))
 		}
 		buf.WriteString(fmt.Sprintf("type %s struct {\n", structName))
 
 		// Generate fields
-		for _, field := range schema.Fields {
+		for _, field := range schema.Columns {
 			goFieldName := opts.FieldNaming(field.Name)
 			if goFieldName == "" {
 				goFieldName = field.Name
@@ -92,7 +92,7 @@ func GenerateGoStructs(schemas map[string]SchemaDefinition, opts GenerateOptions
 			tags := strings.Join(tagParts, " ")
 
 			// Determine Go type
-			goType := field.Type
+			goType := string(field.Type)
 			if field.IsNullable && !strings.HasPrefix(goType, "*") && goType != "any" {
 				goType = "*" + goType
 			}

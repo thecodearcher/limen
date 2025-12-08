@@ -143,72 +143,67 @@ func WithRateLimitFieldLastRequestAt(fieldName string) RateLimitSchemaOption {
 
 // Introspect implements SchemaIntrospector for RateLimitSchema
 func (r *RateLimitSchema) Introspect() SchemaIntrospector {
-	return &rateLimitSchemaIntrospector{schema: r}
-}
-
-type rateLimitSchemaIntrospector struct {
-	schema *RateLimitSchema
-}
-
-func (r *rateLimitSchemaIntrospector) GetTableName() TableName {
-	return r.schema.TableName
-}
-
-func (r *rateLimitSchemaIntrospector) GetFields() []FieldDefinition {
-	return []FieldDefinition{
-		{
-			Name:         r.schema.Fields.ID,
-			Type:         "any",
-			IsNullable:   false,
-			IsPrimaryKey: true,
-			Tags: map[string]string{
-				"json": "id",
-			},
+	return NewIntrospector(
+		r,
+		r.TableName,
+		func(schema *RateLimitSchema) []ColumnDefinition {
+			return []ColumnDefinition{
+				{
+					Name:         schema.Fields.ID,
+					LogicalField: string(SchemaIDField),
+					Type:         ColumnTypeAny,
+					IsNullable:   false,
+					IsPrimaryKey: true,
+					Tags: map[string]string{
+						"json": "id",
+					},
+				},
+				{
+					Name:         schema.Fields.Key,
+					LogicalField: string(RateLimitSchemaKeyField),
+					Type:         ColumnTypeString,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "key",
+					},
+				},
+				{
+					Name:         schema.Fields.Count,
+					LogicalField: string(RateLimitSchemaCountField),
+					Type:         ColumnTypeInt,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "count",
+					},
+				},
+				{
+					Name:         schema.Fields.LastRequestAt,
+					LogicalField: string(RateLimitSchemaLastRequestAtField),
+					Type:         ColumnTypeInt64,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "last_request_at",
+					},
+				},
+			}
 		},
-		{
-			Name:         r.schema.Fields.Key,
-			Type:         "string",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "key",
-			},
+		func(schema *RateLimitSchema) []IndexDefinition {
+			return []IndexDefinition{
+				{
+					Name:    "idx_rate_limits_key",
+					Columns: []string{schema.Fields.Key},
+					Unique:  true,
+				},
+			}
 		},
-		{
-			Name:         r.schema.Fields.Count,
-			Type:         "int",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "count",
-			},
+		func(schema *RateLimitSchema) []ForeignKeyDefinition {
+			return []ForeignKeyDefinition{}
 		},
-		{
-			Name:         r.schema.Fields.LastRequestAt,
-			Type:         "int64",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "last_request_at",
-			},
+		func(schema *RateLimitSchema) *CoreSchemaName {
+			return nil
 		},
-	}
-}
-
-func (r *rateLimitSchemaIntrospector) GetIndexes() []IndexDefinition {
-	return []IndexDefinition{
-		{
-			Name:    "idx_rate_limits_key",
-			Columns: []string{r.schema.Fields.Key},
-			Unique:  true,
-		},
-	}
-}
-
-func (r *rateLimitSchemaIntrospector) GetForeignKeys() []ForeignKeyDefinition {
-	return []ForeignKeyDefinition{}
-}
-
-func (r *rateLimitSchemaIntrospector) GetExtends() string {
-	return ""
+	)
 }

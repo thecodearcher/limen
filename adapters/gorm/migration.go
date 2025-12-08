@@ -31,8 +31,8 @@ func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefiniti
 	buf.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n", schema.TableName))
 
 	// Generate columns
-	columns := make([]string, 0, len(schema.Fields))
-	for _, field := range schema.Fields {
+	columns := make([]string, 0, len(schema.Columns))
+	for _, field := range schema.Columns {
 		colDef := g.generateColumnDefinition(field)
 		columns = append(columns, fmt.Sprintf("  %s", colDef))
 	}
@@ -41,7 +41,7 @@ func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefiniti
 
 	// Generate primary key
 	pkFields := make([]string, 0)
-	for _, field := range schema.Fields {
+	for _, field := range schema.Columns {
 		if field.IsPrimaryKey {
 			pkFields = append(pkFields, field.Name)
 		}
@@ -52,8 +52,20 @@ func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefiniti
 
 	// Generate foreign keys
 	for _, fk := range schema.ForeignKeys {
+		// Use resolved table and column names
+		referencedTable := string(fk.ReferencedTableName)
+		referencedColumn := fk.ReferencedColumnName
+
+		// Fallback to symbolic references if not resolved (should not happen in normal flow)
+		if referencedTable == "" {
+			referencedTable = fk.ReferencedSchema
+		}
+		if referencedColumn == "" {
+			referencedColumn = fk.ReferencedField
+		}
+
 		buf.WriteString(fmt.Sprintf(",\n  CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-			fk.Name, fk.Column, fk.ReferencedTable, fk.ReferencedColumn))
+			fk.Name, fk.Column, referencedTable, referencedColumn))
 		if fk.OnDelete != "" {
 			buf.WriteString(fmt.Sprintf(" ON DELETE %s", fk.OnDelete))
 		}
@@ -78,7 +90,7 @@ func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefiniti
 	return buf.String(), nil
 }
 
-func (g *gormMigrationGenerator) GenerateAlterTable(tableName aegis.TableName, newFields []aegis.FieldDefinition) (string, error) {
+func (g *gormMigrationGenerator) GenerateAlterTable(tableName aegis.TableName, newFields []aegis.ColumnDefinition) (string, error) {
 	if len(newFields) == 0 {
 		return "", nil
 	}
@@ -98,13 +110,14 @@ func (g *gormMigrationGenerator) GenerateAlterTable(tableName aegis.TableName, n
 	return buf.String(), nil
 }
 
-func (g *gormMigrationGenerator) generateColumnDefinition(field aegis.FieldDefinition) string {
+func (g *gormMigrationGenerator) generateColumnDefinition(field aegis.ColumnDefinition) string {
 	var parts []string
 
 	parts = append(parts, field.Name)
 
 	// Map Go types to SQL types based on driver
-	sqlType := g.mapGoTypeToSQL(field.Type, field.IsNullable)
+	// Convert ColumnType to string for SQL generation
+	sqlType := g.mapGoTypeToSQL(string(field.Type), field.IsNullable)
 	parts = append(parts, sqlType)
 
 	if !field.IsNullable && !field.IsPrimaryKey {

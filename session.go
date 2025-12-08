@@ -222,113 +222,111 @@ func WithSessionFieldMetadata(fieldName string) SessionSchemaOption {
 
 // Introspect implements SchemaIntrospector for SessionSchema
 func (s *SessionSchema) Introspect() SchemaIntrospector {
-	return &sessionSchemaIntrospector{schema: s}
-}
-
-type sessionSchemaIntrospector struct {
-	schema *SessionSchema
-}
-
-func (s *sessionSchemaIntrospector) GetTableName() TableName {
-	return s.schema.TableName
-}
-
-func (s *sessionSchemaIntrospector) GetFields() []FieldDefinition {
-	return []FieldDefinition{
-		{
-			Name:         s.schema.Fields.ID,
-			Type:         "any",
-			IsNullable:   false,
-			IsPrimaryKey: true,
-			Tags: map[string]string{
-				"json": "id",
-			},
+	return NewIntrospector(
+		s,
+		s.TableName,
+		func(schema *SessionSchema) []ColumnDefinition {
+			return []ColumnDefinition{
+				{
+					Name:         schema.Fields.ID,
+					LogicalField: string(SchemaIDField),
+					Type:         ColumnTypeAny,
+					IsNullable:   false,
+					IsPrimaryKey: true,
+					Tags: map[string]string{
+						"json": "id",
+					},
+				},
+				{
+					Name:         schema.Fields.Token,
+					LogicalField: string(SessionSchemaTokenField),
+					Type:         ColumnTypeString,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "token",
+					},
+				},
+				{
+					Name:         schema.Fields.UserID,
+					LogicalField: string(SessionSchemaUserIDField),
+					Type:         ColumnTypeAny,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "user_id",
+					},
+				},
+				{
+					Name:         schema.Fields.CreatedAt,
+					LogicalField: string(SessionSchemaCreatedAtField),
+					Type:         ColumnTypeTime,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "created_at",
+					},
+				},
+				{
+					Name:         schema.Fields.ExpiresAt,
+					LogicalField: string(SessionSchemaExpiresAtField),
+					Type:         ColumnTypeTime,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "expires_at",
+					},
+				},
+				{
+					Name:         schema.Fields.LastAccess,
+					LogicalField: string(SessionSchemaLastAccessField),
+					Type:         ColumnTypeTime,
+					IsNullable:   false,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "last_access",
+					},
+				},
+				{
+					Name:         schema.Fields.Metadata,
+					LogicalField: string(SessionSchemaMetadataField),
+					Type:         ColumnTypeMapStringAny,
+					IsNullable:   true,
+					IsPrimaryKey: false,
+					Tags: map[string]string{
+						"json": "metadata",
+					},
+				},
+			}
 		},
-		{
-			Name:         s.schema.Fields.Token,
-			Type:         "string",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "token",
-			},
+		func(schema *SessionSchema) []IndexDefinition {
+			return []IndexDefinition{
+				{
+					Name:    "idx_sessions_token",
+					Columns: []string{schema.Fields.Token},
+					Unique:  true,
+				},
+				{
+					Name:    "idx_sessions_user_id",
+					Columns: []string{schema.Fields.UserID},
+					Unique:  false,
+				},
+			}
 		},
-		{
-			Name:         s.schema.Fields.UserID,
-			Type:         "any",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "user_id",
-			},
+		func(schema *SessionSchema) []ForeignKeyDefinition {
+			return []ForeignKeyDefinition{
+				{
+					Name:             "fk_sessions_user_id",
+					Column:           schema.Fields.UserID,
+					ReferencedSchema: string(CoreSchemaUsers),
+					ReferencedField:  string(SchemaIDField),
+					OnDelete:         FKActionCascade,
+					OnUpdate:         FKActionCascade,
+				},
+			}
 		},
-		{
-			Name:         s.schema.Fields.CreatedAt,
-			Type:         "time.Time",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "created_at",
-			},
+		func(schema *SessionSchema) *CoreSchemaName {
+			return nil
 		},
-		{
-			Name:         s.schema.Fields.ExpiresAt,
-			Type:         "time.Time",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "expires_at",
-			},
-		},
-		{
-			Name:         s.schema.Fields.LastAccess,
-			Type:         "time.Time",
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "last_access",
-			},
-		},
-		{
-			Name:         s.schema.Fields.Metadata,
-			Type:         "map[string]any",
-			IsNullable:   true,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "metadata",
-			},
-		},
-	}
-}
-
-func (s *sessionSchemaIntrospector) GetIndexes() []IndexDefinition {
-	return []IndexDefinition{
-		{
-			Name:    "idx_sessions_token",
-			Columns: []string{s.schema.Fields.Token},
-			Unique:  true,
-		},
-		{
-			Name:    "idx_sessions_user_id",
-			Columns: []string{s.schema.Fields.UserID},
-			Unique:  false,
-		},
-	}
-}
-
-func (s *sessionSchemaIntrospector) GetForeignKeys() []ForeignKeyDefinition {
-	return []ForeignKeyDefinition{
-		{
-			Name:             "fk_sessions_user_id",
-			Column:           s.schema.Fields.UserID,
-			ReferencedTable:  "users",
-			ReferencedColumn: "id",
-			OnDelete:         "CASCADE",
-			OnUpdate:         "CASCADE",
-		},
-	}
-}
-
-func (s *sessionSchemaIntrospector) GetExtends() string {
-	return ""
+	)
 }

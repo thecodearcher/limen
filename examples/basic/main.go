@@ -50,6 +50,17 @@ func main() {
 				}),
 			),
 		},
+		Schema: aegis.NewDefaultSchemaConfig(
+			aegis.WithSchemaUser(
+				aegis.WithUserTableName("usersz_from_personal"),
+				// aegis.WithUserFieldID("id_from_personal"),
+			),
+			// Example: Customize plugin schema table and field names
+			aegis.WithPluginSchema(aegis.FeatureEmailPassword, "something_map_name",
+				aegis.WithPluginTableName("custom_something_table"),
+				aegis.WithPluginFieldName("name", "custom_name_column"),
+			),
+		),
 		// Schema: aegis.SchemaConfig{
 		// 	// AdditionalFields: func(ctx *schemas.AdditionalFieldsContext) map[string]any {
 		// 	// 	return map[string]any{
