@@ -48,7 +48,7 @@ func (s *Session) Touch() {
 
 type SessionSchema struct {
 	// name of the table in the database
-	TableName TableName
+	TableName SchemaTableName
 	// A function to return a map of additional fields to be added to the schema when creating a record
 	AdditionalFields AdditionalFieldsFunc
 	// mapping of the session schema to the database columns
@@ -89,7 +89,7 @@ func NewDefaultSessionSchema(opts ...SessionSchemaOption) *SessionSchema {
 	return schema
 }
 
-func (s *SessionSchema) GetTableName() TableName {
+func (s *SessionSchema) GetTableName() SchemaTableName {
 	return s.TableName
 }
 
@@ -160,7 +160,7 @@ func (s *SessionSchema) ToStorage(data *Session) map[string]any {
 	return result
 }
 
-func WithSessionTableName(tableName TableName) SessionSchemaOption {
+func WithSessionTableName(tableName SchemaTableName) SessionSchemaOption {
 	return func(s *SessionSchema) {
 		s.TableName = tableName
 	}
@@ -225,6 +225,7 @@ func (s *SessionSchema) Introspect() SchemaIntrospector {
 	return NewIntrospector(
 		s,
 		s.TableName,
+		string(CoreSchemaSessions),
 		func(schema *SessionSchema) []ColumnDefinition {
 			return []ColumnDefinition{
 				{
@@ -318,8 +319,8 @@ func (s *SessionSchema) Introspect() SchemaIntrospector {
 				{
 					Name:             "fk_sessions_user_id",
 					Column:           schema.Fields.UserID,
-					ReferencedSchema: string(CoreSchemaUsers),
-					ReferencedField:  string(SchemaIDField),
+					ReferencedSchema: UserSchemaTableName,
+					ReferencedField:  SchemaIDField,
 					OnDelete:         FKActionCascade,
 					OnUpdate:         FKActionCascade,
 				},

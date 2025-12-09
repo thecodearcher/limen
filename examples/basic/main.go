@@ -6,11 +6,10 @@ import (
 	"maps"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-
-	"github.com/gin-gonic/gin"
 
 	"github.com/thecodearcher/aegis"
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
@@ -52,13 +51,14 @@ func main() {
 		},
 		Schema: aegis.NewDefaultSchemaConfig(
 			aegis.WithSchemaUser(
-				aegis.WithUserTableName("usersz_from_personal"),
-				// aegis.WithUserFieldID("id_from_personal"),
+				aegis.WithUserTableName("usersz_from_personal_user_schema"),
+			// aegis.WithUserFieldID("id_from_personal"),
+			// aegis.WithUserFieldEmail("emails_from_personal"),
 			),
 			// Example: Customize plugin schema table and field names
 			aegis.WithPluginSchema(aegis.FeatureEmailPassword, "something_map_name",
-				aegis.WithPluginTableName("custom_something_table"),
-				aegis.WithPluginFieldName("name", "custom_name_column"),
+				// aegis.WithPluginTableName("custom_something_table"),
+				aegis.WithPluginFieldName("name2", "name3"),
 			),
 		),
 		// Schema: aegis.SchemaConfig{

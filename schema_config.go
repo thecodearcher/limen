@@ -80,14 +80,14 @@ func WithSchemaRateLimit(opts ...RateLimitSchemaOption) SchemaConfigOption {
 
 // PluginSchemaConfig represents customization for a plugin schema
 type PluginSchemaConfig struct {
-	TableName *TableName        // Optional: override table name
+	TableName *SchemaTableName        // Optional: override table name
 	Fields    map[string]string // Map of logical field name -> actual column name
 }
 
 type PluginSchemaConfigOption func(*PluginSchemaConfig)
 
 // WithPluginTableName sets the table name for a plugin schema
-func WithPluginTableName(tableName TableName) PluginSchemaConfigOption {
+func WithPluginTableName(tableName SchemaTableName) PluginSchemaConfigOption {
 	return func(c *PluginSchemaConfig) {
 		c.TableName = &tableName
 	}

@@ -7,14 +7,15 @@ import (
 )
 
 type SchemaField string
-type TableName string
+type SchemaTableName string
+type SchemaName string
 
 // defaults for schemas table names
 const (
-	UserSchemaTableName         TableName = "users"
-	VerificationSchemaTableName TableName = "verifications"
-	SessionSchemaTableName      TableName = "sessions"
-	RateLimitSchemaTableName    TableName = "rate_limits"
+	UserSchemaTableName         SchemaTableName = "users"
+	VerificationSchemaTableName SchemaTableName = "verifications"
+	SessionSchemaTableName      SchemaTableName = "sessions"
+	RateLimitSchemaTableName    SchemaTableName = "rate_limits"
 )
 
 // defaults for schemas fields
@@ -85,7 +86,7 @@ func NewAdditionalFieldsContext(request *http.Request, response http.ResponseWri
 }
 
 type Schema[T Model] interface {
-	GetTableName() TableName
+	GetTableName() SchemaTableName
 	ToStorage(data *T) map[string]any
 	FromStorage(data map[string]any) *T
 	GetSoftDeleteField() string

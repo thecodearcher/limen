@@ -23,7 +23,7 @@ func (c User) TableName() string {
 
 type UserSchema struct {
 	// name of the table in the database
-	TableName TableName
+	TableName SchemaTableName
 	// A function to return a map of additional fields to be added to the schema when creating a record. e.g:
 	//  func(ctx context.Context) map[string]any {
 	// 		return map[string]any{
@@ -71,7 +71,7 @@ func NewDefaultUserSchema(opts ...UserSchemaOption) *UserSchema {
 	return schema
 }
 
-func (u *UserSchema) GetTableName() TableName {
+func (u *UserSchema) GetTableName() SchemaTableName {
 	return u.TableName
 }
 
@@ -126,7 +126,7 @@ func (u *UserSchema) Serialize(data *User) map[string]any {
 	return raw
 }
 
-func WithUserTableName(tableName TableName) UserSchemaOption {
+func WithUserTableName(tableName SchemaTableName) UserSchemaOption {
 	return func(s *UserSchema) {
 		s.TableName = tableName
 	}
@@ -185,6 +185,7 @@ func (u *UserSchema) Introspect() SchemaIntrospector {
 	return NewIntrospector(
 		u,
 		u.TableName,
+		string(CoreSchemaUsers),
 		func(s *UserSchema) []ColumnDefinition {
 			fields := []ColumnDefinition{
 				{

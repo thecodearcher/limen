@@ -58,10 +58,10 @@ func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefiniti
 
 		// Fallback to symbolic references if not resolved (should not happen in normal flow)
 		if referencedTable == "" {
-			referencedTable = fk.ReferencedSchema
+			referencedTable = string(fk.ReferencedSchema)
 		}
 		if referencedColumn == "" {
-			referencedColumn = fk.ReferencedField
+			referencedColumn = string(fk.ReferencedField)
 		}
 
 		buf.WriteString(fmt.Sprintf(",\n  CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
@@ -90,7 +90,7 @@ func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefiniti
 	return buf.String(), nil
 }
 
-func (g *gormMigrationGenerator) GenerateAlterTable(tableName aegis.TableName, newFields []aegis.ColumnDefinition) (string, error) {
+func (g *gormMigrationGenerator) GenerateAlterTable(tableName aegis.SchemaTableName, newFields []aegis.ColumnDefinition) (string, error) {
 	if len(newFields) == 0 {
 		return "", nil
 	}

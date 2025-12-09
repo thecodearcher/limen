@@ -7,100 +7,17 @@ import (
 // DiscoverAllSchemas discovers all schemas from core and all registered features.
 // It merges plugin-extended fields into core schemas and returns a complete schema map.
 func (c *AegisCore) DiscoverAllSchemas(features []Feature) (map[string]SchemaDefinition, error) {
-	schemas := make(map[string]SchemaDefinition)
+	schemas := c.collectCoreSchemas()
 
-	// First, collect all core schemas
-	coreSchemas := map[string]SchemaIntrospector{
-		"users":         c.Schema.User.Introspect(),
-		"verifications": c.Schema.Verification.Introspect(),
-		"sessions":      c.Schema.Session.Introspect(),
-		"rate_limits":   c.Schema.RateLimit.Introspect(),
-	}
-	for name, introspector := range coreSchemas {
-		schemas[name] = Introspect(introspector)
-	}
-
-	// Then, collect schemas from all features
 	for _, feature := range features {
-		featureSchemas := feature.GetSchemas()
-		for schemaName, introspector := range featureSchemas {
-			def := Introspect(introspector)
-			def.PluginName = string(feature.Name())
+		if err := c.processFeatureSchemas(feature, schemas); err != nil {
+			return nil, err
+		}
+	}
 
-			// Apply plugin schema customizations if they exist
-			if schemaConfigs, exists := c.Schema.PluginSchemas[feature.Name()]; exists {
-				if schemaConfig, exists := schemaConfigs[schemaName]; exists {
-					// Override table name if provided
-					if schemaConfig.TableName != nil {
-						def.TableName = *schemaConfig.TableName
-					}
-					// Override field names if provided
-					if len(schemaConfig.Fields) > 0 {
-						for i := range def.Columns {
-							col := &def.Columns[i]
-							if newName, exists := schemaConfig.Fields[col.LogicalField]; exists {
-								col.Name = newName
-							}
-						}
-					}
-				}
-			}
-
-			// Check if this schema extends a core schema
-			if def.Extends != nil {
-				extendsName := string(*def.Extends)
-				// Validate that the extended schema is a valid core schema
-				if !IsValidCoreSchema(extendsName) {
-					return nil, fmt.Errorf("plugin %s extends invalid core schema: %s", feature.Name(), extendsName)
-				}
-				// Merge the extended fields into the core schema
-				coreSchema, exists := schemas[extendsName]
-				if !exists {
-					return nil, fmt.Errorf("plugin %s extends unknown schema: %s", feature.Name(), extendsName)
-				}
-
-				// Merge fields (plugin fields take precedence for same field names)
-				mergedFields := make(map[string]ColumnDefinition)
-				for _, field := range coreSchema.Columns {
-					mergedFields[field.Name] = field
-				}
-				for _, field := range def.Columns {
-					existingCoreField, exists := mergedFields[field.Name]
-					if !exists {
-						mergedFields[field.Name] = field
-						continue
-					}
-
-					if existingCoreField.Name == field.Name && existingCoreField.Type != field.Type {
-						return nil, fmt.Errorf("plugin %s conflicts with existing field %s in schema %s: type mismatch (%s vs %s)",
-							feature.Name(), field.Name, extendsName, existingCoreField.Type, field.Type)
-					}
-				}
-
-				// Convert back to slice
-				mergedFieldsSlice := make([]ColumnDefinition, 0, len(mergedFields))
-				for _, field := range mergedFields {
-					mergedFieldsSlice = append(mergedFieldsSlice, field)
-				}
-
-				// Merge indexes
-				mergedIndexes := append(coreSchema.Indexes, def.Indexes...)
-
-				// Merge foreign keys
-				mergedForeignKeys := append(coreSchema.ForeignKeys, def.ForeignKeys...)
-
-				// Update the core schema with merged data
-				coreSchema.Columns = mergedFieldsSlice
-				coreSchema.Indexes = mergedIndexes
-				coreSchema.ForeignKeys = mergedForeignKeys
-				schemas[extendsName] = coreSchema
-			} else {
-				// New table from plugin
-				if _, exists := schemas[schemaName]; exists {
-					return nil, fmt.Errorf("plugin %s defines schema %s which already exists", feature.Name(), schemaName)
-				}
-				schemas[schemaName] = def
-			}
+	for schemaName, schema := range schemas {
+		if err := validateSchemaFields(schema, schemaName, schema.PluginName); err != nil {
+			return nil, err
 		}
 	}
 
@@ -109,6 +26,109 @@ func (c *AegisCore) DiscoverAllSchemas(features []Feature) (map[string]SchemaDef
 	}
 
 	return schemas, nil
+}
+
+// collectCoreSchemas collects all core schemas and returns them as a map
+func (c *AegisCore) collectCoreSchemas() map[string]SchemaDefinition {
+	return map[string]SchemaDefinition{
+		string(CoreSchemaUsers):         Introspect(c.Schema.User.Introspect()),
+		string(CoreSchemaVerifications): Introspect(c.Schema.Verification.Introspect()),
+		string(CoreSchemaSessions):      Introspect(c.Schema.Session.Introspect()),
+		string(CoreSchemaRateLimits):    Introspect(c.Schema.RateLimit.Introspect()),
+	}
+}
+
+// processFeatureSchemas processes all schemas from a feature and updates the schemas map
+func (c *AegisCore) processFeatureSchemas(feature Feature, schemas map[string]SchemaDefinition) error {
+	featureSchemas := feature.GetSchemas()
+	for _, introspector := range featureSchemas {
+		def := Introspect(introspector)
+		def.PluginName = string(feature.Name())
+
+		if err := applyPluginCustomizations(&def, feature.Name(), def.SchemaName, &c.Schema); err != nil {
+			return err
+		}
+
+		if def.Extends != nil {
+			if err := c.mergeSchemaExtension(feature, &def, schemas); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := c.mergeSchemaTable(feature, &def, def.SchemaName, schemas); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// applyPluginCustomizations applies user customizations to a plugin schema definition
+func applyPluginCustomizations(def *SchemaDefinition, featureName FeatureName, schemaName string, config *SchemaConfig) error {
+	schemaConfigs, exists := config.PluginSchemas[featureName]
+	if !exists {
+		return nil
+	}
+	schemaConfig, exists := schemaConfigs[schemaName]
+	if !exists || (schemaConfig.TableName == nil && len(schemaConfig.Fields) == 0) {
+		return nil
+	}
+
+	if schemaConfig.TableName != nil {
+		def.TableName = *schemaConfig.TableName
+	}
+
+	for i := range def.Columns {
+		col := &def.Columns[i]
+		if newName, exists := schemaConfig.Fields[col.LogicalField]; exists {
+			col.Name = newName
+		}
+	}
+
+	return nil
+}
+
+func (c *AegisCore) mergeSchemaTable(feature Feature, def *SchemaDefinition, schemaName string, schemas map[string]SchemaDefinition) error {
+	if _, exists := schemas[schemaName]; exists {
+		return fmt.Errorf("plugin %s defines schema %s which already exists", feature.Name(), schemaName)
+	}
+
+	for _, schema := range schemas {
+		if schema.TableName != def.TableName {
+			continue
+		}
+
+		pluginName := schema.PluginName
+		if schema.PluginName == "" {
+			pluginName = "core"
+		}
+		return fmt.Errorf("plugin (%s) defines schema %s which conflicts with schema (%s) which has table \"%s\"",
+			feature.Name(), schemaName, pluginName, string(schema.TableName),
+		)
+	}
+	schemas[schemaName] = *def
+	return nil
+}
+
+// mergeSchemaExtension merges a plugin schema extension into a core schema
+func (c *AegisCore) mergeSchemaExtension(feature Feature, def *SchemaDefinition, schemas map[string]SchemaDefinition) error {
+	extendsName := string(*def.Extends)
+
+	if !IsValidCoreSchema(extendsName) {
+		return fmt.Errorf("plugin %s extends invalid core schema: %s", feature.Name(), extendsName)
+	}
+
+	coreSchema, exists := schemas[extendsName]
+	if !exists {
+		return fmt.Errorf("plugin %s extends unknown schema: %s", feature.Name(), extendsName)
+	}
+
+	coreSchema.Columns = append(coreSchema.Columns, def.Columns...)
+	coreSchema.Indexes = append(coreSchema.Indexes, def.Indexes...)
+	coreSchema.ForeignKeys = append(coreSchema.ForeignKeys, def.ForeignKeys...)
+	schemas[extendsName] = coreSchema
+	return nil
 }
 
 func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
@@ -120,20 +140,12 @@ func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
 				continue
 			}
 
-			referencedSchema, exists := schemas[fk.ReferencedSchema]
+			referencedSchema, exists := schemas[string(fk.ReferencedSchema)]
 			if !exists {
 				return fmt.Errorf("schema %s has foreign key referencing unknown schema: %s", schemaName, fk.ReferencedSchema)
 			}
 
-			var referencedColumn *ColumnDefinition
-			for j := range referencedSchema.Columns {
-				col := &referencedSchema.Columns[j]
-				if col.LogicalField == fk.ReferencedField {
-					referencedColumn = col
-					break
-				}
-			}
-
+			referencedColumn := findColumnByLogicalField(referencedSchema.Columns, SchemaField(fk.ReferencedField))
 			if referencedColumn == nil {
 				return fmt.Errorf("schema %s has foreign key referencing unknown field %s in schema %s", schemaName, fk.ReferencedField, fk.ReferencedSchema)
 			}
@@ -145,6 +157,50 @@ func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
 		schemas[schemaName] = schema
 	}
 
+	return nil
+}
+
+// validateSchemaFields validates that a schema definition has no internal conflicts
+// It checks for duplicate logicalField and name values within the schema
+func validateSchemaFields(schema SchemaDefinition, schemaName string, ownerName string) error {
+	if ownerName == "" {
+		ownerName = "core"
+	}
+	logicalFields := make(map[string]string)
+	names := make(map[string]string)
+
+	for _, col := range schema.Columns {
+		if col.LogicalField == "" || col.Name == "" {
+			return fmt.Errorf("schema %s (owner: %s) has column with empty logicalField or name", schemaName, ownerName)
+		}
+
+		if existingNameField, exists := logicalFields[col.LogicalField]; exists {
+			return fmt.Errorf(
+				"schema %s (owner: %s) has duplicate logicalField %s at field %s and %s",
+				schemaName, ownerName, col.LogicalField, existingNameField, col.Name,
+			)
+		}
+
+		if existingLogicalField, exists := names[col.Name]; exists {
+			return fmt.Errorf(
+				"schema %s (owner: %s) has duplicate name %s at field %s and %s",
+				schemaName, ownerName, col.Name, existingLogicalField, col.LogicalField,
+			)
+		}
+
+		logicalFields[col.LogicalField] = col.Name
+		names[col.Name] = col.LogicalField
+	}
+
+	return nil
+}
+
+func findColumnByLogicalField(columns []ColumnDefinition, logicalField SchemaField) *ColumnDefinition {
+	for _, col := range columns {
+		if col.LogicalField == string(logicalField) {
+			return &col
+		}
+	}
 	return nil
 }
 

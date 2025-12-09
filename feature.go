@@ -30,7 +30,7 @@ type Feature interface {
 	// Plugins can extend core schemas by setting Extends field, or create new tables.
 	// If a plugin extends a core schema, it should return a schema with the same name
 	// and set Extends to the core schema name (e.g., "users").
-	GetSchemas() map[string]SchemaIntrospector
+	GetSchemas() []SchemaIntrospector
 }
 
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.

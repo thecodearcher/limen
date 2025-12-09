@@ -23,7 +23,7 @@ type MigrationGenerator interface {
 	// GenerateCreateTable generates CREATE TABLE SQL
 	GenerateCreateTable(schema SchemaDefinition) (string, error)
 	// GenerateAlterTable generates ALTER TABLE SQL for adding columns
-	GenerateAlterTable(tableName TableName, newFields []ColumnDefinition) (string, error)
+	GenerateAlterTable(tableName SchemaTableName, newFields []ColumnDefinition) (string, error)
 }
 
 // MigrationApplier applies migrations to the database

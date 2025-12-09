@@ -25,7 +25,7 @@ func (r RateLimit) Raw() map[string]any {
 
 type RateLimitSchema struct {
 	// name of the table in the database
-	TableName TableName
+	TableName SchemaTableName
 
 	// mapping of the rate limit schema to the database columns
 	Fields RateLimitFields
@@ -59,7 +59,7 @@ func NewDefaultRateLimitSchema(opts ...RateLimitSchemaOption) *RateLimitSchema {
 	return schema
 }
 
-func (r *RateLimitSchema) GetTableName() TableName {
+func (r *RateLimitSchema) GetTableName() SchemaTableName {
 	return r.TableName
 }
 
@@ -105,7 +105,7 @@ func (r *RateLimitSchema) ToStorage(data *RateLimit) map[string]any {
 	}
 }
 
-func WithRateLimitTableName(tableName TableName) RateLimitSchemaOption {
+func WithRateLimitTableName(tableName SchemaTableName) RateLimitSchemaOption {
 	return func(s *RateLimitSchema) {
 		s.TableName = tableName
 	}
@@ -146,6 +146,7 @@ func (r *RateLimitSchema) Introspect() SchemaIntrospector {
 	return NewIntrospector(
 		r,
 		r.TableName,
+		string(CoreSchemaRateLimits),
 		func(schema *RateLimitSchema) []ColumnDefinition {
 			return []ColumnDefinition{
 				{

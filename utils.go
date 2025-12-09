@@ -179,3 +179,14 @@ func originMatcher(request *http.Request, origins []*regexp.Regexp) bool {
 
 	return false
 }
+
+func sliceToMap[T any](slice []T, fn func(T) string) map[string]T {
+	if len(slice) == 0 {
+		return make(map[string]T)
+	}
+	m := make(map[string]T, len(slice))
+	for _, item := range slice {
+		m[fn(item)] = item
+	}
+	return m
+}

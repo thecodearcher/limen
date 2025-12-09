@@ -77,7 +77,7 @@ const (
 // SchemaIntrospector provides introspection capabilities for a schema
 type SchemaIntrospector interface {
 	// GetTableName returns the table name for this schema
-	GetTableName() TableName
+	GetTableName() SchemaTableName
 	// GetColumns returns all column definitions for this schema
 	GetColumns() []ColumnDefinition
 	// GetIndexes returns all index definitions for this schema
@@ -86,19 +86,22 @@ type SchemaIntrospector interface {
 	GetForeignKeys() []ForeignKeyDefinition
 	// GetExtends returns the name of the core schema this extends, or nil if none
 	GetExtends() *CoreSchemaName
+	// GetSchemaName returns the name of the logical schema name
+	GetSchemaName() string
 }
 
 // baseIntrospector is a generic base implementation of SchemaIntrospector
 type baseIntrospector[T any] struct {
-	tableName      TableName
+	tableName      SchemaTableName
 	getColumns     func(T) []ColumnDefinition
 	getIndexes     func(T) []IndexDefinition
 	getForeignKeys func(T) []ForeignKeyDefinition
 	getExtends     func(T) *CoreSchemaName
+	schemaName     string
 	schema         T
 }
 
-func (b *baseIntrospector[T]) GetTableName() TableName {
+func (b *baseIntrospector[T]) GetTableName() SchemaTableName {
 	return b.tableName
 }
 
@@ -118,10 +121,15 @@ func (b *baseIntrospector[T]) GetExtends() *CoreSchemaName {
 	return b.getExtends(b.schema)
 }
 
+func (b *baseIntrospector[T]) GetSchemaName() string {
+	return b.schemaName
+}
+
 // NewIntrospector creates a new generic introspector for a schema type
 func NewIntrospector[T any](
 	schema T,
-	tableName TableName,
+	tableName SchemaTableName,
+	schemaName string,
 	getColumns func(T) []ColumnDefinition,
 	getIndexes func(T) []IndexDefinition,
 	getForeignKeys func(T) []ForeignKeyDefinition,
@@ -129,6 +137,7 @@ func NewIntrospector[T any](
 ) SchemaIntrospector {
 	return &baseIntrospector[T]{
 		tableName:      tableName,
+		schemaName:     schemaName,
 		getColumns:     getColumns,
 		getIndexes:     getIndexes,
 		getForeignKeys: getForeignKeys,
@@ -137,7 +146,7 @@ func NewIntrospector[T any](
 	}
 }
 
-// Introspect converts a SchemaIntrospector to a TableDefinition
+// Introspect converts a SchemaIntrospector to a SchemaDefinition
 func Introspect(introspector SchemaIntrospector) SchemaDefinition {
 	return SchemaDefinition{
 		TableName:   introspector.GetTableName(),
@@ -145,15 +154,17 @@ func Introspect(introspector SchemaIntrospector) SchemaDefinition {
 		Indexes:     introspector.GetIndexes(),
 		ForeignKeys: introspector.GetForeignKeys(),
 		Extends:     introspector.GetExtends(),
+		SchemaName:  introspector.GetSchemaName(),
 	}
 }
 
 // SchemaDefinition represents a complete schema definition
 type SchemaDefinition struct {
-	TableName   TableName
+	TableName   SchemaTableName
 	Columns     []ColumnDefinition
 	Indexes     []IndexDefinition
 	ForeignKeys []ForeignKeyDefinition
+	SchemaName  string          // Name of the schema, empty for core schemas
 	Extends     *CoreSchemaName // If extending a core schema (e.g., CoreSchemaUsers), nil for new tables
 	PluginName  string          // Name of the plugin that owns this schema, empty for core schemas
 }
@@ -180,9 +191,9 @@ type IndexDefinition struct {
 type ForeignKeyDefinition struct {
 	Name                 string           // Foreign key constraint name
 	Column               string           // Local column name (uses schema.Fields)
-	ReferencedSchema     string           // Schema name (e.g., "users" or plugin schema name) - symbolic reference
-	ReferencedField      string           // Field name (e.g., "id" or field constant) - symbolic reference
-	ReferencedTableName  TableName        // Resolved table name (populated during schema discovery)
+	ReferencedSchema     SchemaTableName  // Schema name (e.g., "users" or plugin schema name) - symbolic reference
+	ReferencedField      SchemaField      // Field name (e.g., "id" or field constant) - symbolic reference
+	ReferencedTableName  SchemaTableName  // Resolved table name (populated during schema discovery)
 	ReferencedColumnName string           // Resolved column name (populated during schema discovery)
 	OnDelete             ForeignKeyAction // ON DELETE action (use FKAction constants)
 	OnUpdate             ForeignKeyAction // ON UPDATE action (use FKAction constants)

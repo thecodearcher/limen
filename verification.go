@@ -17,7 +17,7 @@ func (v Verification) Raw() map[string]any {
 
 type VerificationSchema struct {
 	// name of the table in the database
-	TableName TableName
+	TableName SchemaTableName
 	// mapping of the verification schema to the database columns
 	Fields VerificationFields
 	// A function to return a map of additional fields to be added to the schema when creating a record
@@ -58,7 +58,7 @@ func NewDefaultVerificationSchema(opts ...VerificationSchemaOption) *Verificatio
 	return schema
 }
 
-func (v *VerificationSchema) GetTableName() TableName {
+func (v *VerificationSchema) GetTableName() SchemaTableName {
 	return v.TableName
 }
 
@@ -115,7 +115,7 @@ func (v *VerificationSchema) ToStorage(data *Verification) map[string]any {
 	}
 }
 
-func WithVerificationTableName(tableName TableName) VerificationSchemaOption {
+func WithVerificationTableName(tableName SchemaTableName) VerificationSchemaOption {
 	return func(s *VerificationSchema) {
 		s.TableName = tableName
 	}
@@ -180,6 +180,7 @@ func (v *VerificationSchema) Introspect() SchemaIntrospector {
 	return NewIntrospector(
 		v,
 		v.TableName,
+		string(CoreSchemaVerifications),
 		func(schema *VerificationSchema) []ColumnDefinition {
 			fields := []ColumnDefinition{
 				{

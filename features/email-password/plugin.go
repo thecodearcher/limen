@@ -67,34 +67,34 @@ func (p *emailPasswordFeature) Name() aegis.FeatureName {
 	return aegis.FeatureEmailPassword
 }
 
-func (p *emailPasswordFeature) GetSchemas() map[string]aegis.SchemaIntrospector {
+func (p *emailPasswordFeature) GetSchemas() []aegis.SchemaIntrospector {
 	// Email-password plugin doesn't add new schemas or extend existing ones
 	// It uses the core User and Verification schemas
-	schemas := make(map[string]aegis.SchemaIntrospector)
-	extension := aegis.NewPluginSchemaForExtension(aegis.CoreSchemaUsers)
-	extension.Fields = []aegis.ColumnDefinition{
-		{
-			Name:         "ids",
-			LogicalField: "id", // Logical identifier for plugin fields is the field name
-			Type:         aegis.ColumnTypeString,
-			IsNullable:   false,
-			IsPrimaryKey: true,
-		},
-	}
+	// schemas := []aegis.SchemaIntrospector{}
+	extension := aegis.NewPluginSchemaForExtension(aegis.CoreSchemaUsers,
 
-	table := aegis.NewPluginSchemaForTable(aegis.TableName("somethings"))
-	table.Fields = []aegis.ColumnDefinition{
-		{
-			Name:         "name",
-			LogicalField: "name", // Logical identifier for plugin fields is the field name
-			Type:         aegis.ColumnTypeString,
-			IsNullable:   false,
-		},
-	}
-	schemas["users"] = extension.ToSchemaIntrospector()
-	schemas["something_map_name"] = table.ToSchemaIntrospector()
-	// schemas["verifications"] = p.verificationSchema.Introspect()
-	return schemas
+		aegis.WithPluginSchemaField("password", aegis.ColumnTypeString),
+	)
+
+	table := aegis.NewPluginSchemaForTable(aegis.SchemaName("something_map_name2"), aegis.SchemaTableName("something_map_name"),
+		aegis.WithPluginSchemaField("name", aegis.ColumnTypeString),
+		aegis.WithPluginSchemaField("name2", aegis.ColumnTypeString),
+		aegis.WithPluginSchemaIndex(aegis.IndexDefinition{
+			Columns: []string{"name"},
+			Unique:  false,
+		}),
+		aegis.WithPluginSchemaForeignKey(aegis.ForeignKeyDefinition{
+			Name:             "fk_users_name",
+			Column:           "name",
+			ReferencedSchema: aegis.UserSchemaTableName,
+			ReferencedField:  aegis.SchemaIDField,
+			OnDelete:         aegis.FKActionCascade,
+			OnUpdate:         aegis.FKActionCascade,
+		}),
+	)
+	// schemas = append(schemas, extension.ToSchemaIntrospector())
+	// schemas = append(schemas, table.ToSchemaIntrospector())
+	return []aegis.SchemaIntrospector{extension.ToSchemaIntrospector(), table.ToSchemaIntrospector()}
 }
 
 func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
