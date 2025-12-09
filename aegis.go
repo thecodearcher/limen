@@ -24,6 +24,7 @@ type AegisCore struct {
 	DBAction       *DatabaseActionHelper
 	Schema         SchemaConfig
 	SessionManager *SessionManager
+	FieldResolver  *FieldResolver
 }
 
 type AegisHTTPCore struct {
@@ -59,6 +60,11 @@ func New(config *Config) (*Aegis, error) {
 	sessionManager := newSessionManager(core, config.Session, config.HTTP.cookieConfig)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
+	discoveredSchemas, err := core.DiscoverAllSchemas(config.Features)
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover schemas: %w", err)
+	}
+	core.FieldResolver = NewFieldResolver(discoveredSchemas)
 	aegis.core = core
 
 	for _, feature := range config.Features {
