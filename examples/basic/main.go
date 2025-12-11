@@ -5,6 +5,7 @@ import (
 	"log"
 	"maps"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -14,6 +15,7 @@ import (
 	"github.com/thecodearcher/aegis"
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
 	emailpassword "github.com/thecodearcher/aegis/features/email-password"
+	usernamepassword "github.com/thecodearcher/aegis/features/username-password"
 )
 
 // Example showing basic usage of the aegis library
@@ -31,7 +33,7 @@ func main() {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 
-	config := &aegis.Config{
+	config := aegis.Config{
 		Database: adapter.New(db),
 		Features: []aegis.Feature{
 
@@ -48,17 +50,45 @@ func main() {
 					return nil
 				}),
 			),
+			usernamepassword.New(),
 		},
 		Schema: aegis.NewDefaultSchemaConfig(
 			aegis.WithSchemaUser(
-				aegis.WithUserTableName("usersz_from_personal_user_schema"),
-			// aegis.WithUserFieldID("id_from_personal"),
-			// aegis.WithUserFieldEmail("emails_from_personal"),
+				// aegis.WithUserTableName("usersz_from_personal_user_schema"),
+				// aegis.WithUserFieldID("id_from_personal"),
+				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
+				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
+					return map[string]any{
+						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
+						"first_name": ctx.GetBodyValue("firstname"),
+						"last_name":  ctx.GetBodyValue("lastname"),
+						"updated_at": time.Now().Format(time.RFC3339),
+					}, nil
+				}),
+
+				// aegis.WithUserSerializer(func(data *aegis.User) map[string]any {
+				// 	return map[string]any{
+				// 		"id":                data.ID,
+				// 		"email":             data.Email,
+				// 		"password":          data.Password,
+				// 		"email_verified_at": data.EmailVerifiedAt,
+				// 	}
+				// }),
+			),
+			aegis.WithSchemaVerification(
+				aegis.WithVerificationFieldID("id_token"),
+				aegis.WithVerificationAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
+					return map[string]any{
+						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
+						"created_at": time.Now().Format(time.RFC3339),
+						"updated_at": time.Now().Format(time.RFC3339),
+					}, nil
+				}),
 			),
 			// Example: Customize plugin schema table and field names
-			aegis.WithPluginSchema(aegis.FeatureEmailPassword, "something_map_name",
+			aegis.WithPluginSchema(aegis.FeatureUsernamePassword, string(aegis.CoreSchemaUsers),
 				// aegis.WithPluginTableName("custom_something_table"),
-				aegis.WithPluginFieldName("name2", "name3"),
+				aegis.WithPluginFieldName("username", "username"),
 			),
 		),
 		// Schema: aegis.SchemaConfig{
@@ -93,16 +123,16 @@ func main() {
 			aegis.WithHTTPBasePath("/api/auth"),
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
 			aegis.WithHTTPCookieName("default_session"),
-			aegis.WithHTTPTrustedOrigins([]string{
-				"*.localhost:3000", "https://localhost:3000",
-				"myapp://",                             // Mobile app scheme
-				"chrome-extension://YOUR_EXTENSION_ID", // Browser extension
-				"exp://*/*",                            // Trust all Expo development URLs
-				"exp://10.0.0.*:*/*",                   // Trust 10.0.0.x IP range with any port,
-				// "*.example.com",
-				"https://*.example.com",
-				"http://*.dev.example.com",
-			}),
+			// aegis.WithHTTPTrustedOrigins([]string{
+			// 	"*.localhost:3000", "https://localhost:3000",
+			// 	"myapp://",                             // Mobile app scheme
+			// 	"chrome-extension://YOUR_EXTENSION_ID", // Browser extension
+			// 	"exp://*/*",                            // Trust all Expo development URLs
+			// 	"exp://10.0.0.*:*/*",                   // Trust 10.0.0.x IP range with any port,
+			// 	// "*.example.com",
+			// 	"https://*.example.com",
+			// 	"http://*.dev.example.com",
+			// }),
 		), // 	aegis.WithRateLimiterWindow(time.Minute),
 		// 	aegis.WithRateLimiterDisableForPaths("/me", "/signin/email"),
 		// aegis.WithRateLimiterStore(aegis.RateLimiterStoreTypeDatabase),
@@ -114,25 +144,27 @@ func main() {
 	}
 
 	handler := auth.Handler()
-	schemas, err := aegis.DiscoverAllSchemasFromConfig(config)
-	if err != nil {
-		log.Fatalf("Failed to discover all schemas: %v", err)
-	}
+	// schemas, err := aegis.DiscoverAllSchemasFromConfig(config)
+	// if err != nil {
+	// 	log.Fatalf("Failed to discover all schemas: %v", err)
+	// }
 
-	fmt.Printf("Schemas: %+v\n", schemas)
-	migrations, err := aegis.GenerateMigrations(config, adapter.NewMigrationGenerator("postgres"))
-	if err != nil {
-		log.Fatalf("Failed to generate migrations: %v", err)
-	}
-	fmt.Printf("Migrations: %+v\n", migrations)
-	code, err := aegis.GenerateGoStructsFromConfig(config, aegis.GenerateOptions{
-		PackageName: "models",
-		Tags:        []string{"json", "gorm"},
-	})
-	if err != nil {
-		log.Fatalf("Failed to generate Go structs: %v", err)
-	}
-	fmt.Printf("Code: %+v\n", code)
+	// fmt.Printf("Schemas: %+v\n", schemas)
+	// copyConfig := &config
+
+	// migrations, err := aegis.GenerateMigrations(copyConfig, adapter.NewMigrationGenerator("postgres"))
+	// if err != nil {
+	// 	log.Fatalf("Failed to generate migrations: %v", err)
+	// }
+	// fmt.Printf("Migrations: %+v\n", migrations)
+	// code, err := aegis.GenerateGoStructsFromConfig(copyConfig, aegis.GenerateOptions{
+	// 	PackageName: "models",
+	// 	Tags:        []string{"json", "gorm"},
+	// })
+	// if err != nil {
+	// 	log.Fatalf("Failed to generate Go structs: %v", err)
+	// }
+	// fmt.Printf("Code: %+v\n", code)
 	// 		fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
 	// 		fmt.Printf("Before request body: %+v\n", ctx.BodyData)
 	// 	}),

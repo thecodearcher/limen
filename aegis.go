@@ -37,18 +37,6 @@ type AegisHTTPCore struct {
 }
 
 func New(config Config) (*Aegis, error) {
-
-	copyConfig := Config{
-		Database: config.Database,
-		Features: append([]Feature{}, config.Features...),
-		Schema:   &*config.Schema,
-		Session:  &*config.Session,
-		HTTP:     &*config.HTTP,
-	}
-	// if config == nil {
-	// 	return nil, fmt.Errorf("missing configuration")
-	// }
-
 	if err := config.validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
@@ -58,7 +46,7 @@ func New(config Config) (*Aegis, error) {
 	}
 
 	aegis := &Aegis{
-		config: &copyConfig,
+		config: &config,
 	}
 
 	core := &AegisCore{

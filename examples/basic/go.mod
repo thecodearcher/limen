@@ -7,6 +7,7 @@ require (
 	github.com/thecodearcher/aegis v0.0.0
 	github.com/thecodearcher/aegis/adapters/gorm v0.0.0
 	github.com/thecodearcher/aegis/features/email-password v0.0.0
+	github.com/thecodearcher/aegis/features/username-password v0.0.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.30.1
 )
