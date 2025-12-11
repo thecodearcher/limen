@@ -67,16 +67,55 @@ func (p *emailPasswordFeature) Name() aegis.FeatureName {
 	return aegis.FeatureEmailPassword
 }
 
-func (p *emailPasswordFeature) GetSchemas() []aegis.SchemaIntrospector {
+type EmailPasswordUser struct {
+	aegis.User
+	Something string `json:"something"`
+}
+type EmailPasswordUserSchema struct {
+	// aegis.Schema[aegis.User]
+	// *aegis.UserSchema
+	core       *aegis.AegisCore
+	schemaMeta *aegis.PluginSchemaMetadata
+}
+
+func (e *EmailPasswordUserSchema) FromStorage(data map[string]any) aegis.Model {
+	return &EmailPasswordUser{}
+}
+
+func (e *EmailPasswordUserSchema) ToStorage(data aegis.Model) map[string]any {
+	return map[string]any{}
+}
+
+func (u *EmailPasswordUserSchema) GetAdditionalFields() aegis.AdditionalFieldsFunc {
+	return nil
+}
+
+func (u *EmailPasswordUserSchema) GetSoftDeleteField() string {
+	return ""
+}
+
+func (u *EmailPasswordUserSchema) GetTableName() aegis.SchemaTableName {
+	return aegis.UserSchemaTableName
+}
+
+func (u *EmailPasswordUserSchema) Initialize(core *aegis.AegisCore, meta *aegis.PluginSchemaMetadata) error {
+	u.core = core
+	u.schemaMeta = meta
+	fmt.Printf("Initialized EmailPasswordUserSchema\n")
+	return nil
+}
+
+func (p *emailPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
+	ex := EmailPasswordUserSchema{}
 	// Email-password plugin doesn't add new schemas or extend existing ones
 	// It uses the core User and Verification schemas
 	// schemas := []aegis.SchemaIntrospector{}
-	extension := aegis.NewPluginSchemaForExtension(aegis.CoreSchemaUsers,
+	extension := aegis.NewPluginSchemaForExtension(aegis.CoreSchemaUsers, &ex, aegis.WithPluginSchemaField("something", aegis.ColumnTypeString)) //
 
-		aegis.WithPluginSchemaField("password", aegis.ColumnTypeString),
-	)
-
-	table := aegis.NewPluginSchemaForTable(aegis.SchemaName("something_map_name2"), aegis.SchemaTableName("something_map_name"),
+	table := aegis.NewPluginSchemaForTable(
+		aegis.SchemaName("something_map_name2"),
+		aegis.SchemaTableName("something_map_name"),
+		&ex,
 		aegis.WithPluginSchemaField("name", aegis.ColumnTypeString),
 		aegis.WithPluginSchemaField("name2", aegis.ColumnTypeString),
 		aegis.WithPluginSchemaIndex(aegis.IndexDefinition{
@@ -97,7 +136,7 @@ func (p *emailPasswordFeature) GetSchemas() []aegis.SchemaIntrospector {
 	return []aegis.SchemaIntrospector{extension.ToSchemaIntrospector(), table.ToSchemaIntrospector()}
 }
 
-func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
+func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore, schemas map[string]*aegis.PluginSchemaMetadata) error {
 	p.core = core
 	p.userSchema = core.Schema.User
 	p.dbAction = core.DBAction
@@ -203,9 +242,7 @@ func (p *emailPasswordFeature) ComparePassword(password string, hash string) (bo
 }
 
 func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email string) (*aegis.Verification, error) {
-	user, err := aegis.FindOne(ctx, p.core, p.userSchema, []aegis.Where{
-		aegis.Eq(p.userSchema.GetEmailField(), email),
-	}, nil)
+	user, err := p.dbAction.FindUserByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrEmailNotFound
 	}
