@@ -23,9 +23,7 @@ type SchemaConfigVerificationOption func(*SchemaConfig, *VerificationSchema)
 
 func newDefaultVerificationSchema(c *SchemaConfig, opts ...SchemaConfigVerificationOption) *VerificationSchema {
 	schema := &VerificationSchema{
-		BaseSchema: BaseSchema{
-			tableName: VerificationSchemaTableName,
-		},
+		BaseSchema: BaseSchema{},
 	}
 
 	for _, opt := range opts {
@@ -33,14 +31,6 @@ func newDefaultVerificationSchema(c *SchemaConfig, opts ...SchemaConfigVerificat
 	}
 
 	return schema
-}
-
-func (v *VerificationSchema) GetSoftDeleteField() string {
-	return v.GetField(string(UserSchemaSoftDeleteField))
-}
-
-func (v *VerificationSchema) GetIDField() string {
-	return v.GetField(string(SchemaIDField))
 }
 
 func (v *VerificationSchema) GetSubjectField() string {
@@ -135,19 +125,18 @@ func WithVerificationFieldUpdatedAt(fieldName string) SchemaConfigVerificationOp
 
 func WithVerificationFieldSoftDelete(fieldName string) SchemaConfigVerificationOption {
 	return func(s *SchemaConfig, v *VerificationSchema) {
-		s.setCoreSchemaField(CoreSchemaVerifications, string(UserSchemaSoftDeleteField), fieldName)
+		s.setCoreSchemaField(CoreSchemaVerifications, string(SchemaSoftDeleteField), fieldName)
 	}
 }
 
 func (v *VerificationSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	fields := v.getDefaultColumns(config)
+	tableName := VerificationSchemaTableName
 
-	return NewIntrospector(
-		v,
-		v.tableName,
-		string(CoreSchemaVerifications),
-		fields,
-		[]IndexDefinition{
+	return &SchemaDefinition{
+		TableName: &tableName,
+		Columns:   fields,
+		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_verifications_value",
 				Columns: []string{v.GetValueField()},
@@ -159,9 +148,11 @@ func (v *VerificationSchema) Introspect(config *SchemaConfig) SchemaIntrospector
 				Unique:  false,
 			},
 		},
-		[]ForeignKeyDefinition{},
-		nil,
-	)
+		ForeignKeys: []ForeignKeyDefinition{},
+		SchemaName:  string(CoreSchemaVerifications),
+		Extends:     nil,
+		Schema:      v,
+	}
 }
 
 func (v *VerificationSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
@@ -228,11 +219,11 @@ func (v *VerificationSchema) getDefaultColumns(config *SchemaConfig) []ColumnDef
 		},
 	}
 
-	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaVerifications, string(UserSchemaSoftDeleteField))
+	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaVerifications, string(SchemaSoftDeleteField))
 	if softDeleteField != "" {
 		fields = append(fields, ColumnDefinition{
 			Name:         softDeleteField,
-			LogicalField: string(UserSchemaSoftDeleteField),
+			LogicalField: string(SchemaSoftDeleteField),
 			Type:         ColumnTypeTimePtr,
 			IsNullable:   true,
 			IsPrimaryKey: false,

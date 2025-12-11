@@ -25,11 +25,11 @@ func (p *usernamePasswordFeature) Name() aegis.FeatureName {
 func (p *usernamePasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
 	userWithUsername := NewUsernamePasswordUserSchema(schema)
 	p.userSchema = userWithUsername
-	extension1 := aegis.NewPluginSchemaForExtension(
+	extension1 := aegis.NewSchemaDefinitionForExtension(
 		aegis.CoreSchemaUsers,
 		userWithUsername,
-		aegis.WithPluginSchemaField("username", aegis.ColumnTypeString),
-		aegis.WithPluginSchemaIndex(aegis.IndexDefinition{
+		aegis.WithSchemaField("username", aegis.ColumnTypeString),
+		aegis.WithSchemaIndex(aegis.IndexDefinition{
 			Columns: []string{"username"},
 			Unique:  true,
 		}),
@@ -52,16 +52,13 @@ func (p *usernamePasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis
 	// 	}),
 	// )
 
-	return []aegis.SchemaIntrospector{extension1.ToSchemaIntrospector()}
+	return []aegis.SchemaIntrospector{extension1}
 	// return []aegis.SchemaIntrospector{}
 }
 
-func (p *usernamePasswordFeature) Initialize(core *aegis.AegisCore, schemas map[string]*aegis.PluginSchemaMetadata) error {
+func (p *usernamePasswordFeature) Initialize(core *aegis.AegisCore) error {
 	p.core = core
 	p.dbAction = core.DBAction
-
-	p.schemaMeta = schemas
-	// p.userSchema = NewUsernamePasswordUserSchema(core, schemas[string(aegis.CoreSchemaUsers)])
 
 	if p.config == nil {
 		return fmt.Errorf("config is required")

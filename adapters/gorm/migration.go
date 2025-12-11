@@ -22,13 +22,13 @@ func (g *gormMigrationGenerator) GenerateUpMigration(schema aegis.SchemaDefiniti
 }
 
 func (g *gormMigrationGenerator) GenerateDownMigration(schema aegis.SchemaDefinition) (string, error) {
-	return fmt.Sprintf("DROP TABLE IF EXISTS %s;", schema.TableName), nil
+	return fmt.Sprintf("DROP TABLE IF EXISTS %s;", schema.GetTableName()), nil
 }
 
 func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefinition) (string, error) {
 	var buf strings.Builder
 
-	buf.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n", schema.TableName))
+	buf.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n", schema.GetTableName()))
 
 	// Generate columns
 	columns := make([]string, 0, len(schema.Columns))
@@ -80,10 +80,10 @@ func (g *gormMigrationGenerator) GenerateCreateTable(schema aegis.SchemaDefiniti
 	for _, idx := range schema.Indexes {
 		if idx.Unique {
 			buf.WriteString(fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s);\n",
-				idx.Name, schema.TableName, strings.Join(idx.Columns, ", ")))
+				idx.Name, schema.GetTableName(), strings.Join(idx.Columns, ", ")))
 		} else {
 			buf.WriteString(fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s);\n",
-				idx.Name, schema.TableName, strings.Join(idx.Columns, ", ")))
+				idx.Name, schema.GetTableName(), strings.Join(idx.Columns, ", ")))
 		}
 	}
 

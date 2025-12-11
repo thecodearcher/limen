@@ -33,7 +33,7 @@ func main() {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 
-	config := aegis.Config{
+	config := &aegis.Config{
 		Database: adapter.New(db),
 		Features: []aegis.Feature{
 
@@ -56,7 +56,8 @@ func main() {
 			aegis.WithSchemaUser(
 				// aegis.WithUserTableName("usersz_from_personal_user_schema"),
 				// aegis.WithUserFieldID("id_from_personal"),
-				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
+				aegis.WithUserFieldEmailVerifiedAt("email_verified_at"),
+				// aegis.WithUserFieldSoftDelete("deleted_at"),
 				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
 					return map[string]any{
 						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
@@ -87,8 +88,7 @@ func main() {
 			),
 			// Example: Customize plugin schema table and field names
 			aegis.WithPluginSchema(aegis.FeatureUsernamePassword, string(aegis.CoreSchemaUsers),
-				// aegis.WithPluginTableName("custom_something_table"),
-				aegis.WithPluginFieldName("username", "username"),
+				aegis.WithPluginFieldName("deleted_at", "username2"),
 			),
 		),
 		// Schema: aegis.SchemaConfig{
@@ -157,17 +157,17 @@ func main() {
 	// 	log.Fatalf("Failed to generate migrations: %v", err)
 	// }
 	// fmt.Printf("Migrations: %+v\n", migrations)
-	// code, err := aegis.GenerateGoStructsFromConfig(copyConfig, aegis.GenerateOptions{
-	// 	PackageName: "models",
-	// 	Tags:        []string{"json", "gorm"},
-	// })
-	// if err != nil {
-	// 	log.Fatalf("Failed to generate Go structs: %v", err)
-	// }
-	// fmt.Printf("Code: %+v\n", code)
-	// 		fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
-	// 		fmt.Printf("Before request body: %+v\n", ctx.BodyData)
-	// 	}),
+	code, err := aegis.GenerateGoStructsFromConfig(config, aegis.GenerateOptions{
+		PackageName: "models",
+		Tags:        []string{"json", "gorm"},
+	})
+	if err != nil {
+		log.Fatalf("Failed to generate Go structs: %v", err)
+	}
+	fmt.Printf("Code: %+v\n", code)
+	// 	fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+	// 	fmt.Printf("Before request body: %+v\n", ctx.BodyData)
+	// }),
 	// 	After: httpx.HookFunc(func(ctx *httpx.HookContext) {
 	// 		fmt.Printf("After request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
 	// 		fmt.Printf("After request status code: %d\n", ctx.StatusCode)

@@ -31,9 +31,7 @@ type SchemaConfigRateLimitOption func(*SchemaConfig, *RateLimitSchema)
 
 func newDefaultRateLimitSchema(c *SchemaConfig, opts ...SchemaConfigRateLimitOption) *RateLimitSchema {
 	schema := &RateLimitSchema{
-		BaseSchema: BaseSchema{
-			tableName: RateLimitSchemaTableName,
-		},
+		BaseSchema: BaseSchema{},
 	}
 
 	for _, opt := range opts {
@@ -109,21 +107,22 @@ func WithRateLimitFieldLastRequestAt(fieldName string) SchemaConfigRateLimitOpti
 }
 
 func (r *RateLimitSchema) Introspect() SchemaIntrospector {
-	return NewIntrospector(
-		r,
-		r.tableName,
-		string(CoreSchemaRateLimits),
-		r.getDefaultColumns(),
-		[]IndexDefinition{
+	tableName := RateLimitSchemaTableName
+	return &SchemaDefinition{
+		TableName: &tableName,
+		Columns:   r.getDefaultColumns(),
+		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_rate_limits_key",
 				Columns: []string{r.GetKeyField()},
 				Unique:  true,
 			},
 		},
-		[]ForeignKeyDefinition{},
-		nil,
-	)
+		ForeignKeys: []ForeignKeyDefinition{},
+		SchemaName:  string(CoreSchemaRateLimits),
+		Extends:     nil,
+		Schema:      r,
+	}
 }
 
 func (r *RateLimitSchema) getDefaultColumns() []ColumnDefinition {

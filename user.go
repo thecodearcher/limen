@@ -32,9 +32,7 @@ type SchemaConfigUserOption func(*SchemaConfig, *UserSchema)
 
 func newDefaultUserSchema(c *SchemaConfig, opts ...SchemaConfigUserOption) *UserSchema {
 	schema := &UserSchema{
-		BaseSchema: BaseSchema{
-			tableName: UserSchemaTableName,
-		},
+		BaseSchema: BaseSchema{},
 	}
 
 	for _, opt := range opts {
@@ -42,14 +40,6 @@ func newDefaultUserSchema(c *SchemaConfig, opts ...SchemaConfigUserOption) *User
 	}
 
 	return schema
-}
-
-func (u *UserSchema) GetSoftDeleteField() string {
-	return u.GetField(string(UserSchemaSoftDeleteField))
-}
-
-func (u *UserSchema) GetIDField() string {
-	return u.GetField(string(SchemaIDField))
 }
 
 func (u *UserSchema) GetEmailField() string {
@@ -136,26 +126,27 @@ func WithUserFieldEmailVerifiedAt(fieldName string) SchemaConfigUserOption {
 
 func WithUserFieldSoftDelete(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaSoftDeleteField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaSoftDeleteField), fieldName)
 	}
 }
 
 func (u *UserSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
-	return NewIntrospector(
-		u,
-		u.tableName,
-		string(CoreSchemaUsers),
-		u.getDefaultColumns(config),
-		[]IndexDefinition{
+	tableName := UserSchemaTableName
+	return &SchemaDefinition{
+		TableName: &tableName,
+		Columns:   u.getDefaultColumns(config),
+		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_users_email",
 				Columns: []string{u.GetEmailField()},
 				Unique:  true,
 			},
 		},
-		[]ForeignKeyDefinition{},
-		nil,
-	)
+		ForeignKeys: []ForeignKeyDefinition{},
+		SchemaName:  string(CoreSchemaUsers),
+		Extends:     nil,
+		Schema:      u,
+	}
 }
 
 func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
@@ -202,11 +193,11 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		},
 	}
 
-	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaUsers, string(UserSchemaSoftDeleteField))
+	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaUsers, string(SchemaSoftDeleteField))
 	if softDeleteField != "" {
 		fields = append(fields, ColumnDefinition{
 			Name:         softDeleteField,
-			LogicalField: string(UserSchemaSoftDeleteField),
+			LogicalField: string(SchemaSoftDeleteField),
 			Type:         ColumnTypeTimePtr,
 			IsNullable:   true,
 			IsPrimaryKey: false,

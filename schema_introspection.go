@@ -24,16 +24,6 @@ func IsValidCoreSchema(name string) bool {
 	}
 }
 
-// AllCoreSchemaNames returns all valid core schema names
-func AllCoreSchemaNames() []CoreSchemaName {
-	return []CoreSchemaName{
-		CoreSchemaUsers,
-		CoreSchemaSessions,
-		CoreSchemaVerifications,
-		CoreSchemaRateLimits,
-	}
-}
-
 // ColumnType represents a Go type for a database column
 type ColumnType string
 
@@ -92,90 +82,6 @@ type SchemaIntrospector interface {
 	// The schema is of type Schema[M] where M is the model type
 	// we don't want to use generics here because we want to support multiple model types
 	GetSchema() Schema
-}
-
-// baseIntrospector is a generic base implementation of SchemaIntrospector
-type baseIntrospector struct {
-	tableName   SchemaTableName
-	columns     []ColumnDefinition
-	indexes     []IndexDefinition
-	foreignKeys []ForeignKeyDefinition
-	extends     *CoreSchemaName
-	schemaName  string
-	schema      Schema
-}
-
-func (b *baseIntrospector) GetTableName() SchemaTableName {
-	return b.tableName
-}
-
-func (b *baseIntrospector) GetColumns() []ColumnDefinition {
-	return b.columns
-}
-
-func (b *baseIntrospector) GetIndexes() []IndexDefinition {
-	return b.indexes
-}
-
-func (b *baseIntrospector) GetForeignKeys() []ForeignKeyDefinition {
-	return b.foreignKeys
-}
-
-func (b *baseIntrospector) GetExtends() *CoreSchemaName {
-	return b.extends
-}
-
-func (b *baseIntrospector) GetSchemaName() string {
-	return b.schemaName
-}
-
-func (b *baseIntrospector) GetSchema() Schema {
-	return b.schema
-}
-
-func NewIntrospector(
-	schema Schema,
-	tableName SchemaTableName,
-	schemaName string,
-	columns []ColumnDefinition,
-	indexes []IndexDefinition,
-	foreignKeys []ForeignKeyDefinition,
-	extends *CoreSchemaName,
-) SchemaIntrospector {
-	return &baseIntrospector{
-		tableName:   tableName,
-		schemaName:  schemaName,
-		columns:     columns,
-		indexes:     indexes,
-		foreignKeys: foreignKeys,
-		extends:     extends,
-		schema:      schema,
-	}
-}
-
-// Introspect converts a SchemaIntrospector to a SchemaDefinition
-func Introspect(introspector SchemaIntrospector) SchemaDefinition {
-	return SchemaDefinition{
-		TableName:   introspector.GetTableName(),
-		Columns:     introspector.GetColumns(),
-		Indexes:     introspector.GetIndexes(),
-		ForeignKeys: introspector.GetForeignKeys(),
-		Extends:     introspector.GetExtends(),
-		SchemaName:  introspector.GetSchemaName(),
-		// Schema:      introspector.GetSchema(),
-	}
-}
-
-// SchemaDefinition represents a complete schema definition
-type SchemaDefinition struct {
-	TableName   SchemaTableName
-	Columns     []ColumnDefinition
-	Indexes     []IndexDefinition
-	ForeignKeys []ForeignKeyDefinition
-	SchemaName  string          // Name of the schema
-	Extends     *CoreSchemaName // If extending a core schema (e.g., CoreSchemaUsers), nil for new tables
-	PluginName  string          // Name of the plugin that owns this schema, empty for core schemas
-	Schema      any             // Schema instance
 }
 
 // ColumnDefinition represents a single field/column in a schema

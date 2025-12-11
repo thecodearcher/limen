@@ -20,13 +20,14 @@ const (
 
 // defaults for schemas fields
 const (
-	SchemaIDField                  SchemaField = "id"
+	SchemaIDField         SchemaField = "id"
+	SchemaSoftDeleteField SchemaField = "deleted_at"
+
 	UserSchemaEmailField           SchemaField = "email"
 	UserSchemaPasswordField        SchemaField = "password"
 	UserSchemaEmailVerifiedAtField SchemaField = "email_verified_at"
 	UserSchemaCreatedAtField       SchemaField = "created_at"
 	UserSchemaUpdatedAtField       SchemaField = "updated_at"
-	UserSchemaSoftDeleteField      SchemaField = "deleted_at"
 
 	VerificationSchemaSubjectField   SchemaField = "subject"
 	VerificationSchemaValueField     SchemaField = "value"
@@ -61,8 +62,6 @@ type Model interface {
 }
 
 type BaseSchema struct {
-	tableName SchemaTableName
-
 	// A function to return a map of additional fields to be added to the schema when creating a record. e.g:
 	//  func(ctx context.Context) map[string]any {
 	// 		return map[string]any{
@@ -74,54 +73,53 @@ type BaseSchema struct {
 	// NOTE: fields here will override the global additional fields function.
 	additionalFields AdditionalFieldsFunc
 
-	// mapping of the schema resolvedFields to the database columns
-	resolvedFields map[string]string
-
-	fieldResolver *FieldResolver
-
+	// meta contains all resolved schema information including table name, field mappings, and resolver
 	meta *PluginSchemaMetadata
 }
 
 func NewBaseSchema(tableName SchemaTableName) *BaseSchema {
-	return &BaseSchema{
-		tableName: tableName,
-	}
+	// tableName parameter kept for backward compatibility but not stored
+	// Actual table name comes from meta after Initialize() is called
+	return &BaseSchema{}
 }
 
 func (b *BaseSchema) GetTableName() SchemaTableName {
-	return b.tableName
+	if b.meta == nil {
+		return ""
+	}
+	return b.meta.TableName
 }
 
 func (b *BaseSchema) GetAdditionalFields() AdditionalFieldsFunc {
 	return b.additionalFields
 }
 
+func (b *BaseSchema) GetIDField() string {
+	return b.GetField(string(SchemaIDField))
+}
+
 func (b *BaseSchema) GetSoftDeleteField() string {
-	return ""
+	return b.GetField(string(SchemaSoftDeleteField))
 }
 
 func (b *BaseSchema) GetFieldResolver() *FieldResolver {
-	return b.fieldResolver
+	if b.meta == nil {
+		return nil
+	}
+	return b.meta.FieldResolver
 }
 
 func (b *BaseSchema) GetField(name string) string {
-	// if exists, ok := b.resolvedFields[name]; ok {
-	// 	return exists
-	// }
-	// return name
 	if b.meta == nil {
-		return name
+		return ""
 	}
 	if field, err := b.meta.GetField(name); err == nil {
 		return field
 	}
-	return name
+	return ""
 }
 
 func (b *BaseSchema) Initialize(core *AegisCore, meta *PluginSchemaMetadata) error {
-	b.fieldResolver = meta.FieldResolver
-	b.resolvedFields = meta.Fields
-	b.tableName = meta.TableName
 	b.meta = meta
 	return nil
 }

@@ -54,9 +54,7 @@ type SchemaConfigSessionOption func(*SchemaConfig, *SessionSchema)
 
 func newDefaultSessionSchema(c *SchemaConfig, opts ...SchemaConfigSessionOption) *SessionSchema {
 	schema := &SessionSchema{
-		BaseSchema: BaseSchema{
-			tableName: SessionSchemaTableName,
-		},
+		BaseSchema: BaseSchema{},
 	}
 
 	for _, opt := range opts {
@@ -69,10 +67,6 @@ func newDefaultSessionSchema(c *SchemaConfig, opts ...SchemaConfigSessionOption)
 func (s *SessionSchema) GetSoftDeleteField() string {
 	// sessions should not have a soft delete field
 	return ""
-}
-
-func (s *SessionSchema) GetIDField() string {
-	return s.GetField(string(SchemaIDField))
 }
 
 func (s *SessionSchema) GetUserIDField() string {
@@ -199,12 +193,11 @@ func WithSessionFieldMetadata(fieldName string) SchemaConfigSessionOption {
 }
 
 func (s *SessionSchema) Introspect() SchemaIntrospector {
-	return NewIntrospector(
-		s,
-		s.tableName,
-		string(CoreSchemaSessions),
-		s.getDefaultColumns(),
-		[]IndexDefinition{
+	tableName := SessionSchemaTableName
+	return &SchemaDefinition{
+		TableName: &tableName,
+		Columns:   s.getDefaultColumns(),
+		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_sessions_token",
 				Columns: []string{s.GetTokenField()},
@@ -216,7 +209,7 @@ func (s *SessionSchema) Introspect() SchemaIntrospector {
 				Unique:  false,
 			},
 		},
-		[]ForeignKeyDefinition{
+		ForeignKeys: []ForeignKeyDefinition{
 			{
 				Name:             "fk_sessions_user_id",
 				Column:           s.GetUserIDField(),
@@ -226,8 +219,10 @@ func (s *SessionSchema) Introspect() SchemaIntrospector {
 				OnUpdate:         FKActionCascade,
 			},
 		},
-		nil,
-	)
+		SchemaName: string(CoreSchemaSessions),
+		Extends:    nil,
+		Schema:     s,
+	}
 }
 
 func (s *SessionSchema) getDefaultColumns() []ColumnDefinition {

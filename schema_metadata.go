@@ -13,6 +13,7 @@ type PluginSchemaMetadata struct {
 	FieldResolver *FieldResolver
 	// Fields maps logical field names declared by this plugin to their resolved column names.
 	// This only includes fields declared by the plugin itself.
+	// This provides O(1) access for plugin-declared fields.
 	Fields map[string]string
 }
 

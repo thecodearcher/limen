@@ -57,12 +57,13 @@ func GenerateGoStructs(schemas map[string]SchemaDefinition, opts GenerateOptions
 
 	// Generate struct for each schema
 	for schemaName, schema := range schemas {
-		structName := opts.FieldNaming(string(schema.TableName))
+		tableName := schema.GetTableName()
+		structName := opts.FieldNaming(string(tableName))
 		if structName == "" {
 			structName = opts.FieldNaming(schemaName)
 		}
 
-		buf.WriteString(fmt.Sprintf("// %s represents the %s table\n", structName, schema.TableName))
+		buf.WriteString(fmt.Sprintf("// %s represents the %s table\n", structName, tableName))
 		if schema.PluginName != "" {
 			buf.WriteString(fmt.Sprintf("// This schema is provided by plugin: %s\n", schema.PluginName))
 		}

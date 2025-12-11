@@ -24,7 +24,7 @@ type Feature interface {
 	// schemas is a map of schema name (as declared in GetSchemas) to resolved schema metadata.
 	// For extensions, the key is the core schema name being extended (e.g., "users").
 	// For new tables, the key is the plugin's schema name.
-	Initialize(core *AegisCore, schemas map[string]*PluginSchemaMetadata) error
+	Initialize(core *AegisCore) error
 	// PluginHTTPConfig returns the configuration for the plugin's HTTP surface.
 	PluginHTTPConfig() PluginHTTPConfig
 	// RegisterRoutes registers routes for the plugin.

@@ -36,7 +36,11 @@ type AegisHTTPCore struct {
 	trustedOriginsPatterns []*regexp.Regexp
 }
 
-func New(config Config) (*Aegis, error) {
+func New(config *Config) (*Aegis, error) {
+	if config == nil {
+		return nil, fmt.Errorf("missing configuration")
+	}
+
 	if err := config.validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
@@ -46,7 +50,7 @@ func New(config Config) (*Aegis, error) {
 	}
 
 	aegis := &Aegis{
-		config: &config,
+		config: config,
 	}
 
 	core := &AegisCore{
@@ -82,7 +86,7 @@ func New(config Config) (*Aegis, error) {
 
 	// Initialize features with metadata
 	for _, feature := range config.Features {
-		if err := feature.Initialize(core, featureMetadata[feature.Name()]); err != nil {
+		if err := feature.Initialize(core); err != nil {
 			return nil, fmt.Errorf("failed to initialize feature %s: %w", feature.Name(), err)
 		}
 
@@ -94,7 +98,15 @@ func New(config Config) (*Aegis, error) {
 		}
 	}
 
-	fmt.Printf("featureMetadata: %+v\n", featureMetadata)
+	for _, feature := range config.Features {
+		fmt.Printf("featureMetadata: %+v\n", feature.Name())
+		for _, schema := range feature.GetSchemas(core.Schema) {
+			fmt.Printf("schema: %+v\n", schema.GetSchemaName())
+			for _, column := range schema.GetColumns() {
+				fmt.Printf("column: %+v\n", column.Name)
+			}
+		}
+	}
 
 	// Set EmailPasswordFeature reference on username-password plugin if both are enabled
 	if aegis.UsernamePassword != nil && aegis.EmailPassword != nil {

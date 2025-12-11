@@ -72,10 +72,10 @@ type EmailPasswordUser struct {
 	Something string `json:"something"`
 }
 type EmailPasswordUserSchema struct {
+	aegis.BaseSchema
 	// aegis.Schema[aegis.User]
 	// *aegis.UserSchema
-	core       *aegis.AegisCore
-	schemaMeta *aegis.PluginSchemaMetadata
+	core *aegis.AegisCore
 }
 
 func (e *EmailPasswordUserSchema) FromStorage(data map[string]any) aegis.Model {
@@ -98,31 +98,26 @@ func (u *EmailPasswordUserSchema) GetTableName() aegis.SchemaTableName {
 	return aegis.UserSchemaTableName
 }
 
-func (u *EmailPasswordUserSchema) Initialize(core *aegis.AegisCore, meta *aegis.PluginSchemaMetadata) error {
-	u.core = core
-	u.schemaMeta = meta
-	fmt.Printf("Initialized EmailPasswordUserSchema\n")
-	return nil
-}
-
 func (p *emailPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
-	ex := EmailPasswordUserSchema{}
+	ex := &EmailPasswordUserSchema{
+		core: p.core,
+	}
 	// Email-password plugin doesn't add new schemas or extend existing ones
 	// It uses the core User and Verification schemas
 	// schemas := []aegis.SchemaIntrospector{}
-	extension := aegis.NewPluginSchemaForExtension(aegis.CoreSchemaUsers, &ex, aegis.WithPluginSchemaField("something", aegis.ColumnTypeString)) //
+	extension := aegis.NewSchemaDefinitionForExtension(aegis.CoreSchemaUsers, ex, aegis.WithSchemaField("something", aegis.ColumnTypeString)) //
 
-	table := aegis.NewPluginSchemaForTable(
+	table := aegis.NewSchemaDefinitionForTable(
 		aegis.SchemaName("something_map_name2"),
 		aegis.SchemaTableName("something_map_name"),
-		&ex,
-		aegis.WithPluginSchemaField("name", aegis.ColumnTypeString),
-		aegis.WithPluginSchemaField("name2", aegis.ColumnTypeString),
-		aegis.WithPluginSchemaIndex(aegis.IndexDefinition{
+		ex,
+		aegis.WithSchemaField("name", aegis.ColumnTypeString),
+		aegis.WithSchemaField("name2", aegis.ColumnTypeString),
+		aegis.WithSchemaIndex(aegis.IndexDefinition{
 			Columns: []string{"name"},
 			Unique:  false,
 		}),
-		aegis.WithPluginSchemaForeignKey(aegis.ForeignKeyDefinition{
+		aegis.WithSchemaForeignKey(aegis.ForeignKeyDefinition{
 			Name:             "fk_users_name",
 			Column:           "name",
 			ReferencedSchema: aegis.UserSchemaTableName,
@@ -133,10 +128,10 @@ func (p *emailPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.Sc
 	)
 	// schemas = append(schemas, extension.ToSchemaIntrospector())
 	// schemas = append(schemas, table.ToSchemaIntrospector())
-	return []aegis.SchemaIntrospector{extension.ToSchemaIntrospector(), table.ToSchemaIntrospector()}
+	return []aegis.SchemaIntrospector{extension, table}
 }
 
-func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore, schemas map[string]*aegis.PluginSchemaMetadata) error {
+func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	p.core = core
 	p.userSchema = core.Schema.User
 	p.dbAction = core.DBAction
