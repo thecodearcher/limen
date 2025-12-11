@@ -46,6 +46,86 @@ const (
 	RateLimitSchemaLastRequestAtField SchemaField = "last_request_at"
 )
 
+type Schema interface {
+	GetTableName() SchemaTableName
+	ToStorage(data Model) map[string]any
+	FromStorage(data map[string]any) Model
+	GetSoftDeleteField() string
+	GetAdditionalFields() AdditionalFieldsFunc
+	Initialize(core *AegisCore, meta *PluginSchemaMetadata) error
+}
+
+type Model interface {
+	// Raw returns the model raw data as returned from the database
+	Raw() map[string]any
+}
+
+type BaseSchema struct {
+	tableName SchemaTableName
+
+	// A function to return a map of additional fields to be added to the schema when creating a record. e.g:
+	//  func(ctx context.Context) map[string]any {
+	// 		return map[string]any{
+	//  		"uuid": uuid.New().String(),
+	//  		"created_at": time.Now(),
+	//  		"updated_at": time.Now(),
+	// 		 }
+	//	 }
+	// NOTE: fields here will override the global additional fields function.
+	additionalFields AdditionalFieldsFunc
+
+	// mapping of the schema resolvedFields to the database columns
+	resolvedFields map[string]string
+
+	fieldResolver *FieldResolver
+
+	meta *PluginSchemaMetadata
+}
+
+func NewBaseSchema(tableName SchemaTableName) *BaseSchema {
+	return &BaseSchema{
+		tableName: tableName,
+	}
+}
+
+func (b *BaseSchema) GetTableName() SchemaTableName {
+	return b.tableName
+}
+
+func (b *BaseSchema) GetAdditionalFields() AdditionalFieldsFunc {
+	return b.additionalFields
+}
+
+func (b *BaseSchema) GetSoftDeleteField() string {
+	return ""
+}
+
+func (b *BaseSchema) GetFieldResolver() *FieldResolver {
+	return b.fieldResolver
+}
+
+func (b *BaseSchema) GetField(name string) string {
+	// if exists, ok := b.resolvedFields[name]; ok {
+	// 	return exists
+	// }
+	// return name
+	if b.meta == nil {
+		return name
+	}
+	if field, err := b.meta.GetField(name); err == nil {
+		return field
+	}
+	return name
+}
+
+func (b *BaseSchema) Initialize(core *AegisCore, meta *PluginSchemaMetadata) error {
+	b.fieldResolver = meta.FieldResolver
+	b.resolvedFields = meta.Fields
+	b.tableName = meta.TableName
+	b.meta = meta
+	return nil
+}
+
 type AdditionalFieldsFunc func(ctx *AdditionalFieldsContext) (map[string]any, *AegisError)
 
 type AdditionalFieldsContext struct {
@@ -85,19 +165,6 @@ func NewAdditionalFieldsContext(request *http.Request, response http.ResponseWri
 	return ctx
 }
 
-type Schema[T Model] interface {
-	GetTableName() SchemaTableName
-	ToStorage(data *T) map[string]any
-	FromStorage(data map[string]any) *T
-	GetSoftDeleteField() string
-	GetAdditionalFields() AdditionalFieldsFunc
-}
-
-type Model interface {
-	// Raw returns the model raw data as returned from the database
-	Raw() map[string]any
-}
-
 func getNullableValue[T any](value any) *T {
 	if value == nil {
 		return nil
@@ -106,7 +173,7 @@ func getNullableValue[T any](value any) *T {
 	return &v
 }
 
-func GetSchemaAdditionalFieldsForRequest[T Model](response http.ResponseWriter, request *http.Request, schema Schema[T]) (map[string]any, error) {
+func GetSchemaAdditionalFieldsForRequest(response http.ResponseWriter, request *http.Request, schema Schema) (map[string]any, error) {
 	additionalFieldsContext := NewAdditionalFieldsContext(request, response)
 	if schema.GetAdditionalFields() != nil {
 		value, err := schema.GetAdditionalFields()(additionalFieldsContext)

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func FindOne[T Model](ctx context.Context, core *AegisCore, schema Schema[T], conditions []Where, orderBy []OrderBy) (*T, error) {
+func FindOne(ctx context.Context, core *AegisCore, schema Schema, conditions []Where, orderBy []OrderBy) (Model, error) {
 	conditions = applySoftDeleteFilter(schema, conditions)
 	result, err := core.DB.FindOne(ctx, schema.GetTableName(), conditions, orderBy)
 	if err != nil {
@@ -20,7 +20,7 @@ func FindOne[T Model](ctx context.Context, core *AegisCore, schema Schema[T], co
 	return model, nil
 }
 
-func Create[T Model](ctx context.Context, core *AegisCore, schema Schema[T], data *T, additionalFields map[string]any) error {
+func Create(ctx context.Context, core *AegisCore, schema Schema, data Model, additionalFields map[string]any) error {
 	payload := make(map[string]any)
 	additionalFieldsContext := NewAdditionalFieldsContext(nil, nil)
 	// the order of the copy of the fields is important here!
@@ -58,7 +58,7 @@ func Create[T Model](ctx context.Context, core *AegisCore, schema Schema[T], dat
 	return nil
 }
 
-func Exists[T Model](ctx context.Context, core *AegisCore, schema Schema[T], conditions []Where) (bool, error) {
+func Exists(ctx context.Context, core *AegisCore, schema Schema, conditions []Where) (bool, error) {
 	conditions = applySoftDeleteFilter(schema, conditions)
 
 	return core.DB.Exists(ctx, schema.GetTableName(), conditions)
@@ -73,11 +73,11 @@ func ParseVerificationAction(action string) (string, string) {
 	return parts[0], parts[1]
 }
 
-func Update[T Model](ctx context.Context, core *AegisCore, schema Schema[T], updatedData *T, conditions []Where) error {
+func Update(ctx context.Context, core *AegisCore, schema Schema, updatedData Model, conditions []Where) error {
 	return UpdateRaw(ctx, core, schema, updatedData, conditions, true)
 }
 
-func UpdateRaw[T Model](ctx context.Context, core *AegisCore, schema Schema[T], updatedData *T, conditions []Where, removeEmptyValues bool) error {
+func UpdateRaw(ctx context.Context, core *AegisCore, schema Schema, updatedData Model, conditions []Where, removeEmptyValues bool) error {
 	payload := make(map[string]any)
 
 	maps.Copy(payload, schema.ToStorage(updatedData))
@@ -96,7 +96,7 @@ func UpdateRaw[T Model](ctx context.Context, core *AegisCore, schema Schema[T], 
 	return core.DB.Update(ctx, schema.GetTableName(), conditions, payload)
 }
 
-func applySoftDeleteFilter[T Model](schema Schema[T], conditions []Where) []Where {
+func applySoftDeleteFilter(schema Schema, conditions []Where) []Where {
 	softDeleteField := schema.GetSoftDeleteField()
 	if softDeleteField != "" {
 		conditions = append(conditions, IsNull(softDeleteField))
@@ -104,7 +104,7 @@ func applySoftDeleteFilter[T Model](schema Schema[T], conditions []Where) []Wher
 	return conditions
 }
 
-func Delete[T Model](ctx context.Context, core *AegisCore, schema Schema[T], conditions []Where) error {
+func Delete(ctx context.Context, core *AegisCore, schema Schema, conditions []Where) error {
 	// if there are conditions, we update the soft delete field to the current time
 	// otherwise we delete the record directly
 	if schema.GetSoftDeleteField() != "" {

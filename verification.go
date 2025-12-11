@@ -16,85 +16,54 @@ func (v Verification) Raw() map[string]any {
 }
 
 type VerificationSchema struct {
-	// name of the table in the database
-	TableName SchemaTableName
-	// mapping of the verification schema to the database columns
-	Fields VerificationFields
-	// A function to return a map of additional fields to be added to the schema when creating a record
-	AdditionalFields AdditionalFieldsFunc
+	BaseSchema
 }
 
-type VerificationFields struct {
-	ID              string
-	Subject         string // ${action}:${identifier} (e.g. email_verification:john.doe@example.com)
-	Value           string // token/code
-	ExpiresAt       string
-	CreatedAt       string
-	UpdatedAt       string
-	SoftDeleteField string
-}
+type SchemaConfigVerificationOption func(*SchemaConfig, *VerificationSchema)
 
-type VerificationSchemaOption func(*VerificationSchema)
-
-// NewDefaultVerificationSchema creates a new VerificationSchema with default values
-func NewDefaultVerificationSchema(opts ...VerificationSchemaOption) *VerificationSchema {
+func newDefaultVerificationSchema(c *SchemaConfig, opts ...SchemaConfigVerificationOption) *VerificationSchema {
 	schema := &VerificationSchema{
-		TableName: VerificationSchemaTableName,
-		Fields: VerificationFields{
-			ID:              string(SchemaIDField),
-			Subject:         string(VerificationSchemaSubjectField),
-			Value:           string(VerificationSchemaValueField),
-			ExpiresAt:       string(VerificationSchemaExpiresAtField),
-			CreatedAt:       string(VerificationSchemaCreatedAtField),
-			UpdatedAt:       string(VerificationSchemaUpdatedAtField),
-			SoftDeleteField: "",
+		BaseSchema: BaseSchema{
+			tableName: VerificationSchemaTableName,
 		},
 	}
 
 	for _, opt := range opts {
-		opt(schema)
+		opt(c, schema)
 	}
 
 	return schema
 }
 
-func (v *VerificationSchema) GetTableName() SchemaTableName {
-	return v.TableName
-}
-
-func (v *VerificationSchema) GetAdditionalFields() AdditionalFieldsFunc {
-	return v.AdditionalFields
+func (v *VerificationSchema) GetSoftDeleteField() string {
+	return v.GetField(string(UserSchemaSoftDeleteField))
 }
 
 func (v *VerificationSchema) GetIDField() string {
-	return v.Fields.ID
+	return v.GetField(string(SchemaIDField))
 }
 
 func (v *VerificationSchema) GetSubjectField() string {
-	return v.Fields.Subject
+	return v.GetField(string(VerificationSchemaSubjectField))
 }
 
 func (v *VerificationSchema) GetValueField() string {
-	return v.Fields.Value
+	return v.GetField(string(VerificationSchemaValueField))
 }
 
 func (v *VerificationSchema) GetExpiresAtField() string {
-	return v.Fields.ExpiresAt
+	return v.GetField(string(VerificationSchemaExpiresAtField))
 }
 
 func (v *VerificationSchema) GetCreatedAtField() string {
-	return v.Fields.CreatedAt
+	return v.GetField(string(VerificationSchemaCreatedAtField))
 }
 
 func (v *VerificationSchema) GetUpdatedAtField() string {
-	return v.Fields.UpdatedAt
+	return v.GetField(string(VerificationSchemaUpdatedAtField))
 }
 
-func (v *VerificationSchema) GetSoftDeleteField() string {
-	return v.Fields.SoftDeleteField
-}
-
-func (v *VerificationSchema) FromStorage(data map[string]any) *Verification {
+func (v *VerificationSchema) FromStorage(data map[string]any) Model {
 	return &Verification{
 		Subject:   data[v.GetSubjectField()].(string),
 		Value:     data[v.GetValueField()].(string),
@@ -105,180 +74,173 @@ func (v *VerificationSchema) FromStorage(data map[string]any) *Verification {
 	}
 }
 
-func (v *VerificationSchema) ToStorage(data *Verification) map[string]any {
+func (v *VerificationSchema) ToStorage(data Model) map[string]any {
+	verification := data.(*Verification)
 	return map[string]any{
-		v.GetSubjectField():   data.Subject,
-		v.GetValueField():     data.Value,
-		v.GetExpiresAtField(): data.ExpiresAt,
-		v.GetCreatedAtField(): data.CreatedAt,
-		v.GetUpdatedAtField(): data.UpdatedAt,
+		v.GetSubjectField():   verification.Subject,
+		v.GetValueField():     verification.Value,
+		v.GetExpiresAtField(): verification.ExpiresAt,
+		v.GetCreatedAtField(): verification.CreatedAt,
+		v.GetUpdatedAtField(): verification.UpdatedAt,
 	}
 }
 
-func WithVerificationTableName(tableName SchemaTableName) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.TableName = tableName
+func WithVerificationTableName(tableName SchemaTableName) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaTableName(CoreSchemaVerifications, tableName)
 	}
 }
 
-func WithVerificationAdditionalFields(fn AdditionalFieldsFunc) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.AdditionalFields = fn
+func WithVerificationAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigVerificationOption {
+	return func(c *SchemaConfig, v *VerificationSchema) {
+		v.additionalFields = fn
 	}
 }
 
-func WithVerificationFields(fields VerificationFields) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields = fields
+func WithVerificationFieldID(fieldName string) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaField(CoreSchemaVerifications, string(SchemaIDField), fieldName)
 	}
 }
 
-func WithVerificationFieldID(fieldName string) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields.ID = fieldName
+func WithVerificationFieldSubject(fieldName string) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaField(CoreSchemaVerifications, string(VerificationSchemaSubjectField), fieldName)
 	}
 }
 
-func WithVerificationFieldSubject(fieldName string) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields.Subject = fieldName
+func WithVerificationFieldValue(fieldName string) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaField(CoreSchemaVerifications, string(VerificationSchemaValueField), fieldName)
 	}
 }
 
-func WithVerificationFieldValue(fieldName string) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields.Value = fieldName
+func WithVerificationFieldExpiresAt(fieldName string) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaField(CoreSchemaVerifications, string(VerificationSchemaExpiresAtField), fieldName)
 	}
 }
 
-func WithVerificationFieldExpiresAt(fieldName string) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields.ExpiresAt = fieldName
+func WithVerificationFieldCreatedAt(fieldName string) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaField(CoreSchemaVerifications, string(VerificationSchemaCreatedAtField), fieldName)
 	}
 }
 
-func WithVerificationFieldCreatedAt(fieldName string) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields.CreatedAt = fieldName
+func WithVerificationFieldUpdatedAt(fieldName string) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaField(CoreSchemaVerifications, string(VerificationSchemaUpdatedAtField), fieldName)
 	}
 }
 
-func WithVerificationFieldUpdatedAt(fieldName string) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields.UpdatedAt = fieldName
+func WithVerificationFieldSoftDelete(fieldName string) SchemaConfigVerificationOption {
+	return func(s *SchemaConfig, v *VerificationSchema) {
+		s.setCoreSchemaField(CoreSchemaVerifications, string(UserSchemaSoftDeleteField), fieldName)
 	}
 }
 
-func WithVerificationFieldSoftDelete(fieldName string) VerificationSchemaOption {
-	return func(s *VerificationSchema) {
-		s.Fields.SoftDeleteField = fieldName
-	}
-}
+func (v *VerificationSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
+	fields := v.getDefaultColumns(config)
 
-// Introspect implements SchemaIntrospector for VerificationSchema
-func (v *VerificationSchema) Introspect() SchemaIntrospector {
 	return NewIntrospector(
 		v,
-		v.TableName,
+		v.tableName,
 		string(CoreSchemaVerifications),
-		func(schema *VerificationSchema) []ColumnDefinition {
-			fields := []ColumnDefinition{
-				{
-					Name:         schema.Fields.ID,
-					LogicalField: string(SchemaIDField),
-					Type:         ColumnTypeAny,
-					IsNullable:   false,
-					IsPrimaryKey: true,
-					Tags: map[string]string{
-						"json": "id",
-					},
-				},
-				{
-					Name:         schema.Fields.Subject,
-					LogicalField: string(VerificationSchemaSubjectField),
-					Type:         ColumnTypeString,
-					IsNullable:   false,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "subject",
-					},
-				},
-				{
-					Name:         schema.Fields.Value,
-					LogicalField: string(VerificationSchemaValueField),
-					Type:         ColumnTypeString,
-					IsNullable:   false,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "value",
-					},
-				},
-				{
-					Name:         schema.Fields.ExpiresAt,
-					LogicalField: string(VerificationSchemaExpiresAtField),
-					Type:         ColumnTypeTime,
-					IsNullable:   false,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "expires_at",
-					},
-				},
-				{
-					Name:         schema.Fields.CreatedAt,
-					LogicalField: string(VerificationSchemaCreatedAtField),
-					Type:         ColumnTypeTime,
-					IsNullable:   false,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "created_at",
-					},
-				},
-				{
-					Name:         schema.Fields.UpdatedAt,
-					LogicalField: string(VerificationSchemaUpdatedAtField),
-					Type:         ColumnTypeTime,
-					IsNullable:   false,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "updated_at",
-					},
-				},
-			}
-
-			if schema.Fields.SoftDeleteField != "" {
-				fields = append(fields, ColumnDefinition{
-					Name:         schema.Fields.SoftDeleteField,
-					LogicalField: string(UserSchemaSoftDeleteField), // Verification uses same soft delete field constant
-					Type:         ColumnTypeTimePtr,
-					IsNullable:   true,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "deleted_at",
-					},
-				})
-			}
-
-			return fields
+		fields,
+		[]IndexDefinition{
+			{
+				Name:    "idx_verifications_value",
+				Columns: []string{v.GetValueField()},
+				Unique:  true,
+			},
+			{
+				Name:    "idx_verifications_subject",
+				Columns: []string{v.GetSubjectField()},
+				Unique:  false,
+			},
 		},
-		func(schema *VerificationSchema) []IndexDefinition {
-			return []IndexDefinition{
-				{
-					Name:    "idx_verifications_value",
-					Columns: []string{schema.Fields.Value},
-					Unique:  true,
-				},
-				{
-					Name:    "idx_verifications_subject",
-					Columns: []string{schema.Fields.Subject},
-					Unique:  false,
-				},
-			}
-		},
-		func(schema *VerificationSchema) []ForeignKeyDefinition {
-			return []ForeignKeyDefinition{}
-		},
-		func(schema *VerificationSchema) *CoreSchemaName {
-			return nil
-		},
+		[]ForeignKeyDefinition{},
+		nil,
 	)
+}
+
+func (v *VerificationSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
+	fields := []ColumnDefinition{
+		{
+			Name:         string(SchemaIDField),
+			LogicalField: string(SchemaIDField),
+			Type:         ColumnTypeAny,
+			IsNullable:   false,
+			IsPrimaryKey: true,
+			Tags: map[string]string{
+				"json": "id",
+			},
+		},
+		{
+			Name:         string(VerificationSchemaSubjectField),
+			LogicalField: string(VerificationSchemaSubjectField),
+			Type:         ColumnTypeString,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "subject",
+			},
+		},
+		{
+			Name:         string(VerificationSchemaValueField),
+			LogicalField: string(VerificationSchemaValueField),
+			Type:         ColumnTypeString,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "value",
+			},
+		},
+		{
+			Name:         string(VerificationSchemaExpiresAtField),
+			LogicalField: string(VerificationSchemaExpiresAtField),
+			Type:         ColumnTypeTime,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "expires_at",
+			},
+		},
+		{
+			Name:         string(VerificationSchemaCreatedAtField),
+			LogicalField: string(VerificationSchemaCreatedAtField),
+			Type:         ColumnTypeTime,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "created_at",
+			},
+		},
+		{
+			Name:         string(VerificationSchemaUpdatedAtField),
+			LogicalField: string(VerificationSchemaUpdatedAtField),
+			Type:         ColumnTypeTime,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "updated_at",
+			},
+		},
+	}
+
+	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaVerifications, string(UserSchemaSoftDeleteField))
+	if softDeleteField != "" {
+		fields = append(fields, ColumnDefinition{
+			Name:         softDeleteField,
+			LogicalField: string(UserSchemaSoftDeleteField),
+			Type:         ColumnTypeTimePtr,
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": softDeleteField,
+			},
+		})
+	}
+
+	return fields
 }

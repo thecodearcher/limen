@@ -9,10 +9,29 @@ type PluginSchema struct {
 	Indexes     []IndexDefinition
 	ForeignKeys []ForeignKeyDefinition
 	SchemaName  string
+	Schema      Schema
+}
+
+type pluginSchemaConfig interface {
+	addField(ColumnDefinition)
+	addIndex(IndexDefinition)
+	addForeignKey(ForeignKeyDefinition)
+}
+
+func (p *PluginSchema) addField(field ColumnDefinition) {
+	p.Fields = append(p.Fields, field)
+}
+
+func (p *PluginSchema) addIndex(index IndexDefinition) {
+	p.Indexes = append(p.Indexes, index)
+}
+
+func (p *PluginSchema) addForeignKey(fk ForeignKeyDefinition) {
+	p.ForeignKeys = append(p.ForeignKeys, fk)
 }
 
 // NewPluginSchemaForTable creates a new PluginSchema for a new table
-func NewPluginSchemaForTable(schemaName SchemaName, tableName SchemaTableName, opts ...PluginSchemaOption) *PluginSchema {
+func NewPluginSchemaForTable(schemaName SchemaName, tableName SchemaTableName, schema Schema, opts ...PluginSchemaOption) *PluginSchema {
 	p := &PluginSchema{
 		TableName:   &tableName,
 		Extends:     nil,
@@ -20,6 +39,7 @@ func NewPluginSchemaForTable(schemaName SchemaName, tableName SchemaTableName, o
 		Indexes:     []IndexDefinition{},
 		ForeignKeys: []ForeignKeyDefinition{},
 		SchemaName:  string(schemaName),
+		Schema:      schema,
 	}
 	for _, opt := range opts {
 		opt(p)
@@ -27,34 +47,38 @@ func NewPluginSchemaForTable(schemaName SchemaName, tableName SchemaTableName, o
 	return p
 }
 
-type PluginSchemaOption func(*PluginSchema)
+type PluginSchemaOption func(pluginSchemaConfig)
 
 func WithPluginSchemaField(name string, columnType ColumnType, opts ...FieldOption) PluginSchemaOption {
-	return func(p *PluginSchema) {
-		p.Fields = append(p.Fields, WithField(name, columnType, opts...))
+	return func(p pluginSchemaConfig) {
+		p.addField(WithField(name, columnType, opts...))
 	}
 }
 
+// WithPluginSchemaIndex creates an option to add an index (no generics required)
 func WithPluginSchemaIndex(index IndexDefinition) PluginSchemaOption {
-	return func(p *PluginSchema) {
-		p.Indexes = append(p.Indexes, index)
+	return func(p pluginSchemaConfig) {
+		p.addIndex(index)
 	}
 }
 
+// WithPluginSchemaForeignKey creates an option to add a foreign key (no generics required)
 func WithPluginSchemaForeignKey(foreignKey ForeignKeyDefinition) PluginSchemaOption {
-	return func(p *PluginSchema) {
-		p.ForeignKeys = append(p.ForeignKeys, foreignKey)
+	return func(p pluginSchemaConfig) {
+		p.addForeignKey(foreignKey)
 	}
 }
 
 // NewPluginSchemaForExtension creates a new PluginSchema for extending a core schema
-func NewPluginSchemaForExtension(schemaName CoreSchemaName, opts ...PluginSchemaOption) *PluginSchema {
+func NewPluginSchemaForExtension(schemaName CoreSchemaName, schema Schema, opts ...PluginSchemaOption) *PluginSchema {
 	p := &PluginSchema{
 		TableName:   nil,
 		Extends:     &schemaName,
 		Fields:      []ColumnDefinition{},
 		Indexes:     []IndexDefinition{},
 		ForeignKeys: []ForeignKeyDefinition{},
+		SchemaName:  string(schemaName),
+		Schema:      schema,
 	}
 	for _, opt := range opts {
 		opt(p)
@@ -142,22 +166,13 @@ func (p *PluginSchema) ToSchemaIntrospector() SchemaIntrospector {
 
 // toSchemaIntrospectorWithTableName is the internal implementation
 func (p *PluginSchema) toSchemaIntrospectorWithTableName(tableName SchemaTableName) SchemaIntrospector {
-
 	return NewIntrospector(
-		p,
+		p.Schema,
 		tableName,
 		p.SchemaName,
-		func(s *PluginSchema) []ColumnDefinition {
-			return s.Fields
-		},
-		func(s *PluginSchema) []IndexDefinition {
-			return s.Indexes
-		},
-		func(s *PluginSchema) []ForeignKeyDefinition {
-			return s.ForeignKeys
-		},
-		func(s *PluginSchema) *CoreSchemaName {
-			return s.Extends
-		},
+		p.Fields,
+		p.Indexes,
+		p.ForeignKeys,
+		p.Extends,
 	)
 }

@@ -5,6 +5,7 @@ use (
 	./adapters/gorm
 	./examples/basic
 	./features/email-password
+	./features/username-password
 )
 
 replace github.com/thecodearcher/aegis v0.0.0 => ./
@@ -12,3 +13,5 @@ replace github.com/thecodearcher/aegis v0.0.0 => ./
 replace github.com/thecodearcher/aegis/adapters/gorm v0.0.0 => ./adapters/gorm
 
 replace github.com/thecodearcher/aegis/features/email-password v0.0.0 => ./features/email-password
+
+replace github.com/thecodearcher/aegis/features/username-password v0.0.0 => ./features/username-password

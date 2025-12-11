@@ -14,15 +14,16 @@ import (
 )
 
 type Aegis struct {
-	EmailPassword EmailPasswordFeature
-	config        *Config
-	core          *AegisCore
+	EmailPassword    EmailPasswordFeature
+	UsernamePassword UsernamePasswordFeature
+	config           *Config
+	core             *AegisCore
 }
 
 type AegisCore struct {
 	DB             DatabaseAdapter
 	DBAction       *DatabaseActionHelper
-	Schema         SchemaConfig
+	Schema         *SchemaConfig
 	SessionManager *SessionManager
 	FieldResolver  *FieldResolver
 }
@@ -35,10 +36,18 @@ type AegisHTTPCore struct {
 	trustedOriginsPatterns []*regexp.Regexp
 }
 
-func New(config *Config) (*Aegis, error) {
-	if config == nil {
-		return nil, fmt.Errorf("missing configuration")
+func New(config Config) (*Aegis, error) {
+
+	copyConfig := Config{
+		Database: config.Database,
+		Features: append([]Feature{}, config.Features...),
+		Schema:   &*config.Schema,
+		Session:  &*config.Session,
+		HTTP:     &*config.HTTP,
 	}
+	// if config == nil {
+	// 	return nil, fmt.Errorf("missing configuration")
+	// }
 
 	if err := config.validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
@@ -49,12 +58,12 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	aegis := &Aegis{
-		config: config,
+		config: &copyConfig,
 	}
 
 	core := &AegisCore{
 		DB:     config.Database,
-		Schema: *config.Schema,
+		Schema: config.Schema,
 	}
 
 	sessionManager := newSessionManager(core, config.Session, config.HTTP.cookieConfig)
@@ -67,14 +76,44 @@ func New(config *Config) (*Aegis, error) {
 	core.FieldResolver = NewFieldResolver(discoveredSchemas)
 	aegis.core = core
 
+	// Build schema metadata for each feature
+	featureMetadata := make(map[FeatureName]map[string]*PluginSchemaMetadata)
+
+	coreSchemasMetadata, err := core.buildCoreSchemasMetadata(discoveredSchemas)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build core schemas metadata: %w", err)
+	}
+	featureMetadata[FeatureName("core")] = coreSchemasMetadata
 	for _, feature := range config.Features {
-		if err := feature.Initialize(core); err != nil {
+		metadata, err := core.buildPluginSchemaMetadata(feature, discoveredSchemas)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build schema metadata for %s: %w", feature.Name(), err)
+		}
+		featureMetadata[feature.Name()] = metadata
+	}
+
+	// Initialize features with metadata
+	for _, feature := range config.Features {
+		if err := feature.Initialize(core, featureMetadata[feature.Name()]); err != nil {
 			return nil, fmt.Errorf("failed to initialize feature %s: %w", feature.Name(), err)
 		}
 
 		switch feature.Name() {
 		case FeatureEmailPassword:
 			aegis.EmailPassword = feature.(EmailPasswordFeature)
+		case FeatureUsernamePassword:
+			aegis.UsernamePassword = feature.(UsernamePasswordFeature)
+		}
+	}
+
+	fmt.Printf("featureMetadata: %+v\n", featureMetadata)
+
+	// Set EmailPasswordFeature reference on username-password plugin if both are enabled
+	if aegis.UsernamePassword != nil && aegis.EmailPassword != nil {
+		if usernamePlugin, ok := aegis.UsernamePassword.(interface {
+			SetEmailPasswordFeature(EmailPasswordFeature)
+		}); ok {
+			usernamePlugin.SetEmailPasswordFeature(aegis.EmailPassword)
 		}
 	}
 

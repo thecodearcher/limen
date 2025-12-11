@@ -88,61 +88,68 @@ type SchemaIntrospector interface {
 	GetExtends() *CoreSchemaName
 	// GetSchemaName returns the name of the logical schema name
 	GetSchemaName() string
+	// GetSchema returns the schema instance
+	// The schema is of type Schema[M] where M is the model type
+	// we don't want to use generics here because we want to support multiple model types
+	GetSchema() Schema
 }
 
 // baseIntrospector is a generic base implementation of SchemaIntrospector
-type baseIntrospector[T any] struct {
-	tableName      SchemaTableName
-	getColumns     func(T) []ColumnDefinition
-	getIndexes     func(T) []IndexDefinition
-	getForeignKeys func(T) []ForeignKeyDefinition
-	getExtends     func(T) *CoreSchemaName
-	schemaName     string
-	schema         T
+type baseIntrospector struct {
+	tableName   SchemaTableName
+	columns     []ColumnDefinition
+	indexes     []IndexDefinition
+	foreignKeys []ForeignKeyDefinition
+	extends     *CoreSchemaName
+	schemaName  string
+	schema      Schema
 }
 
-func (b *baseIntrospector[T]) GetTableName() SchemaTableName {
+func (b *baseIntrospector) GetTableName() SchemaTableName {
 	return b.tableName
 }
 
-func (b *baseIntrospector[T]) GetColumns() []ColumnDefinition {
-	return b.getColumns(b.schema)
+func (b *baseIntrospector) GetColumns() []ColumnDefinition {
+	return b.columns
 }
 
-func (b *baseIntrospector[T]) GetIndexes() []IndexDefinition {
-	return b.getIndexes(b.schema)
+func (b *baseIntrospector) GetIndexes() []IndexDefinition {
+	return b.indexes
 }
 
-func (b *baseIntrospector[T]) GetForeignKeys() []ForeignKeyDefinition {
-	return b.getForeignKeys(b.schema)
+func (b *baseIntrospector) GetForeignKeys() []ForeignKeyDefinition {
+	return b.foreignKeys
 }
 
-func (b *baseIntrospector[T]) GetExtends() *CoreSchemaName {
-	return b.getExtends(b.schema)
+func (b *baseIntrospector) GetExtends() *CoreSchemaName {
+	return b.extends
 }
 
-func (b *baseIntrospector[T]) GetSchemaName() string {
+func (b *baseIntrospector) GetSchemaName() string {
 	return b.schemaName
 }
 
-// NewIntrospector creates a new generic introspector for a schema type
-func NewIntrospector[T any](
-	schema T,
+func (b *baseIntrospector) GetSchema() Schema {
+	return b.schema
+}
+
+func NewIntrospector(
+	schema Schema,
 	tableName SchemaTableName,
 	schemaName string,
-	getColumns func(T) []ColumnDefinition,
-	getIndexes func(T) []IndexDefinition,
-	getForeignKeys func(T) []ForeignKeyDefinition,
-	getExtends func(T) *CoreSchemaName,
+	columns []ColumnDefinition,
+	indexes []IndexDefinition,
+	foreignKeys []ForeignKeyDefinition,
+	extends *CoreSchemaName,
 ) SchemaIntrospector {
-	return &baseIntrospector[T]{
-		tableName:      tableName,
-		schemaName:     schemaName,
-		getColumns:     getColumns,
-		getIndexes:     getIndexes,
-		getForeignKeys: getForeignKeys,
-		getExtends:     getExtends,
-		schema:         schema,
+	return &baseIntrospector{
+		tableName:   tableName,
+		schemaName:  schemaName,
+		columns:     columns,
+		indexes:     indexes,
+		foreignKeys: foreignKeys,
+		extends:     extends,
+		schema:      schema,
 	}
 }
 
@@ -155,6 +162,7 @@ func Introspect(introspector SchemaIntrospector) SchemaDefinition {
 		ForeignKeys: introspector.GetForeignKeys(),
 		Extends:     introspector.GetExtends(),
 		SchemaName:  introspector.GetSchemaName(),
+		// Schema:      introspector.GetSchema(),
 	}
 }
 
@@ -164,9 +172,10 @@ type SchemaDefinition struct {
 	Columns     []ColumnDefinition
 	Indexes     []IndexDefinition
 	ForeignKeys []ForeignKeyDefinition
-	SchemaName  string          // Name of the schema, empty for core schemas
+	SchemaName  string          // Name of the schema
 	Extends     *CoreSchemaName // If extending a core schema (e.g., CoreSchemaUsers), nil for new tables
 	PluginName  string          // Name of the plugin that owns this schema, empty for core schemas
+	Schema      any             // Schema instance
 }
 
 // ColumnDefinition represents a single field/column in a schema

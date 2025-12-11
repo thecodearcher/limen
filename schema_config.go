@@ -20,6 +20,8 @@ type SchemaConfig struct {
 	Session *SessionSchema
 	// Rate limit schema configuration
 	RateLimit *RateLimitSchema
+	// Core schema customizations
+	coreSchemaCustomizations map[CoreSchemaName]PluginSchemaConfig
 	// Plugin schema customizations: FeatureName -> SchemaName -> Config
 	PluginSchemas map[FeatureName]map[string]PluginSchemaConfig
 }
@@ -29,18 +31,64 @@ type SchemaConfigOption func(*SchemaConfig)
 // NewDefaultSchemaConfig creates a new SchemaConfig with default values.
 func NewDefaultSchemaConfig(opts ...SchemaConfigOption) *SchemaConfig {
 	config := &SchemaConfig{
-		User:          NewDefaultUserSchema(),
-		Verification:  NewDefaultVerificationSchema(),
-		Session:       NewDefaultSessionSchema(),
-		RateLimit:     NewDefaultRateLimitSchema(),
-		PluginSchemas: make(map[FeatureName]map[string]PluginSchemaConfig),
+		PluginSchemas:            make(map[FeatureName]map[string]PluginSchemaConfig),
+		coreSchemaCustomizations: make(map[CoreSchemaName]PluginSchemaConfig),
 	}
 
 	for _, opt := range opts {
 		opt(config)
 	}
 
+	// Set defaults if not provided
+	if config.Verification == nil {
+		config.Verification = newDefaultVerificationSchema(config)
+	}
+	if config.Session == nil {
+		config.Session = newDefaultSessionSchema(config)
+	}
+	if config.RateLimit == nil {
+		config.RateLimit = newDefaultRateLimitSchema(config)
+	}
+
 	return config
+}
+
+func (c *SchemaConfig) getCoreSchemaCustomizationField(schemaName CoreSchemaName, field string) string {
+	exists, ok := c.coreSchemaCustomizations[schemaName]
+	if !ok || exists.Fields == nil {
+		return ""
+	}
+	return exists.Fields[field]
+}
+
+func (c *SchemaConfig) setCoreSchemaField(schemaName CoreSchemaName, field string, value string) {
+	if exists, ok := c.coreSchemaCustomizations[schemaName]; ok {
+		if exists.Fields == nil {
+			exists.Fields = make(map[string]string)
+		}
+		exists.Fields[field] = value
+		c.coreSchemaCustomizations[schemaName] = exists
+		return
+	}
+
+	c.coreSchemaCustomizations[schemaName] = PluginSchemaConfig{
+		Fields: map[string]string{
+			field: value,
+		},
+	}
+}
+
+func (c *SchemaConfig) setCoreSchemaTableName(schemaName CoreSchemaName, tableName SchemaTableName) {
+	if exists, ok := c.coreSchemaCustomizations[schemaName]; ok {
+		exists.TableName = &tableName
+		c.coreSchemaCustomizations[schemaName] = exists
+		return
+	}
+
+	c.coreSchemaCustomizations[schemaName] = PluginSchemaConfig{
+		TableName: &tableName,
+		Fields:    make(map[string]string),
+	}
 }
 
 // WithSchemaAdditionalFields sets the global additional fields function
@@ -51,36 +99,36 @@ func WithSchemaAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigOption {
 }
 
 // WithSchemaUser sets the user schema configuration
-func WithSchemaUser(opts ...UserSchemaOption) SchemaConfigOption {
+func WithSchemaUser(opts ...SchemaConfigUserOption) SchemaConfigOption {
 	return func(c *SchemaConfig) {
-		c.User = NewDefaultUserSchema(opts...)
+		c.User = newDefaultUserSchema(c, opts...)
 	}
 }
 
 // WithSchemaVerification sets the verification schema configuration
-func WithSchemaVerification(opts ...VerificationSchemaOption) SchemaConfigOption {
+func WithSchemaVerification(opts ...SchemaConfigVerificationOption) SchemaConfigOption {
 	return func(c *SchemaConfig) {
-		c.Verification = NewDefaultVerificationSchema(opts...)
+		c.Verification = newDefaultVerificationSchema(c, opts...)
 	}
 }
 
 // WithSchemaSession sets the session schema configuration
-func WithSchemaSession(opts ...SessionSchemaOption) SchemaConfigOption {
+func WithSchemaSession(opts ...SchemaConfigSessionOption) SchemaConfigOption {
 	return func(c *SchemaConfig) {
-		c.Session = NewDefaultSessionSchema(opts...)
+		c.Session = newDefaultSessionSchema(c, opts...)
 	}
 }
 
 // WithSchemaRateLimit sets the rate limit schema configuration
-func WithSchemaRateLimit(opts ...RateLimitSchemaOption) SchemaConfigOption {
+func WithSchemaRateLimit(opts ...SchemaConfigRateLimitOption) SchemaConfigOption {
 	return func(c *SchemaConfig) {
-		c.RateLimit = NewDefaultRateLimitSchema(opts...)
+		c.RateLimit = newDefaultRateLimitSchema(c, opts...)
 	}
 }
 
 // PluginSchemaConfig represents customization for a plugin schema
 type PluginSchemaConfig struct {
-	TableName *SchemaTableName        // Optional: override table name
+	TableName *SchemaTableName  // Optional: override table name
 	Fields    map[string]string // Map of logical field name -> actual column name
 }
 

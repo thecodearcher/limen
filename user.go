@@ -22,84 +22,49 @@ func (c User) TableName() string {
 }
 
 type UserSchema struct {
-	// name of the table in the database
-	TableName SchemaTableName
-	// A function to return a map of additional fields to be added to the schema when creating a record. e.g:
-	//  func(ctx context.Context) map[string]any {
-	// 		return map[string]any{
-	//  		"uuid": uuid.New().String(),
-	//  		"created_at": time.Now(),
-	//  		"updated_at": time.Now(),
-	// 		 }
-	//	 }
-	// NOTE: fields here will override the global additional fields function.
-	AdditionalFields AdditionalFieldsFunc
-	// mapping of the user schema to the database columns
-	Fields UserFields
+	BaseSchema
 
 	// A function to serialize the model to a json object for returning to the client
 	Serializer func(data *User) map[string]any
 }
 
-type UserFields struct {
-	ID              string
-	Email           string
-	Password        string
-	EmailVerifiedAt string
-	SoftDeleteField string
-}
+type SchemaConfigUserOption func(*SchemaConfig, *UserSchema)
 
-type UserSchemaOption func(*UserSchema)
-
-// NewDefaultUserSchema creates a new UserSchema with default values
-func NewDefaultUserSchema(opts ...UserSchemaOption) *UserSchema {
+func newDefaultUserSchema(c *SchemaConfig, opts ...SchemaConfigUserOption) *UserSchema {
 	schema := &UserSchema{
-		TableName: UserSchemaTableName,
-		Fields: UserFields{
-			ID:              string(SchemaIDField),
-			Email:           string(UserSchemaEmailField),
-			Password:        string(UserSchemaPasswordField),
-			EmailVerifiedAt: string(UserSchemaEmailVerifiedAtField),
-			SoftDeleteField: string(UserSchemaSoftDeleteField),
+		BaseSchema: BaseSchema{
+			tableName: UserSchemaTableName,
 		},
 	}
 
 	for _, opt := range opts {
-		opt(schema)
+		opt(c, schema)
 	}
 
 	return schema
 }
 
-func (u *UserSchema) GetTableName() SchemaTableName {
-	return u.TableName
-}
-
 func (u *UserSchema) GetSoftDeleteField() string {
-	return u.Fields.SoftDeleteField
+	return u.GetField(string(UserSchemaSoftDeleteField))
 }
 
 func (u *UserSchema) GetIDField() string {
-	return u.Fields.ID
+	return u.GetField(string(SchemaIDField))
 }
 
 func (u *UserSchema) GetEmailField() string {
-	return u.Fields.Email
+	return u.GetField(string(UserSchemaEmailField))
 }
 
 func (u *UserSchema) GetPasswordField() string {
-	return u.Fields.Password
+	return u.GetField(string(UserSchemaPasswordField))
 }
 
 func (u *UserSchema) GetEmailVerifiedAtField() string {
-	return u.Fields.EmailVerifiedAt
+	return u.GetField(string(UserSchemaEmailVerifiedAtField))
 }
 
-func (u *UserSchema) GetAdditionalFields() AdditionalFieldsFunc {
-	return u.AdditionalFields
-}
-
-func (u *UserSchema) FromStorage(data map[string]any) *User {
+func (u *UserSchema) FromStorage(data map[string]any) Model {
 	return &User{
 		ID:              data[u.GetIDField()],
 		Email:           data[u.GetEmailField()].(string),
@@ -109,11 +74,12 @@ func (u *UserSchema) FromStorage(data map[string]any) *User {
 	}
 }
 
-func (u *UserSchema) ToStorage(data *User) map[string]any {
+func (u *UserSchema) ToStorage(data Model) map[string]any {
+	user := data.(*User)
 	return map[string]any{
-		u.GetEmailField():           data.Email,
-		u.GetPasswordField():        data.Password,
-		u.GetEmailVerifiedAtField(): data.EmailVerifiedAt,
+		u.GetEmailField():           user.Email,
+		u.GetPasswordField():        user.Password,
+		u.GetEmailVerifiedAtField(): user.EmailVerifiedAt,
 	}
 }
 
@@ -126,139 +92,129 @@ func (u *UserSchema) Serialize(data *User) map[string]any {
 	return raw
 }
 
-func WithUserTableName(tableName SchemaTableName) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.TableName = tableName
+func WithUserTableName(tableName SchemaTableName) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaTableName(CoreSchemaUsers, tableName)
 	}
 }
 
-func WithUserAdditionalFields(fn AdditionalFieldsFunc) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.AdditionalFields = fn
+func WithUserAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigUserOption {
+	return func(c *SchemaConfig, u *UserSchema) {
+		u.additionalFields = fn
 	}
 }
 
-func WithUserSerializer(serializer func(data *User) map[string]any) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.Serializer = serializer
+func WithUserSerializer(serializer func(data *User) map[string]any) SchemaConfigUserOption {
+	return func(c *SchemaConfig, u *UserSchema) {
+		u.Serializer = serializer
 	}
 }
 
-func WithUserFields(fields UserFields) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.Fields = fields
+func WithUserFieldID(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaIDField), fieldName)
 	}
 }
 
-func WithUserFieldID(fieldName string) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.Fields.ID = fieldName
+func WithUserFieldEmail(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaEmailField), fieldName)
 	}
 }
 
-func WithUserFieldEmail(fieldName string) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.Fields.Email = fieldName
+func WithUserFieldPassword(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaPasswordField), fieldName)
 	}
 }
 
-func WithUserFieldPassword(fieldName string) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.Fields.Password = fieldName
+func WithUserFieldEmailVerifiedAt(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaEmailVerifiedAtField), fieldName)
 	}
 }
 
-func WithUserFieldEmailVerifiedAt(fieldName string) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.Fields.EmailVerifiedAt = fieldName
+func WithUserFieldSoftDelete(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaSoftDeleteField), fieldName)
 	}
 }
 
-func WithUserFieldSoftDelete(fieldName string) UserSchemaOption {
-	return func(s *UserSchema) {
-		s.Fields.SoftDeleteField = fieldName
-	}
-}
-
-// Introspect implements SchemaIntrospector for UserSchema
-func (u *UserSchema) Introspect() SchemaIntrospector {
+func (u *UserSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	return NewIntrospector(
 		u,
-		u.TableName,
+		u.tableName,
 		string(CoreSchemaUsers),
-		func(s *UserSchema) []ColumnDefinition {
-			fields := []ColumnDefinition{
-				{
-					Name:         s.Fields.ID,
-					LogicalField: string(SchemaIDField),
-					Type:         ColumnTypeAny,
-					IsNullable:   false,
-					IsPrimaryKey: true,
-					Tags: map[string]string{
-						"json": "id",
-					},
-				},
-				{
-					Name:         s.Fields.Email,
-					LogicalField: string(UserSchemaEmailField),
-					Type:         ColumnTypeString,
-					IsNullable:   false,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "email",
-					},
-				},
-				{
-					Name:         s.Fields.Password,
-					LogicalField: string(UserSchemaPasswordField),
-					Type:         ColumnTypeString,
-					IsNullable:   false,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "-",
-					},
-				},
-				{
-					Name:         s.Fields.EmailVerifiedAt,
-					LogicalField: string(UserSchemaEmailVerifiedAtField),
-					Type:         ColumnTypeTimePtr,
-					IsNullable:   true,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "email_verified_at",
-					},
-				},
-			}
-
-			if s.Fields.SoftDeleteField != "" {
-				fields = append(fields, ColumnDefinition{
-					Name:         s.Fields.SoftDeleteField,
-					LogicalField: string(UserSchemaSoftDeleteField),
-					Type:         ColumnTypeTimePtr,
-					IsNullable:   true,
-					IsPrimaryKey: false,
-					Tags: map[string]string{
-						"json": "deleted_at",
-					},
-				})
-			}
-
-			return fields
+		u.getDefaultColumns(config),
+		[]IndexDefinition{
+			{
+				Name:    "idx_users_email",
+				Columns: []string{u.GetEmailField()},
+				Unique:  true,
+			},
 		},
-		func(s *UserSchema) []IndexDefinition {
-			return []IndexDefinition{
-				{
-					Name:    "idx_users_email",
-					Columns: []string{s.Fields.Email},
-					Unique:  true,
-				},
-			}
-		},
-		func(s *UserSchema) []ForeignKeyDefinition {
-			return []ForeignKeyDefinition{}
-		},
-		func(s *UserSchema) *CoreSchemaName {
-			return nil
-		},
+		[]ForeignKeyDefinition{},
+		nil,
 	)
+}
+
+func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
+	fields := []ColumnDefinition{
+		{
+			Name:         string(SchemaIDField),
+			LogicalField: string(SchemaIDField),
+			Type:         ColumnTypeAny,
+			IsNullable:   false,
+			IsPrimaryKey: true,
+			Tags: map[string]string{
+				"json": "id",
+			},
+		},
+		{
+			Name:         string(UserSchemaEmailField),
+			LogicalField: string(UserSchemaEmailField),
+			Type:         ColumnTypeString,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "email",
+			},
+		},
+		{
+			Name:         string(UserSchemaPasswordField),
+			LogicalField: string(UserSchemaPasswordField),
+			Type:         ColumnTypeString,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "-",
+			},
+		},
+		{
+			Name:         string(UserSchemaEmailVerifiedAtField),
+			LogicalField: string(UserSchemaEmailVerifiedAtField),
+			Type:         ColumnTypeTimePtr,
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "email_verified_at",
+			},
+		},
+	}
+
+	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaUsers, string(UserSchemaSoftDeleteField))
+	if softDeleteField != "" {
+		fields = append(fields, ColumnDefinition{
+			Name:         softDeleteField,
+			LogicalField: string(UserSchemaSoftDeleteField),
+			Type:         ColumnTypeTimePtr,
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": softDeleteField,
+			},
+		})
+	}
+
+	return fields
 }

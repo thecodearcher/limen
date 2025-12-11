@@ -19,7 +19,7 @@ func (s *DatabaseRateLimiterStore) Get(ctx context.Context, key string) (*RateLi
 		return nil, ErrRateLimitNotFound
 	}
 
-	return limit, nil
+	return limit.(*RateLimit), nil
 }
 
 func (s *DatabaseRateLimiterStore) Create(ctx context.Context, value *RateLimit) error {
