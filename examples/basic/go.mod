@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/gin-gonic/gin v1.11.0
+	github.com/google/uuid v1.6.0
 	github.com/thecodearcher/aegis v0.0.0
 	github.com/thecodearcher/aegis/adapters/gorm v0.0.0
 	github.com/thecodearcher/aegis/features/email-password v0.0.0
@@ -12,11 +13,13 @@ require (
 	gorm.io/gorm v1.30.1
 )
 
-// replace github.com/thecodearcher/aegis => ../../
+replace github.com/thecodearcher/aegis => ../../
 
-// replace github.com/thecodearcher/aegis/adapters/gorm => ../../adapters/gorm
+replace github.com/thecodearcher/aegis/adapters/gorm => ../../adapters/gorm
 
-// replace github.com/thecodearcher/aegis/features/email-password => ../../features/email-password
+replace github.com/thecodearcher/aegis/features/email-password => ../../features/email-password
+
+replace github.com/thecodearcher/aegis/features/username-password => ../../features/username-password
 
 require (
 	github.com/bytedance/sonic v1.14.0 // indirect

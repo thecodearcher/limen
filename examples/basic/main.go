@@ -56,7 +56,7 @@ func main() {
 			aegis.WithSchemaUser(
 				// aegis.WithUserTableName("usersz_from_personal_user_schema"),
 				// aegis.WithUserFieldID("id_from_personal"),
-				aegis.WithUserFieldEmailVerifiedAt("email_verified_at"),
+				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
 				// aegis.WithUserFieldSoftDelete("deleted_at"),
 				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
 					return map[string]any{
@@ -77,7 +77,6 @@ func main() {
 				// }),
 			),
 			aegis.WithSchemaVerification(
-				aegis.WithVerificationFieldID("id_token"),
 				aegis.WithVerificationAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
 					return map[string]any{
 						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
