@@ -43,6 +43,10 @@ func Create(ctx context.Context, core *AegisCore, schema Schema, data Model, add
 	maps.Copy(payload, additionalFields)
 	maps.Copy(payload, schema.ToStorage(data))
 
+	if err := assignID(ctx, core, schema, payload); err != nil {
+		return err
+	}
+
 	for key, value := range payload {
 		// empty strings are converted to nil to avoid empty strings in the database
 		if value == "" {
@@ -94,6 +98,28 @@ func UpdateRaw(ctx context.Context, core *AegisCore, schema Schema, updatedData 
 	conditions = applySoftDeleteFilter(schema, conditions)
 
 	return core.DB.Update(ctx, schema.GetTableName(), conditions, payload)
+}
+
+func assignID(ctx context.Context, core *AegisCore, schema Schema, payload map[string]any) error {
+	idField := schema.GetIDField()
+	if idField == "" {
+		return nil
+	}
+
+	if _, exists := payload[idField]; exists || core.Schema.IDGenerator == nil {
+		return nil
+	}
+
+	id, err := core.Schema.IDGenerator.Generate(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to generate ID: %w", err)
+	}
+
+	if id != nil {
+		payload[idField] = id
+	}
+
+	return nil
 }
 
 func applySoftDeleteFilter(schema Schema, conditions []Where) []Where {

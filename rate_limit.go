@@ -106,11 +106,11 @@ func WithRateLimitFieldLastRequestAt(fieldName string) SchemaConfigRateLimitOpti
 	}
 }
 
-func (r *RateLimitSchema) Introspect() SchemaIntrospector {
+func (r *RateLimitSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	tableName := RateLimitSchemaTableName
 	return &SchemaDefinition{
 		TableName: &tableName,
-		Columns:   r.getDefaultColumns(),
+		Columns:   r.getDefaultColumns(config),
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_rate_limits_key",
@@ -125,12 +125,14 @@ func (r *RateLimitSchema) Introspect() SchemaIntrospector {
 	}
 }
 
-func (r *RateLimitSchema) getDefaultColumns() []ColumnDefinition {
+func (r *RateLimitSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
+	idType := config.GetIDColumnType()
+
 	return []ColumnDefinition{
 		{
 			Name:         string(SchemaIDField),
 			LogicalField: string(SchemaIDField),
-			Type:         ColumnTypeAny,
+			Type:         idType,
 			IsNullable:   false,
 			IsPrimaryKey: true,
 			Tags: map[string]string{

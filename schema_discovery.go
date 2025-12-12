@@ -33,8 +33,8 @@ func (a *AegisCore) DiscoverAllSchemas(features []Feature) (map[string]SchemaDef
 func (a *AegisCore) collectCoreSchemas() map[string]SchemaDefinition {
 	userDef := a.Schema.User.Introspect(a.Schema).(*SchemaDefinition)
 	verificationDef := a.Schema.Verification.Introspect(a.Schema).(*SchemaDefinition)
-	sessionDef := a.Schema.Session.Introspect().(*SchemaDefinition)
-	rateLimitDef := a.Schema.RateLimit.Introspect().(*SchemaDefinition)
+	sessionDef := a.Schema.Session.Introspect(a.Schema).(*SchemaDefinition)
+	rateLimitDef := a.Schema.RateLimit.Introspect(a.Schema).(*SchemaDefinition)
 
 	return map[string]SchemaDefinition{
 		string(CoreSchemaUsers):         *userDef,

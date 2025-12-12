@@ -192,11 +192,11 @@ func WithSessionFieldMetadata(fieldName string) SchemaConfigSessionOption {
 	}
 }
 
-func (s *SessionSchema) Introspect() SchemaIntrospector {
+func (s *SessionSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	tableName := SessionSchemaTableName
 	return &SchemaDefinition{
 		TableName: &tableName,
-		Columns:   s.getDefaultColumns(),
+		Columns:   s.getDefaultColumns(config),
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_sessions_token",
@@ -225,12 +225,14 @@ func (s *SessionSchema) Introspect() SchemaIntrospector {
 	}
 }
 
-func (s *SessionSchema) getDefaultColumns() []ColumnDefinition {
+func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
+	idType := config.GetIDColumnType()
+
 	return []ColumnDefinition{
 		{
 			Name:         string(SchemaIDField),
 			LogicalField: string(SchemaIDField),
-			Type:         ColumnTypeAny,
+			Type:         idType,
 			IsNullable:   false,
 			IsPrimaryKey: true,
 			Tags: map[string]string{

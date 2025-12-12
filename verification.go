@@ -156,11 +156,13 @@ func (v *VerificationSchema) Introspect(config *SchemaConfig) SchemaIntrospector
 }
 
 func (v *VerificationSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
+	idType := config.GetIDColumnType()
+
 	fields := []ColumnDefinition{
 		{
 			Name:         string(SchemaIDField),
 			LogicalField: string(SchemaIDField),
-			Type:         ColumnTypeAny,
+			Type:         idType,
 			IsNullable:   false,
 			IsPrimaryKey: true,
 			Tags: map[string]string{

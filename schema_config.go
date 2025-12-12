@@ -12,6 +12,8 @@ type SchemaConfig struct {
 	// this function will be called during the creation of any schema record.
 	// You can also set fields on supported schemas itself.
 	AdditionalFields AdditionalFieldsFunc
+	// IDGenerator generates IDs for all schemas
+	IDGenerator IDGenerator
 	// User schema configuration
 	User *UserSchema
 	// Verification schema configuration
@@ -51,6 +53,15 @@ func NewDefaultSchemaConfig(opts ...SchemaConfigOption) *SchemaConfig {
 	}
 
 	return config
+}
+
+// GetIDColumnType returns the ColumnType for ID fields based on the configured ID generator
+// Returns ColumnTypeInt64 (for auto-increment) if no generator is configured
+func (c *SchemaConfig) GetIDColumnType() ColumnType {
+	if c != nil && c.IDGenerator != nil {
+		return c.IDGenerator.GetColumnType()
+	}
+	return ColumnTypeInt64
 }
 
 func (c *SchemaConfig) getCoreSchemaCustomizationField(schemaName CoreSchemaName, field string) string {
@@ -95,6 +106,13 @@ func (c *SchemaConfig) setCoreSchemaTableName(schemaName CoreSchemaName, tableNa
 func WithSchemaAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigOption {
 	return func(c *SchemaConfig) {
 		c.AdditionalFields = fn
+	}
+}
+
+// WithSchemaIDGenerator sets the global ID generator
+func WithSchemaIDGenerator(generator IDGenerator) SchemaConfigOption {
+	return func(c *SchemaConfig) {
+		c.IDGenerator = generator
 	}
 }
 

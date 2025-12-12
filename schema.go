@@ -53,6 +53,7 @@ type Schema interface {
 	FromStorage(data map[string]any) Model
 	GetSoftDeleteField() string
 	GetAdditionalFields() AdditionalFieldsFunc
+	GetIDField() string
 	Initialize(core *AegisCore, meta *PluginSchemaMetadata) error
 }
 
