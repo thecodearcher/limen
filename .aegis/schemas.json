@@ -1,0 +1,403 @@
+{
+  "schemas": {
+    "rate_limits": {
+      "TableName": "rate_limits",
+      "Columns": [
+        {
+          "Name": "id",
+          "LogicalField": "id",
+          "Type": "int64",
+          "IsNullable": false,
+          "IsPrimaryKey": true,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "id"
+          }
+        },
+        {
+          "Name": "key",
+          "LogicalField": "key",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "key"
+          }
+        },
+        {
+          "Name": "count",
+          "LogicalField": "count",
+          "Type": "int",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "count"
+          }
+        },
+        {
+          "Name": "last_request_at",
+          "LogicalField": "last_request_at",
+          "Type": "int64",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "last_request_at"
+          }
+        }
+      ],
+      "Indexes": [
+        {
+          "Name": "idx_rate_limits_key",
+          "Columns": [
+            "key"
+          ],
+          "Unique": true
+        }
+      ],
+      "ForeignKeys": null,
+      "SchemaName": "rate_limits",
+      "Extends": null,
+      "PluginName": ""
+    },
+    "sessions": {
+      "TableName": "sessions",
+      "Columns": [
+        {
+          "Name": "id",
+          "LogicalField": "id",
+          "Type": "int64",
+          "IsNullable": false,
+          "IsPrimaryKey": true,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "id"
+          }
+        },
+        {
+          "Name": "token",
+          "LogicalField": "token",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "token"
+          }
+        },
+        {
+          "Name": "user_id",
+          "LogicalField": "user_id",
+          "Type": "int64",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "user_id"
+          }
+        },
+        {
+          "Name": "created_at",
+          "LogicalField": "created_at",
+          "Type": "time.Time",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "created_at"
+          }
+        },
+        {
+          "Name": "expires_at",
+          "LogicalField": "expires_at",
+          "Type": "time.Time",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "expires_at"
+          }
+        },
+        {
+          "Name": "last_access",
+          "LogicalField": "last_access",
+          "Type": "time.Time",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "last_access"
+          }
+        },
+        {
+          "Name": "metadata",
+          "LogicalField": "metadata",
+          "Type": "map[string]any",
+          "IsNullable": true,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "metadata"
+          }
+        }
+      ],
+      "Indexes": [
+        {
+          "Name": "idx_sessions_token",
+          "Columns": [
+            "token"
+          ],
+          "Unique": true
+        },
+        {
+          "Name": "idx_sessions_user_id",
+          "Columns": [
+            "user_id"
+          ],
+          "Unique": false
+        }
+      ],
+      "ForeignKeys": [
+        {
+          "Name": "fk_sessions_user_id",
+          "Column": "user_id",
+          "ReferencedSchema": "users",
+          "ReferencedField": "id",
+          "OnDelete": "CASCADE",
+          "OnUpdate": "CASCADE"
+        }
+      ],
+      "SchemaName": "sessions",
+      "Extends": null,
+      "PluginName": ""
+    },
+    "something_map_name2": {
+      "TableName": "something_map_name",
+      "Columns": [
+        {
+          "Name": "name_from_plugin",
+          "LogicalField": "name",
+          "Type": "int64",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {}
+        },
+        {
+          "Name": "name2",
+          "LogicalField": "name2",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {}
+        }
+      ],
+      "Indexes": [
+        {
+          "Name": "idx_something_map_name2_name",
+          "Columns": [
+            "name_from_plugin"
+          ],
+          "Unique": false
+        }
+      ],
+      "ForeignKeys": [
+        {
+          "Name": "fk_users_name",
+          "Column": "name_from_plugin",
+          "ReferencedSchema": "users",
+          "ReferencedField": "id",
+          "OnDelete": "CASCADE",
+          "OnUpdate": "CASCADE"
+        }
+      ],
+      "SchemaName": "something_map_name2",
+      "Extends": null,
+      "PluginName": "email-password"
+    },
+    "users": {
+      "TableName": "users",
+      "Columns": [
+        {
+          "Name": "id",
+          "LogicalField": "id",
+          "Type": "int64",
+          "IsNullable": false,
+          "IsPrimaryKey": true,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "id"
+          }
+        },
+        {
+          "Name": "email",
+          "LogicalField": "email",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "email"
+          }
+        },
+        {
+          "Name": "password",
+          "LogicalField": "password",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "-"
+          }
+        },
+        {
+          "Name": "email_verified_at",
+          "LogicalField": "email_verified_at",
+          "Type": "time.Time",
+          "IsNullable": true,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "email_verified_at"
+          }
+        },
+        {
+          "Name": "something",
+          "LogicalField": "something",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {}
+        },
+        {
+          "Name": "username2",
+          "LogicalField": "username",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {}
+        }
+      ],
+      "Indexes": [
+        {
+          "Name": "idx_users_email",
+          "Columns": [
+            "email"
+          ],
+          "Unique": true
+        },
+        {
+          "Name": "idx_users_username",
+          "Columns": [
+            "username2"
+          ],
+          "Unique": true
+        }
+      ],
+      "ForeignKeys": [],
+      "SchemaName": "users",
+      "Extends": null,
+      "PluginName": ""
+    },
+    "verifications": {
+      "TableName": "verifications",
+      "Columns": [
+        {
+          "Name": "id",
+          "LogicalField": "id",
+          "Type": "int64",
+          "IsNullable": false,
+          "IsPrimaryKey": true,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "id"
+          }
+        },
+        {
+          "Name": "subject",
+          "LogicalField": "subject",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "subject"
+          }
+        },
+        {
+          "Name": "value",
+          "LogicalField": "value",
+          "Type": "string",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "value"
+          }
+        },
+        {
+          "Name": "expires_at",
+          "LogicalField": "expires_at",
+          "Type": "time.Time",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "expires_at"
+          }
+        },
+        {
+          "Name": "created_at",
+          "LogicalField": "created_at",
+          "Type": "time.Time",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "created_at"
+          }
+        },
+        {
+          "Name": "updated_at",
+          "LogicalField": "updated_at",
+          "Type": "time.Time",
+          "IsNullable": false,
+          "IsPrimaryKey": false,
+          "DefaultValue": "",
+          "Tags": {
+            "json": "updated_at"
+          }
+        }
+      ],
+      "Indexes": [
+        {
+          "Name": "idx_verifications_value",
+          "Columns": [
+            "value"
+          ],
+          "Unique": true
+        },
+        {
+          "Name": "idx_verifications_subject",
+          "Columns": [
+            "subject"
+          ],
+          "Unique": false
+        }
+      ],
+      "ForeignKeys": null,
+      "SchemaName": "verifications",
+      "Extends": null,
+      "PluginName": ""
+    }
+  },
+  "metadata": {
+    "useAutoIncrementID": true
+  }
+}

@@ -1,8 +1,10 @@
-package aegis
+package main
 
 import (
 	"context"
 	"time"
+
+	"github.com/thecodearcher/aegis"
 )
 
 // Migration represents a single database migration
@@ -17,13 +19,13 @@ type Migration struct {
 // MigrationGenerator generates migration SQL from schema definitions
 type MigrationGenerator interface {
 	// GenerateUpMigration generates SQL to create/alter a table based on schema definition
-	GenerateUpMigration(schema SchemaDefinition) (string, error)
+	GenerateUpMigration(schema aegis.SchemaDefinition) (string, error)
 	// GenerateDownMigration generates SQL to drop/alter a table back
-	GenerateDownMigration(schema SchemaDefinition) (string, error)
+	GenerateDownMigration(schema aegis.SchemaDefinition) (string, error)
 	// GenerateCreateTable generates CREATE TABLE SQL
-	GenerateCreateTable(schema SchemaDefinition) (string, error)
+	GenerateCreateTable(schema aegis.SchemaDefinition) (string, error)
 	// GenerateAlterTable generates ALTER TABLE SQL for adding columns
-	GenerateAlterTable(tableName SchemaTableName, newFields []ColumnDefinition) (string, error)
+	GenerateAlterTable(tableName aegis.SchemaTableName, newFields []aegis.ColumnDefinition) (string, error)
 }
 
 // MigrationApplier applies migrations to the database

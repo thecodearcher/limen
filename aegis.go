@@ -68,6 +68,13 @@ func New(config *Config) (*Aegis, error) {
 	core.FieldResolver = NewFieldResolver(discoveredSchemas)
 	aegis.core = core
 
+	// Serialize schemas for CLI if enabled
+	if config.CLI != nil && config.CLI.Enabled {
+		if err := config.prepareCLIConfig(discoveredSchemas); err != nil {
+			log.Printf("Warning: failed to prepare CLI config: %v", err)
+		}
+	}
+
 	// Build schema metadata for each feature
 	featureMetadata := make(map[FeatureName]map[string]*PluginSchemaMetadata)
 
@@ -95,16 +102,6 @@ func New(config *Config) (*Aegis, error) {
 			aegis.EmailPassword = feature.(EmailPasswordFeature)
 		case FeatureUsernamePassword:
 			aegis.UsernamePassword = feature.(UsernamePasswordFeature)
-		}
-	}
-
-	for _, feature := range config.Features {
-		fmt.Printf("featureMetadata: %+v\n", feature.Name())
-		for _, schema := range feature.GetSchemas(core.Schema) {
-			fmt.Printf("schema: %+v\n", schema.GetSchemaName())
-			for _, column := range schema.GetColumns() {
-				fmt.Printf("column: %+v\n", column.Name)
-			}
 		}
 	}
 

@@ -139,19 +139,18 @@ func (v *VerificationSchema) Introspect(config *SchemaConfig) SchemaIntrospector
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_verifications_value",
-				Columns: []string{v.GetValueField()},
+				Columns: []string{string(VerificationSchemaValueField)},
 				Unique:  true,
 			},
 			{
 				Name:    "idx_verifications_subject",
-				Columns: []string{v.GetSubjectField()},
+				Columns: []string{string(VerificationSchemaSubjectField)},
 				Unique:  false,
 			},
 		},
-		ForeignKeys: []ForeignKeyDefinition{},
-		SchemaName:  string(CoreSchemaVerifications),
-		Extends:     nil,
-		Schema:      v,
+		SchemaName: string(CoreSchemaVerifications),
+		Extends:    nil,
+		Schema:     v,
 	}
 }
 
@@ -226,7 +225,7 @@ func (v *VerificationSchema) getDefaultColumns(config *SchemaConfig) []ColumnDef
 		fields = append(fields, ColumnDefinition{
 			Name:         softDeleteField,
 			LogicalField: string(SchemaSoftDeleteField),
-			Type:         ColumnTypeTimePtr,
+			Type:         ColumnTypeTime,
 			IsNullable:   true,
 			IsPrimaryKey: false,
 			Tags: map[string]string{

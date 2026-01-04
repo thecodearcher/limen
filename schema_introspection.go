@@ -28,6 +28,8 @@ func IsValidCoreSchema(name string) bool {
 type ColumnType string
 
 const (
+	// ColumnTypeUUID represents the uuid string type
+	ColumnTypeUUID ColumnType = "uuid"
 	// ColumnTypeString represents the string type
 	ColumnTypeString ColumnType = "string"
 	// ColumnTypeInt represents the int type
@@ -40,8 +42,6 @@ const (
 	ColumnTypeBool ColumnType = "bool"
 	// ColumnTypeTime represents the time.Time type
 	ColumnTypeTime ColumnType = "time.Time"
-	// ColumnTypeTimePtr represents the *time.Time type
-	ColumnTypeTimePtr ColumnType = "*time.Time"
 	// ColumnTypeAny represents the any type
 	ColumnTypeAny ColumnType = "any"
 	// ColumnTypeMapStringAny represents the map[string]any type
@@ -104,12 +104,10 @@ type IndexDefinition struct {
 
 // ForeignKeyDefinition represents a foreign key relationship
 type ForeignKeyDefinition struct {
-	Name                 string           // Foreign key constraint name
-	Column               string           // Local column name (uses schema.Fields)
-	ReferencedSchema     SchemaTableName  // Schema name (e.g., "users" or plugin schema name) - symbolic reference
-	ReferencedField      SchemaField      // Field name (e.g., "id" or field constant) - symbolic reference
-	ReferencedTableName  SchemaTableName  // Resolved table name (populated during schema discovery)
-	ReferencedColumnName string           // Resolved column name (populated during schema discovery)
-	OnDelete             ForeignKeyAction // ON DELETE action (use FKAction constants)
-	OnUpdate             ForeignKeyAction // ON UPDATE action (use FKAction constants)
+	Name             string           // Foreign key constraint name
+	Column           string           // Local column name (uses schema.Fields)
+	ReferencedSchema SchemaTableName  // Schema name (e.g., "users" or plugin schema name) - symbolic reference
+	ReferencedField  SchemaField      // Field name (e.g., "id" or field constant) - symbolic reference
+	OnDelete         ForeignKeyAction // ON DELETE action (use FKAction constants)
+	OnUpdate         ForeignKeyAction // ON UPDATE action (use FKAction constants)
 }

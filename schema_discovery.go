@@ -2,6 +2,7 @@ package aegis
 
 import (
 	"fmt"
+	"strings"
 )
 
 // DiscoverAllSchemas discovers all schemas from core and all registered features.
@@ -23,6 +24,10 @@ func (a *AegisCore) DiscoverAllSchemas(features []Feature) (map[string]SchemaDef
 	}
 
 	if err := resolveForeignKeyReferences(schemas); err != nil {
+		return nil, err
+	}
+
+	if err := resolveIndexColumnNames(schemas); err != nil {
 		return nil, err
 	}
 
@@ -170,8 +175,8 @@ func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
 		for i := range schema.ForeignKeys {
 			fk := &schema.ForeignKeys[i]
 
-			if fk.ReferencedTableName != "" && fk.ReferencedColumnName != "" {
-				continue
+			if fk.Name == "" {
+				fk.Name = fmt.Sprintf("fk_%s_%s", schemaName, fk.Column)
 			}
 
 			referencedSchema, exists := schemas[string(fk.ReferencedSchema)]
@@ -184,13 +189,51 @@ func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
 				return fmt.Errorf("schema %s has foreign key referencing unknown field %s in schema %s", schemaName, fk.ReferencedField, fk.ReferencedSchema)
 			}
 
-			fk.ReferencedTableName = referencedSchema.GetTableName()
-			fk.ReferencedColumnName = referencedColumn.Name
+			fk.ReferencedSchema = referencedSchema.GetTableName()
+			fk.ReferencedField = SchemaField(referencedColumn.Name)
+
+			resolvedColumn := findColumnByLogicalField(schema.Columns, SchemaField(fk.Column))
+			if resolvedColumn == nil {
+				return fmt.Errorf("schema %s has foreign key with unknown local column %s", schemaName, fk.Column)
+			}
+
+			localColumnLogicalField := resolvedColumn.LogicalField
+			fk.Column = resolvedColumn.Name
+
+			// Update the foreign key local column type to match the referenced column type
+			for j := range schema.Columns {
+				if schema.Columns[j].LogicalField == localColumnLogicalField {
+					schema.Columns[j].Type = referencedColumn.Type
+					break
+				}
+			}
 		}
 
 		schemas[schemaName] = schema
 	}
 
+	return nil
+}
+
+func resolveIndexColumnNames(schemas map[string]SchemaDefinition) error {
+	for schemaName, schema := range schemas {
+		for i := range schema.Indexes {
+			index := &schema.Indexes[i]
+			if index.Name == "" {
+				index.Name = fmt.Sprintf("idx_%s_%s", schemaName, strings.Join(index.Columns, "_"))
+			}
+
+			for j := range index.Columns {
+				column := index.Columns[j]
+				resolvedColumn := findColumnByLogicalField(schema.Columns, SchemaField(column))
+				if resolvedColumn == nil {
+					return fmt.Errorf("schema %s has index with unknown column %s", schema.SchemaName, column)
+				}
+				index.Columns[j] = resolvedColumn.Name
+			}
+		}
+		schemas[schemaName] = schema
+	}
 	return nil
 }
 

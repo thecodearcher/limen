@@ -11,7 +11,7 @@ type SchemaDefinition struct {
 	SchemaName  string          // Name of the schema
 	Extends     *CoreSchemaName // If extending a core schema (e.g., CoreSchemaUsers), nil for new tables
 	PluginName  string          // Name of the plugin that owns this schema, empty for core schemas
-	Schema      Schema          // Schema instance
+	Schema      Schema          `json:"-"` // Schema instance (excluded from JSON serialization for CLI)
 }
 
 // GetTableName implements SchemaIntrospector.

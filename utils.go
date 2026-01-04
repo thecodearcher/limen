@@ -1,12 +1,15 @@
 package aegis
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -189,4 +192,18 @@ func sliceToMap[T any](slice []T, fn func(T) string) map[string]T {
 		m[fn(item)] = item
 	}
 	return m
+}
+
+func writeToFile(data []byte, outputPath string) error {
+	file, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(file, bytes.NewReader(data)); err != nil {
+		return fmt.Errorf("failed to write schemas file: %w", err)
+	}
+
+	return nil
 }

@@ -200,19 +200,19 @@ func (s *SessionSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_sessions_token",
-				Columns: []string{s.GetTokenField()},
+				Columns: []string{string(SessionSchemaTokenField)},
 				Unique:  true,
 			},
 			{
 				Name:    "idx_sessions_user_id",
-				Columns: []string{s.GetUserIDField()},
+				Columns: []string{string(SessionSchemaUserIDField)},
 				Unique:  false,
 			},
 		},
 		ForeignKeys: []ForeignKeyDefinition{
 			{
 				Name:             "fk_sessions_user_id",
-				Column:           s.GetUserIDField(),
+				Column:           string(SessionSchemaUserIDField),
 				ReferencedSchema: UserSchemaTableName,
 				ReferencedField:  SchemaIDField,
 				OnDelete:         FKActionCascade,

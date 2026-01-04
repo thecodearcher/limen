@@ -114,14 +114,13 @@ func (r *RateLimitSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_rate_limits_key",
-				Columns: []string{r.GetKeyField()},
+				Columns: []string{string(RateLimitSchemaKeyField)},
 				Unique:  true,
 			},
 		},
-		ForeignKeys: []ForeignKeyDefinition{},
-		SchemaName:  string(CoreSchemaRateLimits),
-		Extends:     nil,
-		Schema:      r,
+		SchemaName: string(CoreSchemaRateLimits),
+		Extends:    nil,
+		Schema:     r,
 	}
 }
 

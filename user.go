@@ -138,7 +138,7 @@ func (u *UserSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_users_email",
-				Columns: []string{u.GetEmailField()},
+				Columns: []string{string(UserSchemaEmailField)},
 				Unique:  true,
 			},
 		},
@@ -186,7 +186,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		{
 			Name:         string(UserSchemaEmailVerifiedAtField),
 			LogicalField: string(UserSchemaEmailVerifiedAtField),
-			Type:         ColumnTypeTimePtr,
+			Type:         ColumnTypeTime,
 			IsNullable:   true,
 			IsPrimaryKey: false,
 			Tags: map[string]string{
@@ -200,7 +200,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		fields = append(fields, ColumnDefinition{
 			Name:         softDeleteField,
 			LogicalField: string(SchemaSoftDeleteField),
-			Type:         ColumnTypeTimePtr,
+			Type:         ColumnTypeTime,
 			IsNullable:   true,
 			IsPrimaryKey: false,
 			Tags: map[string]string{

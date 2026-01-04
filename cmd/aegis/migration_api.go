@@ -1,28 +1,30 @@
-package aegis
+package main
 
 import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/thecodearcher/aegis"
 )
 
 // IntrospectSchemas introspects all schemas from a Config struct
-func IntrospectSchemas(config *Config) (map[string]SchemaDefinition, error) {
-	return DiscoverAllSchemasFromConfig(config)
+func IntrospectSchemas(config *aegis.Config) (map[string]aegis.SchemaDefinition, error) {
+	return aegis.DiscoverAllSchemasFromConfig(config)
 }
 
 // GenerateGoStructsFromConfig generates Go struct definitions from a Config
-func GenerateGoStructsFromConfig(config *Config, opts GenerateOptions) (string, error) {
+func GenerateGoStructsFromConfig(config *aegis.Config, opts GenerateOptions) (string, error) {
 	schemas, err := IntrospectSchemas(config)
 	if err != nil {
 		return "", fmt.Errorf("failed to introspect schemas: %w", err)
 	}
 
-	return GenerateGoStructs(schemas, opts)
+	return GenerateGoStructs(schemas, opts), nil
 }
 
 // GenerateMigrations generates migration SQL from schema definitions
-func GenerateMigrations(config *Config, generator MigrationGenerator) ([]Migration, error) {
+func GenerateMigrations(config *aegis.Config, generator MigrationGenerator) ([]Migration, error) {
 	schemas, err := IntrospectSchemas(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to introspect schemas: %w", err)
@@ -56,7 +58,7 @@ func GenerateMigrations(config *Config, generator MigrationGenerator) ([]Migrati
 }
 
 // ApplyMigrations applies a list of migrations to the database
-func ApplyMigrations(ctx context.Context, config *Config, migrations []Migration, applier MigrationApplier) error {
+func ApplyMigrations(ctx context.Context, config *aegis.Config, migrations []Migration, applier MigrationApplier) error {
 	// Get already applied migrations
 	applied, err := applier.GetAppliedMigrations(ctx)
 	if err != nil {
@@ -89,7 +91,7 @@ func ApplyMigrations(ctx context.Context, config *Config, migrations []Migration
 }
 
 // RollbackLastMigration rolls back the last applied migration
-func RollbackLastMigration(ctx context.Context, config *Config, applier MigrationApplier) error {
+func RollbackLastMigration(ctx context.Context, config *aegis.Config, applier MigrationApplier) error {
 	applied, err := applier.GetAppliedMigrations(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get applied migrations: %w", err)
