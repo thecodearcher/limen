@@ -78,7 +78,56 @@ func (s *sqlMigrationGenerator) generateCreateTable(schema *aegis.SchemaDefiniti
 	return buf.String(), nil
 }
 
-func (s *sqlMigrationGenerator) generateAlterTableStatement(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateMigrationForExistingTable(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+	var buf strings.Builder
+	statements := []string{}
+
+	alterTableStatement, err := s.generateUpAlterTableStatement(tableName, diff)
+	if err != nil {
+		return "", err
+	}
+
+	if alterTableStatement != "" {
+		statements = append(statements, alterTableStatement)
+	}
+
+	for _, idx := range diff.AddedIndexes {
+		statements = append(statements, s.generateCreateIndexStatement(&idx, tableName))
+	}
+
+	if len(statements) > 0 {
+		buf.WriteString(strings.Join(statements, "\n"))
+	}
+
+	return buf.String(), nil
+}
+
+func (s *sqlMigrationGenerator) generateAlterDownMigration(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+	var buf strings.Builder
+	statements := []string{}
+
+	for _, idx := range diff.AddedIndexes {
+		dropSQL := s.driver.DropIndexSQL(string(tableName), idx.Name)
+		statements = append(statements, dropSQL)
+	}
+
+	downAlterTableStatement, err := s.generateDownAlterTableStatement(tableName, diff)
+	if err != nil {
+		return "", err
+	}
+
+	if downAlterTableStatement != "" {
+		statements = append(statements, downAlterTableStatement)
+	}
+
+	if len(statements) > 0 {
+		buf.WriteString(strings.Join(statements, "\n"))
+	}
+
+	return buf.String(), nil
+}
+
+func (s *sqlMigrationGenerator) generateUpAlterTableStatement(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
 	if len(diff.AddedColumns) == 0 && len(diff.AddedForeignKeys) == 0 {
 		return "", nil
 	}
@@ -104,63 +153,30 @@ func (s *sqlMigrationGenerator) generateAlterTableStatement(tableName aegis.Sche
 	return buf.String(), nil
 }
 
-func (s *sqlMigrationGenerator) generateMigrationForExistingTable(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateDownAlterTableStatement(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+	if len(diff.AddedColumns) == 0 && len(diff.AddedForeignKeys) == 0 {
+		return "", nil
+	}
+
 	var buf strings.Builder
 	statements := []string{}
 
-	alterTableStatement, err := s.generateAlterTableStatement(tableName, diff)
-	if err != nil {
-		return "", err
+	fmt.Fprintf(&buf, "ALTER TABLE %s\n", tableName)
+
+	for _, fk := range diff.AddedForeignKeys {
+		dropOp := s.driver.DropForeignKeySQL(string(tableName), fk.Name)
+		statements = append(statements, dropOp)
 	}
 
-	if alterTableStatement != "" {
-		statements = append(statements, alterTableStatement)
-	}
-
-	for _, idx := range diff.AddedIndexes {
-		statements = append(statements, s.generateCreateIndexStatement(&idx, tableName))
-	}
-
-	if len(statements) > 0 {
-		buf.WriteString(strings.Join(statements, "\n"))
-	}
-
-	return buf.String(), nil
-}
-
-func (s *sqlMigrationGenerator) generateAlterDownMigration(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
-	var buf strings.Builder
-	statements := []string{}
-
-	if len(diff.AddedColumns) > 0 || len(diff.AddedForeignKeys) > 0 {
-		var alterOps []string
-
-		if len(diff.AddedColumns) > 0 {
-			dropColumnOps := s.generateDropColumnStatements(tableName, diff.AddedColumns)
-			alterOps = append(alterOps, dropColumnOps...)
-		}
-
-		if len(diff.AddedForeignKeys) > 0 {
-			dropFKOps := s.generateDropForeignKeyStatements(tableName, diff.AddedForeignKeys)
-			alterOps = append(alterOps, dropFKOps...)
-		}
-
-		if len(alterOps) > 0 {
-			alterStmt := fmt.Sprintf("ALTER TABLE %s\n  %s;", tableName, strings.Join(alterOps, ",\n  "))
-			statements = append(statements, alterStmt)
-		}
-	}
-
-	// DROP INDEX statements are separate (they use DROP INDEX syntax, not ALTER TABLE)
-	if len(diff.AddedIndexes) > 0 {
-		dropIndexStatements := s.generateDropIndexStatements(tableName, diff.AddedIndexes)
-		statements = append(statements, dropIndexStatements...)
+	for _, col := range diff.AddedColumns {
+		dropOp := s.driver.DropColumnSQL(string(tableName), col.Name)
+		statements = append(statements, dropOp)
 	}
 
 	if len(statements) > 0 {
-		buf.WriteString(strings.Join(statements, "\n"))
+		buf.WriteString(strings.Join(statements, ",\n"))
+		buf.WriteString(";\n")
 	}
-
 	return buf.String(), nil
 }
 
@@ -219,31 +235,4 @@ func (s *sqlMigrationGenerator) generateCreateIndexStatement(idx *aegis.IndexDef
 
 	return fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s);",
 		idx.Name, tableName, strings.Join(idx.Columns, ", "))
-}
-
-func (s *sqlMigrationGenerator) generateDropColumnStatements(tableName aegis.SchemaTableName, columns []aegis.ColumnDefinition) []string {
-	statements := make([]string, 0, len(columns))
-	for _, col := range columns {
-		dropOp := s.driver.DropColumnSQL(string(tableName), col.Name)
-		statements = append(statements, dropOp)
-	}
-	return statements
-}
-
-func (s *sqlMigrationGenerator) generateDropIndexStatements(tableName aegis.SchemaTableName, indexes []aegis.IndexDefinition) []string {
-	statements := make([]string, 0, len(indexes))
-	for _, idx := range indexes {
-		dropSQL := s.driver.DropIndexSQL(string(tableName), idx.Name)
-		statements = append(statements, dropSQL)
-	}
-	return statements
-}
-
-func (s *sqlMigrationGenerator) generateDropForeignKeyStatements(tableName aegis.SchemaTableName, foreignKeys []aegis.ForeignKeyDefinition) []string {
-	statements := make([]string, 0, len(foreignKeys))
-	for _, fk := range foreignKeys {
-		dropOp := s.driver.DropForeignKeySQL(string(tableName), fk.Name)
-		statements = append(statements, dropOp)
-	}
-	return statements
 }
