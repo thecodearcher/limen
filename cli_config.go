@@ -16,8 +16,8 @@ type SchemasMetadata struct {
 
 // CliConfig represents the JSON file format containing schemas and metadata
 type CliConfig struct {
-	Schemas  map[string]SchemaDefinition `json:"schemas"`
-	Metadata SchemasMetadata             `json:"metadata"`
+	Schemas            map[string]SchemaDefinition `json:"schemas"`
+	UseAutoIncrementID bool                        `json:"useAutoIncrementID"`
 }
 
 // calculateHash computes MD5 hash of the given bytes and returns hex string
@@ -27,10 +27,8 @@ func calculateHash(data []byte) string {
 
 func (c *Config) serializeSchemasToJSON(schemas map[string]SchemaDefinition) ([]byte, error) {
 	file := CliConfig{
-		Schemas: schemas,
-		Metadata: SchemasMetadata{
-			UseAutoIncrementID: c.Schema.IDGenerator == nil,
-		},
+		Schemas:            schemas,
+		UseAutoIncrementID: c.Schema.IDGenerator == nil,
 	}
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)

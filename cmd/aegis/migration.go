@@ -1,55 +1,80 @@
 package main
 
 import (
-	"context"
+	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/thecodearcher/aegis"
 )
 
-// Migration represents a single database migration
 type Migration struct {
-	Version   string     // Migration version (timestamp or version number)
-	Name      string     // Migration name
-	UpSQL     string     // SQL to apply the migration
-	DownSQL   string     // SQL to rollback the migration
-	AppliedAt *time.Time // When this migration was applied (nil if not applied)
+	Version string // Migration version timestamp (YYYYMMDDHHMMSS)
+	UpSQL   string // SQL to apply the migration
+	DownSQL string // SQL to rollback the migration
 }
 
-// MigrationGenerator generates migration SQL from schema definitions
-type MigrationGenerator interface {
-	// GenerateUpMigration generates SQL to create/alter a table based on schema definition
-	GenerateUpMigration(schema aegis.SchemaDefinition) (string, error)
-	// GenerateDownMigration generates SQL to drop/alter a table back
-	GenerateDownMigration(schema aegis.SchemaDefinition) (string, error)
-	// GenerateCreateTable generates CREATE TABLE SQL
-	GenerateCreateTable(schema aegis.SchemaDefinition) (string, error)
-	// GenerateAlterTable generates ALTER TABLE SQL for adding columns
-	GenerateAlterTable(tableName aegis.SchemaTableName, newFields []aegis.ColumnDefinition) (string, error)
+func generateMigrations(db *sql.DB, driver Driver, config *aegis.CliConfig) ([]Migration, error) {
+	migrations := make([]Migration, 0, len(config.Schemas))
+	timestamp := time.Now().Format("20060102150405")
+
+	introspector := newSchemaIntrospector(db, driver)
+	tableNames := make([]string, 0, len(config.Schemas))
+	for _, schema := range config.Schemas {
+		tableNames = append(tableNames, string(schema.GetTableName()))
+	}
+
+	existingTables, err := introspector.getTables(tableNames)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get existing tables: %w", err)
+	}
+
+	generator, err := newSQLMigrationGenerator(driver, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create migration generator: %w", err)
+	}
+
+	for schemaName, schemaDef := range config.Schemas {
+		var diff *schemaDiff
+
+		if existingTables[string(schemaDef.GetTableName())] {
+			diff, err = generateDiffForTable(introspector, &schemaDef)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate schema diff for %s: %w", schemaName, err)
+			}
+
+			if !diff.HasChanges() {
+				continue
+			}
+		}
+
+		upSQL, err := generator.generateUpMigration(&schemaDef, diff)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate up migration for %s: %w", schemaName, err)
+		}
+
+		downSQL, err := generator.generateDownMigration(&schemaDef, diff)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate down migration for %s: %w", schemaName, err)
+		}
+
+		migration := Migration{
+			Version: fmt.Sprintf("%s_%s", timestamp, schemaName),
+			UpSQL:   upSQL,
+			DownSQL: downSQL,
+		}
+
+		migrations = append(migrations, migration)
+	}
+
+	return migrations, nil
 }
 
-// MigrationApplier applies migrations to the database
-type MigrationApplier interface {
-	// ApplyMigration applies a migration SQL to the database
-	ApplyMigration(ctx context.Context, sql string) error
-	// RollbackMigration rolls back a migration SQL
-	RollbackMigration(ctx context.Context, sql string) error
-	// GetAppliedMigrations returns list of applied migration versions
-	GetAppliedMigrations(ctx context.Context) ([]string, error)
-	// RecordMigration records that a migration was applied
-	RecordMigration(ctx context.Context, migration Migration) error
-	// RemoveMigration removes a migration record
-	RemoveMigration(ctx context.Context, version string) error
-}
-
-// MigrationTracker manages migration state in the database
-type MigrationTracker interface {
-	// EnsureMigrationTable ensures the migrations table exists
-	EnsureMigrationTable(ctx context.Context) error
-	// GetAppliedMigrations returns all applied migrations
-	GetAppliedMigrations(ctx context.Context) ([]Migration, error)
-	// RecordMigration records a migration as applied
-	RecordMigration(ctx context.Context, migration Migration) error
-	// RemoveMigration removes a migration record
-	RemoveMigration(ctx context.Context, version string) error
+func generateDiffForTable(introspector *schemaIntrospector, schema *aegis.SchemaDefinition) (*schemaDiff, error) {
+	existingSchema, err := introspector.introspectTable(schema.GetTableName())
+	if err != nil {
+		return nil, err
+	}
+	diff := compareSchemas(existingSchema, schema)
+	return &diff, nil
 }

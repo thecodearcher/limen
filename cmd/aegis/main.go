@@ -6,20 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/urfave/cli/v3"
-
-	"github.com/thecodearcher/aegis"
-	gormadapter "github.com/thecodearcher/aegis/adapters/gorm"
-
-	"gorm.io/driver/postgres"
-	gormlib "gorm.io/gorm"
 )
 
 const (
 	defaultOutputPath  = "./models"
-	defaultPackageName = "models"
 	defaultSchemasPath = "./.aegis/schemas.json"
 )
 
@@ -71,8 +63,13 @@ func main() {
 							&cli.StringFlag{
 								Name:    "driver",
 								Aliases: []string{"d"},
-								Usage:   "Database driver name (postgres, mysql, sqlite, etc.) - used for SQL generation",
+								Usage:   "Database driver name (postgres, mysql) - used for SQL generation",
 								Value:   string(DriverPostgres),
+							},
+							&cli.StringFlag{
+								Name:    "dsn",
+								Usage:   "Database connection string for introspection",
+								Aliases: []string{"c"},
 							},
 						},
 						Action: runMigrateGenerate,
@@ -95,7 +92,7 @@ func main() {
 							&cli.StringFlag{
 								Name:    "driver",
 								Aliases: []string{"d"},
-								Usage:   "Database driver name (postgres, mysql, sqlite, etc.) - used for SQL generation and connection",
+								Usage:   "Database driver name (postgres, mysql) - used for SQL generation and connection",
 								Value:   string(DriverPostgres),
 							},
 						},
@@ -154,16 +151,31 @@ func runIntrospect(ctx context.Context, cmd *cli.Command) error {
 func runMigrateGenerate(ctx context.Context, cmd *cli.Command) error {
 	schemasPath := cmd.String("schemas")
 	outputPath := cmd.String("output")
-	driver := cmd.String("driver")
+	driverName := cmd.String("driver")
+	dsn := cmd.String("dsn")
 
-	result, err := loadConfig(schemasPath)
+	config, err := loadConfig(schemasPath)
 	if err != nil {
 		return fmt.Errorf("error loading config: %w", err)
 	}
 
-	generator := NewSQLMigrationGenerator(DatabaseDriver(driver), result.Metadata.UseAutoIncrementID)
+	driver, err := GetDriversRegistry().getDriver(driverName)
+	if err != nil {
+		return fmt.Errorf("error getting driver: %w", err)
+	}
 
-	migrations, err := generateMigrationsFromSchemas(result.Schemas, generator)
+	if dsn == "" {
+		return fmt.Errorf("dsn is required")
+	}
+
+	var migrations []Migration
+
+	db, err := driver.Connect(dsn)
+	if err != nil {
+		return fmt.Errorf("error connecting to database: %w", err)
+	}
+
+	migrations, err = generateMigrations(db, driver, config)
 	if err != nil {
 		return fmt.Errorf("error generating migrations: %w", err)
 	}
@@ -174,6 +186,11 @@ func runMigrateGenerate(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	for _, migration := range migrations {
+		// Skip empty migrations
+		if migration.UpSQL == "" {
+			continue
+		}
+
 		upFile := filepath.Join(outputPath, fmt.Sprintf("%s.up.sql", migration.Version))
 		downFile := filepath.Join(outputPath, fmt.Sprintf("%s.down.sql", migration.Version))
 
@@ -212,7 +229,7 @@ func runMigrateUp(ctx context.Context, cmd *cli.Command) error {
 	// applier := &gormMigrationApplier{adapter: adapter, db: db}
 
 	// // Generate migrations directly from schemas
-	// generator := NewSQLMigrationGenerator(driver)
+	// generator := newSQLMigrationGenerator(driver, config)
 	// migrations, err := generateMigrationsFromSchemas(schemas, generator)
 	// if err != nil {
 	// 	return fmt.Errorf("error generating migrations: %w", err)
@@ -233,126 +250,6 @@ func runMigrateDown(ctx context.Context, cmd *cli.Command) error {
 
 func runMigrateStatus(ctx context.Context, cmd *cli.Command) error {
 	return fmt.Errorf("migrate status is not yet implemented")
-}
-
-// connectDatabase connects to a database using the specified driver and DSN
-// The driver parameter is flexible - it's passed to MigrationGenerator which handles
-// driver-specific SQL generation. For actual database connection, we use GORM
-// which supports multiple drivers via their respective packages.
-func connectDatabase(driver DatabaseDriver, dsn string) (*gormlib.DB, error) {
-	var dialector gormlib.Dialector
-
-	// Map driver names to GORM dialectors
-	// This is a minimal implementation - users can extend by importing additional drivers
-	switch driver {
-	case DriverPostgres, DriverPostgreSQL:
-		dialector = postgres.Open(dsn)
-	case DriverMySQL, DriverMariaDB:
-		// MySQL/MariaDB driver would need to be imported: "gorm.io/driver/mysql"
-		return nil, fmt.Errorf("mysql driver not yet supported in CLI - import gorm.io/driver/mysql to enable")
-	case DriverSQLite, DriverSQLite3:
-		// SQLite driver would need to be imported: "gorm.io/driver/sqlite"
-		return nil, fmt.Errorf("sqlite driver not yet supported in CLI - import gorm.io/driver/sqlite to enable")
-	case DriverSQLServer, DriverMSSQL:
-		// SQL Server driver would need to be imported: "gorm.io/driver/sqlserver"
-		return nil, fmt.Errorf("sqlserver driver not yet supported in CLI - import gorm.io/driver/sqlserver to enable")
-	default:
-		// For unknown drivers, try postgres as fallback
-		// MigrationGenerator will still use the specified driver name for SQL generation
-		fmt.Fprintf(os.Stderr, "Warning: unknown driver '%s', attempting postgres connection\n", driver)
-		dialector = postgres.Open(dsn)
-	}
-
-	return gormlib.Open(dialector, &gormlib.Config{})
-}
-
-// gormMigrationApplier implements MigrationApplier for GORM
-type gormMigrationApplier struct {
-	adapter *gormadapter.Adapter
-	db      *gormlib.DB
-}
-
-func (g *gormMigrationApplier) ApplyMigration(ctx context.Context, sql string) error {
-	return g.db.WithContext(ctx).Exec(sql).Error
-}
-
-func (g *gormMigrationApplier) RollbackMigration(ctx context.Context, sql string) error {
-	return g.db.WithContext(ctx).Exec(sql).Error
-}
-
-func (g *gormMigrationApplier) GetAppliedMigrations(ctx context.Context) ([]string, error) {
-	// Ensure migrations table exists
-	if err := g.EnsureMigrationTable(ctx); err != nil {
-		return nil, err
-	}
-
-	var versions []string
-	err := g.db.WithContext(ctx).
-		Table("aegis_migrations").
-		Select("version").
-		Order("version ASC").
-		Pluck("version", &versions).Error
-
-	return versions, err
-}
-
-func (g *gormMigrationApplier) RecordMigration(ctx context.Context, migration Migration) error {
-	if err := g.EnsureMigrationTable(ctx); err != nil {
-		return err
-	}
-
-	return g.db.WithContext(ctx).Table("aegis_migrations").Create(map[string]any{
-		"version":    migration.Version,
-		"name":       migration.Name,
-		"applied_at": migration.AppliedAt,
-	}).Error
-}
-
-func (g *gormMigrationApplier) RemoveMigration(ctx context.Context, version string) error {
-	return g.db.WithContext(ctx).
-		Table("aegis_migrations").
-		Where("version = ?", version).
-		Delete(nil).Error
-}
-
-func (g *gormMigrationApplier) EnsureMigrationTable(ctx context.Context) error {
-	return g.db.WithContext(ctx).Exec(`
-		CREATE TABLE IF NOT EXISTS aegis_migrations (
-			version VARCHAR(255) PRIMARY KEY,
-			name VARCHAR(255) NOT NULL,
-			applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-		)
-	`).Error
-}
-
-// generateMigrationsFromSchemas generates migrations directly from schemas
-// This is a helper that works with schemas without needing a full Config
-func generateMigrationsFromSchemas(schemas map[string]aegis.SchemaDefinition, generator MigrationGenerator) ([]Migration, error) {
-	migrations := make([]Migration, 0, len(schemas))
-	timestamp := time.Now().Format("20060102150405")
-
-	for schemaName, schema := range schemas {
-		upSQL, err := generator.GenerateUpMigration(schema)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate up migration for %s: %w", schemaName, err)
-		}
-
-		downSQL, err := generator.GenerateDownMigration(schema)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate down migration for %s: %w", schemaName, err)
-		}
-
-		migration := Migration{
-			Version: fmt.Sprintf("%s_%s", timestamp, schemaName),
-			Name:    fmt.Sprintf("create_%s", schemaName),
-			UpSQL:   upSQL,
-			DownSQL: downSQL,
-		}
-
-		migrations = append(migrations, migration)
-	}
-
-	return migrations, nil
 }
 
 func writeFile(path string, content []byte) error {
