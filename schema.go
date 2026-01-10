@@ -21,19 +21,19 @@ const (
 // defaults for schemas fields
 const (
 	SchemaIDField         SchemaField = "id"
+	SchemaCreatedAtField  SchemaField = "created_at"
+	SchemaUpdatedAtField  SchemaField = "updated_at"
 	SchemaSoftDeleteField SchemaField = "deleted_at"
 
+	UserSchemaFirstNameField       SchemaField = "first_name"
+	UserSchemaLastNameField        SchemaField = "last_name"
 	UserSchemaEmailField           SchemaField = "email"
 	UserSchemaPasswordField        SchemaField = "password"
 	UserSchemaEmailVerifiedAtField SchemaField = "email_verified_at"
-	UserSchemaCreatedAtField       SchemaField = "created_at"
-	UserSchemaUpdatedAtField       SchemaField = "updated_at"
 
 	VerificationSchemaSubjectField   SchemaField = "subject"
 	VerificationSchemaValueField     SchemaField = "value"
 	VerificationSchemaExpiresAtField SchemaField = "expires_at"
-	VerificationSchemaCreatedAtField SchemaField = "created_at"
-	VerificationSchemaUpdatedAtField SchemaField = "updated_at"
 
 	SessionSchemaUserIDField     SchemaField = "user_id"
 	SessionSchemaTokenField      SchemaField = "token"

@@ -207,3 +207,26 @@ func writeToFile(data []byte, outputPath string) error {
 
 	return nil
 }
+
+func addTimestampFields(fields []ColumnDefinition) []ColumnDefinition {
+	return append(fields, ColumnDefinition{
+		Name:         string(SchemaCreatedAtField),
+		LogicalField: string(SchemaCreatedAtField),
+		Type:         ColumnTypeTime,
+		IsNullable:   false,
+		IsPrimaryKey: false,
+		DefaultValue: "CURRENT_TIMESTAMP",
+		Tags: map[string]string{
+			"json": "created_at",
+		},
+	}, ColumnDefinition{
+		Name:         string(SchemaUpdatedAtField),
+		LogicalField: string(SchemaUpdatedAtField),
+		Type:         ColumnTypeTime,
+		IsNullable:   false,
+		IsPrimaryKey: false,
+		Tags: map[string]string{
+			"json": "updated_at",
+		},
+	})
+}

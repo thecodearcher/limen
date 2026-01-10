@@ -46,11 +46,11 @@ func (v *VerificationSchema) GetExpiresAtField() string {
 }
 
 func (v *VerificationSchema) GetCreatedAtField() string {
-	return v.GetField(string(VerificationSchemaCreatedAtField))
+	return v.GetField(string(SchemaCreatedAtField))
 }
 
 func (v *VerificationSchema) GetUpdatedAtField() string {
-	return v.GetField(string(VerificationSchemaUpdatedAtField))
+	return v.GetField(string(SchemaUpdatedAtField))
 }
 
 func (v *VerificationSchema) FromStorage(data map[string]any) Model {
@@ -113,13 +113,13 @@ func WithVerificationFieldExpiresAt(fieldName string) SchemaConfigVerificationOp
 
 func WithVerificationFieldCreatedAt(fieldName string) SchemaConfigVerificationOption {
 	return func(s *SchemaConfig, v *VerificationSchema) {
-		s.setCoreSchemaField(CoreSchemaVerifications, string(VerificationSchemaCreatedAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaVerifications, string(SchemaCreatedAtField), fieldName)
 	}
 }
 
 func WithVerificationFieldUpdatedAt(fieldName string) SchemaConfigVerificationOption {
 	return func(s *SchemaConfig, v *VerificationSchema) {
-		s.setCoreSchemaField(CoreSchemaVerifications, string(VerificationSchemaUpdatedAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaVerifications, string(SchemaUpdatedAtField), fieldName)
 	}
 }
 
@@ -198,27 +198,9 @@ func (v *VerificationSchema) getDefaultColumns(config *SchemaConfig) []ColumnDef
 				"json": "expires_at",
 			},
 		},
-		{
-			Name:         string(VerificationSchemaCreatedAtField),
-			LogicalField: string(VerificationSchemaCreatedAtField),
-			Type:         ColumnTypeTime,
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "created_at",
-			},
-		},
-		{
-			Name:         string(VerificationSchemaUpdatedAtField),
-			LogicalField: string(VerificationSchemaUpdatedAtField),
-			Type:         ColumnTypeTime,
-			IsNullable:   false,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": "updated_at",
-			},
-		},
 	}
+
+	fields = addTimestampFields(fields)
 
 	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaVerifications, string(SchemaSoftDeleteField))
 	if softDeleteField != "" {

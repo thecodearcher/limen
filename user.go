@@ -23,6 +23,11 @@ func (c User) TableName() string {
 
 type UserSchema struct {
 	BaseSchema
+	// If true, the schema will include the first name and last name fields
+	includeNameFields bool
+
+	// If true, the schema will include the created at and updated at fields
+	includeTimestampFields bool
 
 	// A function to serialize the model to a json object for returning to the client
 	Serializer func(data *User) map[string]any
@@ -32,7 +37,9 @@ type SchemaConfigUserOption func(*SchemaConfig, *UserSchema)
 
 func newDefaultUserSchema(c *SchemaConfig, opts ...SchemaConfigUserOption) *UserSchema {
 	schema := &UserSchema{
-		BaseSchema: BaseSchema{},
+		BaseSchema:             BaseSchema{},
+		includeNameFields:      true,
+		includeTimestampFields: true,
 	}
 
 	for _, opt := range opts {
@@ -130,6 +137,36 @@ func WithUserFieldSoftDelete(fieldName string) SchemaConfigUserOption {
 	}
 }
 
+func WithUserIncludeNameFields(include bool) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		u.includeNameFields = include
+	}
+}
+
+func WithUserFirstNameField(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaFirstNameField), fieldName)
+	}
+}
+
+func WithUserLastNameField(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaLastNameField), fieldName)
+	}
+}
+
+func WithUserFieldCreatedAt(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaCreatedAtField), fieldName)
+	}
+}
+
+func WithUserFieldUpdatedAt(fieldName string) SchemaConfigUserOption {
+	return func(s *SchemaConfig, u *UserSchema) {
+		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaUpdatedAtField), fieldName)
+	}
+}
+
 func (u *UserSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	tableName := UserSchemaTableName
 	return &SchemaDefinition{
@@ -193,6 +230,35 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 				"json": "email_verified_at",
 			},
 		},
+	}
+
+	if u.includeNameFields {
+		fields = append(fields,
+			ColumnDefinition{
+				Name:         string(UserSchemaFirstNameField),
+				LogicalField: string(UserSchemaFirstNameField),
+				Type:         ColumnTypeString,
+				IsNullable:   false,
+				IsPrimaryKey: false,
+				Tags: map[string]string{
+					"json": "first_name",
+				},
+			},
+			ColumnDefinition{
+				Name:         string(UserSchemaLastNameField),
+				LogicalField: string(UserSchemaLastNameField),
+				Type:         ColumnTypeString,
+				IsNullable:   true,
+				IsPrimaryKey: false,
+				Tags: map[string]string{
+					"json": "last_name",
+				},
+			},
+		)
+	}
+
+	if u.includeTimestampFields {
+		fields = addTimestampFields(fields)
 	}
 
 	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaUsers, string(SchemaSoftDeleteField))
