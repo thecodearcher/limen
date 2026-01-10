@@ -199,7 +199,11 @@ func (s *sqlMigrationGenerator) generateColumnDefinition(field *aegis.ColumnDefi
 	}
 
 	if field.DefaultValue != "" {
-		parts = append(parts, fmt.Sprintf("DEFAULT %s", field.DefaultValue))
+		defaultValue := field.DefaultValue
+		if checkForSpecialSyntaxPatterns(defaultValue) {
+			defaultValue = strings.TrimPrefix(s.driver.FormatDefaultValue(defaultValue), aegis.DatabaseDefaultValuePrefix)
+		}
+		parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultValue))
 	}
 
 	return strings.Join(parts, " ")

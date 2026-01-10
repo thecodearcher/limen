@@ -1,8 +1,6 @@
 package aegis
 
 // SchemaDefinition represents a complete schema definition.
-// It can be used both for plugin declaration (before discovery) and as a resolved schema (after discovery).
-// SchemaDefinition implements SchemaIntrospector interface.
 type SchemaDefinition struct {
 	TableName   *SchemaTableName // Pointer to table name (nil for extensions before discovery)
 	Columns     []ColumnDefinition

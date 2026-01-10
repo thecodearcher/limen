@@ -186,6 +186,16 @@ func (d *postgresDriver) GetAutoIncrementSuffix() string {
 	return ""
 }
 
+func (d *postgresDriver) FormatDefaultValue(defaultValue string) string {
+	switch defaultValue {
+	case string(aegis.DatabaseDefaultValueNow):
+		return "CURRENT_TIMESTAMP"
+	case string(aegis.DatabaseDefaultValueUUID):
+		return "gen_random_uuid()"
+	}
+	return defaultValue
+}
+
 func (d *postgresDriver) DropIndexSQL(tableName, indexName string) string {
 	return fmt.Sprintf("DROP INDEX IF EXISTS %s", indexName)
 }

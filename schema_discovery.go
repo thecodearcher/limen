@@ -281,21 +281,6 @@ func findColumnByLogicalField(columns []ColumnDefinition, logicalField SchemaFie
 	return nil
 }
 
-// DiscoverAllSchemasFromConfig discovers all schemas from a Config struct.
-// This is the main entry point for schema discovery.
-func DiscoverAllSchemasFromConfig(config *Config) (map[string]SchemaDefinition, error) {
-	if config == nil {
-		return nil, fmt.Errorf("config is required")
-	}
-
-	core := &AegisCore{
-		DB:     config.Database,
-		Schema: config.Schema,
-	}
-
-	return core.DiscoverAllSchemas(config.Features)
-}
-
 // buildPluginSchemaMetadata builds schema metadata for a feature's schemas.
 // It returns a map where the key is the schema name that should be used to look up metadata.
 func (a *AegisCore) buildPluginSchemaMetadata(feature Feature, discoveredSchemas map[string]SchemaDefinition) (map[string]*PluginSchemaMetadata, error) {

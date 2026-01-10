@@ -265,6 +265,7 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 			Type:         ColumnTypeTime,
 			IsNullable:   false,
 			IsPrimaryKey: false,
+			DefaultValue: string(DatabaseDefaultValueNow),
 			Tags: map[string]string{
 				"json": "created_at",
 			},

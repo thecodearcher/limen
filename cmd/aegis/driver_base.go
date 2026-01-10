@@ -55,14 +55,6 @@ func (d *baseDriver) normalizeDefault(defaultValue string) string {
 		return ""
 	}
 
-	defaultValue = strings.TrimSpace(defaultValue)
-	if strings.HasPrefix(defaultValue, "nextval(") {
-		return ""
-	}
-	if strings.HasPrefix(defaultValue, "CURRENT_TIMESTAMP") {
-		return ""
-	}
-
 	// Remove quotes from string defaults
 	if len(defaultValue) > 0 && (defaultValue[0] == '\'' || defaultValue[0] == '"') {
 		defaultValue = defaultValue[1 : len(defaultValue)-1]
@@ -85,4 +77,8 @@ func (d *baseDriver) parseColumnRowCommon(
 		IsPrimaryKey: isPK,
 		DefaultValue: defaultValue,
 	}, nil
+}
+
+func checkForSpecialSyntaxPatterns(defaultValue string) bool {
+	return strings.HasPrefix(defaultValue, aegis.DatabaseDefaultValuePrefix)
 }

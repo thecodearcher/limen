@@ -138,6 +138,16 @@ func (d *mysqlDriver) GetAutoIncrementSuffix() string {
 	return "AUTO_INCREMENT"
 }
 
+func (d *mysqlDriver) FormatDefaultValue(defaultValue string) string {
+	switch defaultValue {
+	case string(aegis.DatabaseDefaultValueNow):
+		return "CURRENT_TIMESTAMP"
+	case string(aegis.DatabaseDefaultValueUUID):
+		return "UUID()"
+	}
+	return defaultValue
+}
+
 func (d *mysqlDriver) DropIndexSQL(tableName, indexName string) string {
 	return fmt.Sprintf("DROP INDEX %s ON %s", indexName, tableName)
 }

@@ -17,6 +17,10 @@ type Driver interface {
 	MapGoTypeToSQL(goType aegis.ColumnType, isAutoIncrement bool) string
 	MapSQLTypeToGoType(dataType string) aegis.ColumnType
 	GetAutoIncrementSuffix() string
+	// FormatDefaultValue converts special default value syntax to database-specific SQL
+	// Special syntax patterns like "@now()" or "@uuid()" are converted to the appropriate
+	// database function (e.g., now() for PostgreSQL, CURRENT_TIMESTAMP for MySQL)
+	FormatDefaultValue(defaultValue string) string
 	DropColumnSQL(tableName, columnName string) string
 	DropIndexSQL(tableName, indexName string) string
 	DropForeignKeySQL(tableName, constraintName string) string

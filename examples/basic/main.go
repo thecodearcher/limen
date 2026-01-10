@@ -74,7 +74,7 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			aegis.WithSchemaUser(
 				// aegis.WithUserTableName("usersz_from_personal_user_schema"),
 				// aegis.WithUserFieldID("id_from_personal"),
-				// aegis.WithUserFieldEmailVerifiedAt("email_verified"),
+				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
 				// aegis.WithUserFieldEmail("email_from_personal"),
 				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
 					return map[string]any{

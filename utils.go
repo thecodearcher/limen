@@ -215,7 +215,7 @@ func addTimestampFields(fields []ColumnDefinition) []ColumnDefinition {
 		Type:         ColumnTypeTime,
 		IsNullable:   false,
 		IsPrimaryKey: false,
-		DefaultValue: "CURRENT_TIMESTAMP",
+		DefaultValue: string(DatabaseDefaultValueNow),
 		Tags: map[string]string{
 			"json": "created_at",
 		},
@@ -229,4 +229,14 @@ func addTimestampFields(fields []ColumnDefinition) []ColumnDefinition {
 			"json": "updated_at",
 		},
 	})
+}
+
+// IsValidCoreSchema checks if a string is a valid core schema name
+func IsValidCoreSchema(name string) bool {
+	switch CoreSchemaName(name) {
+	case CoreSchemaUsers, CoreSchemaSessions, CoreSchemaVerifications, CoreSchemaRateLimits:
+		return true
+	default:
+		return false
+	}
 }
