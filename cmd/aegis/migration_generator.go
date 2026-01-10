@@ -233,10 +233,10 @@ func (s *sqlMigrationGenerator) generateForeignKeyStatement(fk *aegis.ForeignKey
 
 func (s *sqlMigrationGenerator) generateCreateIndexStatement(idx *aegis.IndexDefinition, tableName aegis.SchemaTableName) string {
 	if idx.Unique {
-		return fmt.Sprintf("CREATE UNIQUE INDEX IF NOT EXISTS %s ON %s (%s);",
+		return fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (%s);",
 			idx.Name, tableName, strings.Join(idx.Columns, ", "))
 	}
 
-	return fmt.Sprintf("CREATE INDEX IF NOT EXISTS %s ON %s (%s);",
+	return fmt.Sprintf("CREATE INDEX %s ON %s (%s);",
 		idx.Name, tableName, strings.Join(idx.Columns, ", "))
 }

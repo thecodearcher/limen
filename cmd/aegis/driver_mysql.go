@@ -28,11 +28,6 @@ func (d *mysqlDriver) Connect(dsn string) (*sql.DB, error) {
 }
 
 func (d *mysqlDriver) TableExistsBatchQuery(tableNames []string) (string, []any) {
-	if len(tableNames) == 0 {
-		return "SELECT table_name FROM information_schema.tables WHERE 1=0", []any{}
-	}
-
-	// Build placeholders for IN clause
 	placeholders := make([]string, len(tableNames))
 	args := make([]any, len(tableNames))
 	for i, name := range tableNames {
@@ -50,12 +45,7 @@ func (d *mysqlDriver) TableExistsBatchQuery(tableNames []string) (string, []any)
 
 func (d *mysqlDriver) IntrospectColumnsQuery(tableName string) (string, []any) {
 	return `
-		SELECT 
-			column_name,
-			data_type,
-			is_nullable,
-			column_default,
-			column_key = 'PRI' as is_primary_key
+		SELECT column_name
 		FROM information_schema.columns
 		WHERE table_schema = DATABASE() AND table_name = ?
 		ORDER BY ordinal_position
@@ -77,13 +67,7 @@ func (d *mysqlDriver) IntrospectIndexesQuery(tableName string) (string, []any) {
 
 func (d *mysqlDriver) IntrospectForeignKeysQuery(tableName string) (string, []any) {
 	return `
-		SELECT
-			constraint_name,
-			column_name,
-			referenced_table_name,
-			referenced_column_name,
-			delete_rule,
-			update_rule
+		SELECT DISTINCT constraint_name
 		FROM information_schema.key_column_usage
 		WHERE table_schema = DATABASE() 
 			AND table_name = ?
@@ -102,7 +86,7 @@ func (d *mysqlDriver) MapGoTypeToSQL(goType aegis.ColumnType, isAutoIncrement bo
 	case aegis.ColumnTypeString:
 		return "VARCHAR(255)"
 	case aegis.ColumnTypeTime:
-		return "DATETIME"
+		return "TIMESTAMP"
 	case aegis.ColumnTypeUUID:
 		return "VARCHAR(36)"
 	case aegis.ColumnTypeMapStringAny:
@@ -154,24 +138,4 @@ func (d *mysqlDriver) DropIndexSQL(tableName, indexName string) string {
 
 func (d *mysqlDriver) DropForeignKeySQL(tableName, constraintName string) string {
 	return fmt.Sprintf("DROP FOREIGN KEY %s", constraintName)
-}
-
-func (d *mysqlDriver) ParseColumnRow(scan func(dest ...any) error) (aegis.ColumnDefinition, error) {
-	var colName, dataType, isNullable string
-	var colDefault sql.NullString
-	var isPK bool
-
-	if err := scan(&colName, &dataType, &isNullable, &colDefault, &isPK); err != nil {
-		return aegis.ColumnDefinition{}, err
-	}
-
-	colType := d.MapSQLTypeToGoType(dataType)
-
-	col, err := d.parseColumnRowCommon(colName, isNullable, colDefault, isPK)
-	if err != nil {
-		return aegis.ColumnDefinition{}, err
-	}
-
-	col.Type = colType
-	return col, nil
 }

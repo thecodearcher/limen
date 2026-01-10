@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
@@ -28,19 +27,14 @@ func (d *baseDriver) ParseIndexRow(scan func(dest ...any) error) (aegis.IndexDef
 }
 
 func (d *baseDriver) ParseForeignKeyRow(scan func(dest ...any) error) (aegis.ForeignKeyDefinition, error) {
-	var fkName, colName, refTable, refCol, deleteRule, updateRule string
+	var fkName string
 
-	if err := scan(&fkName, &colName, &refTable, &refCol, &deleteRule, &updateRule); err != nil {
+	if err := scan(&fkName); err != nil {
 		return aegis.ForeignKeyDefinition{}, err
 	}
 
 	return aegis.ForeignKeyDefinition{
-		Name:             fkName,
-		Column:           colName,
-		ReferencedSchema: aegis.SchemaTableName(refTable),
-		ReferencedField:  aegis.SchemaField(refCol),
-		OnDelete:         aegis.ForeignKeyAction(deleteRule),
-		OnUpdate:         aegis.ForeignKeyAction(updateRule),
+		Name: fkName,
 	}, nil
 }
 
@@ -48,34 +42,20 @@ func (d *baseDriver) DropColumnSQL(tableName, columnName string) string {
 	return fmt.Sprintf("DROP COLUMN %s", columnName)
 }
 
-// normalizeDefault normalizes default values from the database
-// Handles both PostgreSQL (nextval) and MySQL (CURRENT_TIMESTAMP) cases
-func (d *baseDriver) normalizeDefault(defaultValue string) string {
-	if defaultValue == "" {
-		return ""
+func (d *baseDriver) ParseColumnRow(scan func(dest ...any) error) (aegis.ColumnDefinition, error) {
+	var colName string
+
+	if err := scan(&colName); err != nil {
+		return aegis.ColumnDefinition{}, err
 	}
-
-	// Remove quotes from string defaults
-	if len(defaultValue) > 0 && (defaultValue[0] == '\'' || defaultValue[0] == '"') {
-		defaultValue = defaultValue[1 : len(defaultValue)-1]
-	}
-
-	return defaultValue
-}
-
-func (d *baseDriver) parseColumnRowCommon(
-	colName, isNullable string,
-	colDefault sql.NullString,
-	isPK bool,
-) (aegis.ColumnDefinition, error) {
-	defaultValue := d.normalizeDefault(colDefault.String)
 
 	return aegis.ColumnDefinition{
 		Name:         colName,
 		LogicalField: colName,
-		IsNullable:   isNullable == "YES",
-		IsPrimaryKey: isPK,
-		DefaultValue: defaultValue,
+		Type:         aegis.ColumnTypeString,
+		IsNullable:   false,
+		IsPrimaryKey: false,
+		DefaultValue: "",
 	}, nil
 }
 

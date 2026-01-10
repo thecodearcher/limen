@@ -80,15 +80,8 @@ func (d *postgresDriver) TableExistsBatchQuery(tableNames []string) (string, []a
 func (d *postgresDriver) IntrospectColumnsQuery(tableName string) (string, []any) {
 	schema := d.getSchema()
 	return `
-		SELECT 
-			column_name,
-			udt_name as data_type,
-			is_nullable,
-			column_default,
-			(SELECT COUNT(*) FROM information_schema.table_constraints tc
-			 JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
-			 WHERE tc.table_schema = $1 AND tc.table_name = $2 AND tc.constraint_type = 'PRIMARY KEY' AND ccu.column_name = c.column_name) > 0 as is_primary_key
-		FROM information_schema.columns c
+		SELECT column_name
+		FROM information_schema.columns
 		WHERE table_schema = $1 AND table_name = $2
 		ORDER BY ordinal_position
 	`, []any{schema, tableName}
@@ -97,37 +90,29 @@ func (d *postgresDriver) IntrospectColumnsQuery(tableName string) (string, []any
 func (d *postgresDriver) IntrospectIndexesQuery(tableName string) (string, []any) {
 	schema := d.getSchema()
 	return `
-		SELECT 
-			i.indexname,
-			string_agg(a.attname, ',' ORDER BY array_position(ix.indkey, a.attnum)) as columns,
-			i.indexdef LIKE '%UNIQUE%' as is_unique
-		FROM pg_indexes i
-		JOIN pg_index ix ON i.indexname = (SELECT relname FROM pg_class WHERE oid = ix.indexrelid)
-		JOIN pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = ANY(ix.indkey)
-		WHERE i.tablename = $1 AND i.schemaname = $2
-		GROUP BY i.indexname, i.indexdef
-		HAVING NOT (i.indexname LIKE '%_pkey')
+		SELECT
+  		idx.relname AS indexname,
+  		string_agg(pg_get_indexdef(i.indexrelid, k, true), ',' ORDER BY k) AS columns,
+  		i.indisunique AS is_unique
+		FROM pg_index i
+		JOIN pg_class tbl ON tbl.oid = i.indrelid
+		JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
+		JOIN pg_class idx ON idx.oid = i.indexrelid
+		JOIN generate_series(1, i.indnkeyatts) AS k ON true
+		WHERE tbl.relname = $1
+		  AND ns.nspname = $2
+		  AND NOT i.indisprimary
+		GROUP BY idx.relname, i.indisunique
+		ORDER BY idx.relname;
 	`, []any{tableName, schema}
 }
 
 func (d *postgresDriver) IntrospectForeignKeysQuery(tableName string) (string, []any) {
 	schema := d.getSchema()
 	return `
-		SELECT
-			tc.constraint_name,
-			kcu.column_name,
-			ccu.table_name AS foreign_table_name,
-			ccu.column_name AS foreign_column_name,
-			rc.delete_rule,
-			rc.update_rule
-		FROM information_schema.table_constraints AS tc
-		JOIN information_schema.key_column_usage AS kcu
-			ON tc.constraint_name = kcu.constraint_name
-		JOIN information_schema.constraint_column_usage AS ccu
-			ON ccu.constraint_name = tc.constraint_name
-		JOIN information_schema.referential_constraints AS rc
-			ON rc.constraint_name = tc.constraint_name
-		WHERE tc.table_schema = $1 AND tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = $2
+		SELECT constraint_name
+		FROM information_schema.table_constraints
+		WHERE table_schema = $1 AND constraint_type = 'FOREIGN KEY' AND table_name = $2
 	`, []any{schema, tableName}
 }
 
@@ -202,24 +187,4 @@ func (d *postgresDriver) DropIndexSQL(tableName, indexName string) string {
 
 func (d *postgresDriver) DropForeignKeySQL(tableName, constraintName string) string {
 	return fmt.Sprintf("DROP CONSTRAINT %s", constraintName)
-}
-
-func (d *postgresDriver) ParseColumnRow(scan func(dest ...any) error) (aegis.ColumnDefinition, error) {
-	var colName, dataType, isNullable string
-	var colDefault sql.NullString
-	var isPK bool
-
-	if err := scan(&colName, &dataType, &isNullable, &colDefault, &isPK); err != nil {
-		return aegis.ColumnDefinition{}, err
-	}
-
-	colType := d.MapSQLTypeToGoType(dataType)
-
-	col, err := d.parseColumnRowCommon(colName, isNullable, colDefault, isPK)
-	if err != nil {
-		return aegis.ColumnDefinition{}, err
-	}
-
-	col.Type = colType
-	return col, nil
 }
