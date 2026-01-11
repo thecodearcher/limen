@@ -7,12 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/iancoleman/strcase"
 	"github.com/urfave/cli/v3"
 )
 
 const (
-	defaultOutputPath  = "./models"
-	defaultSchemasPath = "./.aegis/schemas.json"
+	defaultOutputPath     = "./models"
+	defaultSchemasPath    = "./.aegis/schemas.json"
+	defaultMigrationsPath = "./migrations"
 )
 
 func main() {
@@ -29,84 +31,51 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
-				Name:  "introspect",
+				Name:  "generate",
 				Usage: "Generate Go structs from schemas",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "output",
-						Aliases: []string{"o"},
-						Usage:   "Output directory for generated structs",
-						Value:   defaultOutputPath,
-					},
-					&cli.StringFlag{
-						Name:    "package",
-						Aliases: []string{"p"},
-						Usage:   "Package name for generated code",
-					},
-				},
-				Action: runIntrospect,
-			},
-			{
-				Name:  "migrate",
-				Usage: "Database migration commands",
 				Commands: []*cli.Command{
 					{
-						Name:  "generate",
-						Usage: "Generate migration files",
+						Name:  "models",
+						Usage: "Generate models from schemas",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
 								Name:    "output",
 								Aliases: []string{"o"},
-								Usage:   "Output directory for migration files",
-								Value:   "./migrations",
+								Usage:   "Output directory for generated structs",
+								Value:   defaultOutputPath,
 							},
 							&cli.StringFlag{
-								Name:    "driver",
-								Aliases: []string{"d"},
-								Usage:   "Database driver name (postgres, mysql) - used for SQL generation",
-								Value:   string(DriverPostgres),
-							},
-							&cli.StringFlag{
-								Name:    "dsn",
-								Usage:   "Database connection string for introspection",
-								Aliases: []string{"c"},
+								Name:    "package",
+								Aliases: []string{"p"},
+								Usage:   "Package name for generated code",
 							},
 						},
-						Action: runMigrateGenerate,
+						Action: runGenerateModels,
 					},
 					{
-						Name:  "up",
-						Usage: "Apply pending migrations",
+						Name:  "migrations",
+						Usage: "Generate migration files from schemas",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:     "config",
-								Aliases:  []string{"c"},
-								Usage:    "Path to Go file containing Config struct",
+								Name:    "output",
+								Aliases: []string{"o"},
+								Usage:   "Output directory for generated migrations",
+								Value:   defaultMigrationsPath,
+							},
+							&cli.StringFlag{
+								Name:     "driver",
+								Aliases:  []string{"d"},
+								Usage:    "Database driver name (postgres, mysql) - used for SQL generation",
 								Required: true,
 							},
 							&cli.StringFlag{
-								Name:  "dsn",
-								Usage: "Database connection string (overrides config)",
-								Value: "",
-							},
-							&cli.StringFlag{
-								Name:    "driver",
-								Aliases: []string{"d"},
-								Usage:   "Database driver name (postgres, mysql) - used for SQL generation and connection",
-								Value:   string(DriverPostgres),
+								Name:     "dsn",
+								Usage:    "Database connection string for introspection",
+								Aliases:  []string{"c"},
+								Required: true,
 							},
 						},
-						Action: runMigrateUp,
-					},
-					{
-						Name:   "down",
-						Usage:  "Rollback last migration",
-						Action: runMigrateDown,
-					},
-					{
-						Name:   "status",
-						Usage:  "Show migration status",
-						Action: runMigrateStatus,
+						Action: runMigrateGenerate,
 					},
 				},
 			},
@@ -119,7 +88,7 @@ func main() {
 	}
 }
 
-func runIntrospect(ctx context.Context, cmd *cli.Command) error {
+func runGenerateModels(ctx context.Context, cmd *cli.Command) error {
 	schemasPath := cmd.String("schemas")
 	outputPath := cmd.String("output")
 	packageName := cmd.String("package")
@@ -136,11 +105,15 @@ func runIntrospect(ctx context.Context, cmd *cli.Command) error {
 	code := GenerateGoStructs(schemas, GenerateOptions{
 		PackageName: packageName,
 		Tags:        []string{"json"},
-		FieldNaming: defaultFieldNaming,
+		FieldNaming: strcase.ToCamel,
 	})
 
 	outputFile := filepath.Join(outputPath, "models.go")
-	if err := writeFile(outputFile, []byte(code)); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outputFile), 0755); err != nil {
+		return fmt.Errorf("error creating output directory: %w", err)
+	}
+
+	if err := os.WriteFile(outputFile, []byte(code), 0644); err != nil {
 		return fmt.Errorf("error writing output file: %w", err)
 	}
 
@@ -180,13 +153,11 @@ func runMigrateGenerate(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("error generating migrations: %w", err)
 	}
 
-	// Write migration files
 	if err := os.MkdirAll(outputPath, 0755); err != nil {
 		return fmt.Errorf("error creating output directory: %w", err)
 	}
 
 	for _, migration := range migrations {
-		// Skip empty migrations
 		if migration.UpSQL == "" {
 			continue
 		}
@@ -205,57 +176,7 @@ func runMigrateGenerate(ctx context.Context, cmd *cli.Command) error {
 		fmt.Printf("Generated migration: %s\n", migration.Version)
 	}
 
+	fmt.Println("\nTo apply these migrations, use any other migration tool that supports SQL files like goose, golang-migrate, etc. Or apply them manually.")
+
 	return nil
-}
-
-func runMigrateUp(ctx context.Context, cmd *cli.Command) error {
-	// configPath := cmd.String("config")
-	// dsn := cmd.String("dsn")
-	// driver := cmd.String("driver")
-
-	// Load config and schemas from file
-	// schemas, err := loadSchemaFromFile(configPath)
-	// if err != nil {
-	// 	return fmt.Errorf("error loading config: %w", err)
-	// }
-
-	// // Connect to database
-	// db, err := connectDatabase(driver, dsn)
-	// if err != nil {
-	// 	return fmt.Errorf("error connecting to database: %w", err)
-	// }
-
-	// adapter := gormadapter.New(db)
-	// applier := &gormMigrationApplier{adapter: adapter, db: db}
-
-	// // Generate migrations directly from schemas
-	// generator := newSQLMigrationGenerator(driver, config)
-	// migrations, err := generateMigrationsFromSchemas(schemas, generator)
-	// if err != nil {
-	// 	return fmt.Errorf("error generating migrations: %w", err)
-	// }
-
-	// Apply migrations
-	// if err := aegis.ApplyMigrations(ctx, config, migrations, applier); err != nil {
-	// 	return fmt.Errorf("error applying migrations: %w", err)
-	// }
-
-	fmt.Println("Migrations applied successfully")
-	return nil
-}
-
-func runMigrateDown(ctx context.Context, cmd *cli.Command) error {
-	return fmt.Errorf("migrate down is not yet implemented")
-}
-
-func runMigrateStatus(ctx context.Context, cmd *cli.Command) error {
-	return fmt.Errorf("migrate status is not yet implemented")
-}
-
-func writeFile(path string, content []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return fmt.Errorf("error creating output directory: %w", err)
-	}
-
-	return os.WriteFile(path, content, 0644)
 }
