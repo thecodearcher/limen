@@ -58,15 +58,16 @@ func (httpCore *AegisHTTPCore) middlewareCheckOrigin() httpx.Middleware {
 				return
 			}
 
-			if len(httpCore.trustedOriginsPatterns) > 0 {
-				if originMatcher(r, httpCore.trustedOriginsPatterns) {
-					next.ServeHTTP(w, r)
-					return
-				}
-				httpCore.Responder.Error(w, r, NewAegisError("Origin not allowed", http.StatusForbidden, nil))
+			if len(httpCore.trustedOriginsPatterns) == 0 {
+				next.ServeHTTP(w, r)
 				return
 			}
-			next.ServeHTTP(w, r)
+
+			if originMatcher(r, httpCore.trustedOriginsPatterns) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			httpCore.Responder.Error(w, r, NewAegisError("Origin not allowed", http.StatusForbidden, nil))
 		})
 	}
 }

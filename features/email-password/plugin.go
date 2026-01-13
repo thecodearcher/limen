@@ -67,9 +67,13 @@ func (p *emailPasswordFeature) Name() aegis.FeatureName {
 	return aegis.FeatureEmailPassword
 }
 
+func (p *emailPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
+	return []aegis.SchemaIntrospector{}
+}
+
 func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	p.core = core
-	p.userSchema = &core.Schema.User
+	p.userSchema = core.Schema.User
 	p.dbAction = core.DBAction
 	if p.config == nil {
 		return fmt.Errorf("config is required")
@@ -173,9 +177,7 @@ func (p *emailPasswordFeature) ComparePassword(password string, hash string) (bo
 }
 
 func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email string) (*aegis.Verification, error) {
-	user, err := aegis.FindOne(ctx, p.core, p.userSchema, []aegis.Where{
-		aegis.Eq(p.userSchema.GetEmailField(), email),
-	}, nil)
+	user, err := p.dbAction.FindUserByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrEmailNotFound
 	}

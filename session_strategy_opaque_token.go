@@ -8,33 +8,33 @@ import (
 	"time"
 )
 
-type OpaqueTokenStrategy struct {
+type opaqueTokenStrategy struct {
 	store        SessionStore
 	config       *sessionConfig
 	cookieConfig *cookieConfig
 }
 
-func NewOpaqueTokenStrategy(store SessionStore, config *sessionConfig, cookieConfig *cookieConfig) *OpaqueTokenStrategy {
-	return &OpaqueTokenStrategy{
+func newOpaqueTokenStrategy(store SessionStore, config *sessionConfig, cookieConfig *cookieConfig) *opaqueTokenStrategy {
+	return &opaqueTokenStrategy{
 		store:        store,
 		config:       config,
 		cookieConfig: cookieConfig,
 	}
 }
 
-func (s *OpaqueTokenStrategy) GetName() string {
+func (s *opaqueTokenStrategy) GetName() string {
 	return string(SessionStrategyOpaqueToken)
 }
 
-func (s *OpaqueTokenStrategy) IsStateful() bool {
+func (s *opaqueTokenStrategy) IsStateful() bool {
 	return true
 }
 
-func (s *OpaqueTokenStrategy) SupportsExpirationExtension() bool {
+func (s *opaqueTokenStrategy) SupportsExpirationExtension() bool {
 	return true
 }
 
-func (s *OpaqueTokenStrategy) Create(ctx context.Context, user *User, options *SessionCreateOptions) (*SessionCreateResult, error) {
+func (s *opaqueTokenStrategy) Create(ctx context.Context, user *User, options *SessionCreateOptions) (*SessionCreateResult, error) {
 	sessionToken, err := generateCryptoSecureRandomString()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session ID: %w", err)
@@ -46,7 +46,7 @@ func (s *OpaqueTokenStrategy) Create(ctx context.Context, user *User, options *S
 	}, nil
 }
 
-func (s *OpaqueTokenStrategy) Validate(ctx context.Context, request *http.Request) (*SessionValidateResult, error) {
+func (s *opaqueTokenStrategy) Validate(ctx context.Context, request *http.Request) (*SessionValidateResult, error) {
 	sessionID, err := s.extractSessionToken(request)
 	if err != nil {
 		return nil, ErrSessionNotFound
@@ -77,7 +77,7 @@ func (s *OpaqueTokenStrategy) Validate(ctx context.Context, request *http.Reques
 	}, nil
 }
 
-func (s *OpaqueTokenStrategy) extractSessionToken(request *http.Request) (string, error) {
+func (s *opaqueTokenStrategy) extractSessionToken(request *http.Request) (string, error) {
 	if s.cookieConfig != nil {
 		if cookie, err := request.Cookie(s.cookieConfig.name); err == nil {
 			token := strings.TrimSpace(cookie.Value)

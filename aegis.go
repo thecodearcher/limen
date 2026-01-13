@@ -1,4 +1,4 @@
-// Package aegis provides a framework for building authentication systems.
+// Package aegis is the main package for the Aegis authentication library.
 package aegis
 
 import (
@@ -14,16 +14,18 @@ import (
 )
 
 type Aegis struct {
-	EmailPassword EmailPasswordFeature
-	config        *Config
-	core          *AegisCore
+	EmailPassword    EmailPasswordFeature
+	UsernamePassword UsernamePasswordFeature
+	config           *Config
+	core             *AegisCore
 }
 
 type AegisCore struct {
 	DB             DatabaseAdapter
 	DBAction       *DatabaseActionHelper
-	Schema         SchemaConfig
+	Schema         *SchemaConfig
 	SessionManager *SessionManager
+	SchemaResolver *SchemaResolver
 }
 
 type AegisHTTPCore struct {
@@ -59,8 +61,27 @@ func New(config *Config) (*Aegis, error) {
 	sessionManager := newSessionManager(core, config.Session, config.HTTP.cookieConfig)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
+
+	discoveredSchemas, err := discoverSchemas(config.Schema, config.Features)
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover schemas: %w", err)
+	}
+	core.SchemaResolver = newFieldResolver(discoveredSchemas)
+
 	aegis.core = core
 
+	// Serialize schemas for CLI if enabled
+	if config.CLI != nil && config.CLI.Enabled {
+		if err := config.prepareCLIConfig(discoveredSchemas); err != nil {
+			return nil, fmt.Errorf("failed to prepare CLI config: %w", err)
+		}
+	}
+
+	if err := core.initializeSchemas(discoveredSchemas); err != nil {
+		return nil, fmt.Errorf("failed to initialize core schemas: %w", err)
+	}
+
+	// Initialize features
 	for _, feature := range config.Features {
 		if err := feature.Initialize(core); err != nil {
 			return nil, fmt.Errorf("failed to initialize feature %s: %w", feature.Name(), err)
@@ -69,6 +90,17 @@ func New(config *Config) (*Aegis, error) {
 		switch feature.Name() {
 		case FeatureEmailPassword:
 			aegis.EmailPassword = feature.(EmailPasswordFeature)
+		case FeatureUsernamePassword:
+			aegis.UsernamePassword = feature.(UsernamePasswordFeature)
+		}
+	}
+
+	// Set EmailPasswordFeature reference on username-password plugin if both are enabled
+	if aegis.UsernamePassword != nil && aegis.EmailPassword != nil {
+		if usernamePlugin, ok := aegis.UsernamePassword.(interface {
+			SetEmailPasswordFeature(EmailPasswordFeature)
+		}); ok {
+			usernamePlugin.SetEmailPasswordFeature(aegis.EmailPassword)
 		}
 	}
 
@@ -152,7 +184,6 @@ func (a *Aegis) prepareRateLimiterRules(basePath string, config *httpConfig) map
 
 	customRules := config.rateLimiter.customRules
 
-	// Process feature rules
 	for _, feature := range a.config.Features {
 		featureRules := a.processFeatureRateLimitRules(feature, basePath, config, customRules)
 		maps.Copy(rules, featureRules)
@@ -234,7 +265,7 @@ func (a *Aegis) registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore
 		group: router.Group(basePath),
 		core:  httpCore,
 	}
-	api := NewAegisAPI(httpCore, a.core)
+	api := newAegisAPI(httpCore, a.core)
 	api.RegisterRoutes(routeBuilder)
 }
 

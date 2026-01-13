@@ -10,12 +10,6 @@ import (
 // and serves as a contract for the features of the library.
 // Ensures that the features are implemented correctly in their respective modules.
 
-type FeatureName string
-
-const (
-	FeatureEmailPassword FeatureName = "email-password"
-)
-
 type Feature interface {
 	// Unique identifier for the feature.
 	Name() FeatureName
@@ -25,6 +19,12 @@ type Feature interface {
 	PluginHTTPConfig() PluginHTTPConfig
 	// RegisterRoutes registers routes for the plugin.
 	RegisterRoutes(httpCore *AegisHTTPCore, routeBuilder *RouteBuilder)
+	// GetSchemas returns all schemas provided by this feature.
+	// Returns a map of schema name to SchemaIntrospector.
+	// Plugins can extend core schemas by setting Extends field, or create new tables.
+	// If a plugin extends a core schema, it should return a schema with the same name
+	// and set Extends to the core schema name (e.g., "users").
+	GetSchemas(schema *SchemaConfig) []SchemaIntrospector
 }
 
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.
@@ -78,4 +78,19 @@ type EmailPasswordFeature interface {
 
 	// VerifyEmail verifies the email using the given token.
 	VerifyEmail(ctx context.Context, token string) error
+}
+
+type UsernamePasswordFeature interface {
+	// SignInWithUsernameAndPassword signs in a user with the given username and password
+	// and returns the authentication result.
+	SignInWithUsernameAndPassword(ctx context.Context, username string, password string) (*AuthenticationResult, error)
+
+	// SignUpWithUsernameAndPassword creates a new user with the given username, email, and password
+	// and returns the authentication result.
+	// username is the username to use for signup.
+	// additionalFields are additional fields to be added to the user (username should be included here).
+	//
+	// Note: Email is required for password reset functionality (via email-password plugin).
+	// Note: When a key in additionalFields is already present in User, the value in additionalFields will be overwritten by the value associated with the key in User.
+	SignUpWithUsernameAndPassword(ctx context.Context, user *User, username string, additionalFields map[string]any) (*AuthenticationResult, error)
 }

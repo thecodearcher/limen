@@ -14,7 +14,7 @@ type DatabaseSessionStore struct {
 func NewDatabaseSessionStore(core *AegisCore) *DatabaseSessionStore {
 	return &DatabaseSessionStore{
 		core:   core,
-		schema: &core.Schema.Session,
+		schema: core.Schema.Session,
 	}
 }
 

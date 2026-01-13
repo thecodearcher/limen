@@ -5,13 +5,13 @@ import (
 )
 
 type DatabaseAdapter interface {
-	Create(ctx context.Context, tableName TableName, data map[string]any) error
-	FindOne(ctx context.Context, tableName TableName, conditions []Where, orderBy []OrderBy) (map[string]any, error)
-	FindMany(ctx context.Context, tableName TableName, conditions []Where, options *QueryOptions) ([]map[string]any, error)
-	Update(ctx context.Context, tableName TableName, conditions []Where, updates map[string]any) error
-	Delete(ctx context.Context, tableName TableName, conditions []Where) error
-	Exists(ctx context.Context, tableName TableName, conditions []Where) (bool, error)
-	Count(ctx context.Context, tableName TableName, conditions []Where) (int64, error)
+	Create(ctx context.Context, tableName SchemaTableName, data map[string]any) error
+	FindOne(ctx context.Context, tableName SchemaTableName, conditions []Where, orderBy []OrderBy) (map[string]any, error)
+	FindMany(ctx context.Context, tableName SchemaTableName, conditions []Where, options *QueryOptions) ([]map[string]any, error)
+	Update(ctx context.Context, tableName SchemaTableName, conditions []Where, updates map[string]any) error
+	Delete(ctx context.Context, tableName SchemaTableName, conditions []Where) error
+	Exists(ctx context.Context, tableName SchemaTableName, conditions []Where) (bool, error)
+	Count(ctx context.Context, tableName SchemaTableName, conditions []Where) (int64, error)
 }
 
 // DatabaseTx represents a database transaction

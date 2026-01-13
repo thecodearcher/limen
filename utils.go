@@ -1,12 +1,15 @@
 package aegis
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"slices"
 	"strings"
@@ -178,4 +181,106 @@ func originMatcher(request *http.Request, origins []*regexp.Regexp) bool {
 	}
 
 	return false
+}
+
+func sliceToMap[T any](slice []T, fn func(T) string) map[string]T {
+	if len(slice) == 0 {
+		return make(map[string]T)
+	}
+	m := make(map[string]T, len(slice))
+	for _, item := range slice {
+		m[fn(item)] = item
+	}
+	return m
+}
+
+func writeToFile(data []byte, outputPath string) error {
+	file, err := os.Create(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer file.Close()
+
+	if _, err := io.Copy(file, bytes.NewReader(data)); err != nil {
+		return fmt.Errorf("failed to write schemas file: %w", err)
+	}
+
+	return nil
+}
+
+func addTimestampFields(fields []ColumnDefinition) []ColumnDefinition {
+	return append(fields, ColumnDefinition{
+		Name:         string(SchemaCreatedAtField),
+		LogicalField: SchemaCreatedAtField,
+		Type:         ColumnTypeTime,
+		IsNullable:   false,
+		IsPrimaryKey: false,
+		DefaultValue: string(DatabaseDefaultValueNow),
+		Tags: map[string]string{
+			"json": "created_at",
+		},
+	}, ColumnDefinition{
+		Name:         string(SchemaUpdatedAtField),
+		LogicalField: SchemaUpdatedAtField,
+		Type:         ColumnTypeTime,
+		IsNullable:   false,
+		IsPrimaryKey: false,
+		Tags: map[string]string{
+			"json": "updated_at",
+		},
+	})
+}
+
+func addSoftDeleteField(fields []ColumnDefinition, config *SchemaConfig, schemaName SchemaName) []ColumnDefinition {
+	softDeleteField := config.getCoreSchemaCustomizationField(schemaName, SchemaSoftDeleteField)
+	if softDeleteField != "" {
+		return append(fields, ColumnDefinition{
+			Name:         softDeleteField,
+			LogicalField: SchemaSoftDeleteField,
+			Type:         ColumnTypeTime,
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": softDeleteField,
+			},
+		})
+	}
+	return fields
+}
+
+// IsValidCoreSchema checks if a string is a valid core schema name
+func IsValidCoreSchema(name string) bool {
+	switch SchemaName(name) {
+	case CoreSchemaUsers, CoreSchemaSessions, CoreSchemaVerifications, CoreSchemaRateLimits:
+		return true
+	default:
+		return false
+	}
+}
+
+func getNullableValue[T any](value any) *T {
+	if value == nil {
+		return nil
+	}
+	v := value.(T)
+	return &v
+}
+
+func GetAdditionalFieldsFromRequest(response http.ResponseWriter, request *http.Request, schema Schema) (map[string]any, error) {
+	if schema.GetAdditionalFields() != nil {
+		additionalFieldsContext := newAdditionalFieldsContext(request, response)
+		return schema.GetAdditionalFields()(additionalFieldsContext)
+	}
+	return make(map[string]any), nil
+}
+
+func joinCustomStringSlice[T ~string](fields []T, separator string) string {
+	var joined string
+	for i := range fields {
+		joined += string(fields[i])
+		if i < len(fields)-1 {
+			joined += separator
+		}
+	}
+	return joined
 }

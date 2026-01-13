@@ -6,14 +6,25 @@ import "fmt"
 type Config struct {
 	Database DatabaseAdapter
 	Features []Feature
-	Schema   SchemaConfig
+	Schema   *SchemaConfig
 	Session  *sessionConfig
 	HTTP     *httpConfig
+	CLI      *CLIConfig
+}
+
+// CLIConfig contains configuration for CLI tool support
+// When enabled, discovered schemas are serialized to a JSON file that the CLI can read directly
+type CLIConfig struct {
+	Enabled bool
 }
 
 func (c *Config) validate() error {
 	if c.Database == nil {
 		return ErrDatabaseAdapterRequired
+	}
+
+	if c.Schema == nil {
+		c.Schema = NewDefaultSchemaConfig()
 	}
 
 	if c.Session == nil {
