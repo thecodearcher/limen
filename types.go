@@ -121,3 +121,11 @@ type RateLimiterStore interface {
 	Create(ctx context.Context, value *RateLimit) error
 	Update(ctx context.Context, key string, value *RateLimit) error
 }
+
+// IDGenerator generates IDs for database records
+type IDGenerator interface {
+	// Generate generates a new ID
+	Generate(ctx context.Context) (any, error)
+	// GetColumnType returns the ColumnType that should be used for this generator
+	GetColumnType() ColumnType
+}

@@ -24,70 +24,40 @@ func (r RateLimit) Raw() map[string]any {
 }
 
 type RateLimitSchema struct {
-	// name of the table in the database
-	TableName TableName
-
-	// mapping of the rate limit schema to the database columns
-	Fields RateLimitFields
+	BaseSchema
 }
 
-type RateLimitFields struct {
-	ID            string
-	Key           string
-	Count         string
-	LastRequestAt string
-}
+type SchemaConfigRateLimitOption func(*SchemaConfig, *RateLimitSchema)
 
-type RateLimitSchemaOption func(*RateLimitSchema)
-
-// NewDefaultRateLimitSchema creates a new RateLimitSchema with default values
-func NewDefaultRateLimitSchema(opts ...RateLimitSchemaOption) *RateLimitSchema {
+func newDefaultRateLimitSchema(c *SchemaConfig, opts ...SchemaConfigRateLimitOption) *RateLimitSchema {
 	schema := &RateLimitSchema{
-		TableName: RateLimitSchemaTableName,
-		Fields: RateLimitFields{
-			ID:            string(SchemaIDField),
-			Key:           string(RateLimitSchemaKeyField),
-			Count:         string(RateLimitSchemaCountField),
-			LastRequestAt: string(RateLimitSchemaLastRequestAtField),
-		},
+		BaseSchema: BaseSchema{},
 	}
 
 	for _, opt := range opts {
-		opt(schema)
+		opt(c, schema)
 	}
 
 	return schema
 }
 
-func (r *RateLimitSchema) GetTableName() TableName {
-	return r.TableName
-}
-
-func (r *RateLimitSchema) GetAdditionalFields() AdditionalFieldsFunc {
-	return nil
-}
-
-func (r *RateLimitSchema) GetSoftDeleteField() string {
-	return ""
-}
-
 func (r *RateLimitSchema) GetIDField() string {
-	return r.Fields.ID
+	return r.GetField(SchemaIDField)
 }
 
 func (r *RateLimitSchema) GetKeyField() string {
-	return r.Fields.Key
+	return r.GetField(RateLimitSchemaKeyField)
 }
 
 func (r *RateLimitSchema) GetCountField() string {
-	return r.Fields.Count
+	return r.GetField(RateLimitSchemaCountField)
 }
 
 func (r *RateLimitSchema) GetLastRequestAtField() string {
-	return r.Fields.LastRequestAt
+	return r.GetField(RateLimitSchemaLastRequestAtField)
 }
 
-func (r *RateLimitSchema) FromStorage(data map[string]any) *RateLimit {
+func (r *RateLimitSchema) FromStorage(data map[string]any) Model {
 	return &RateLimit{
 		ID:            data[r.GetIDField()],
 		Key:           data[r.GetKeyField()].(string),
@@ -97,11 +67,106 @@ func (r *RateLimitSchema) FromStorage(data map[string]any) *RateLimit {
 	}
 }
 
-func (r *RateLimitSchema) ToStorage(data *RateLimit) map[string]any {
+func (r *RateLimitSchema) ToStorage(data Model) map[string]any {
+	rateLimit := data.(*RateLimit)
 	return map[string]any{
-		r.GetKeyField():           data.Key,
-		r.GetCountField():         data.Count,
-		r.GetLastRequestAtField(): data.LastRequestAt,
+		r.GetKeyField():           rateLimit.Key,
+		r.GetCountField():         rateLimit.Count,
+		r.GetLastRequestAtField(): rateLimit.LastRequestAt,
+	}
+}
+
+func WithRateLimitTableName(tableName SchemaTableName) SchemaConfigRateLimitOption {
+	return func(s *SchemaConfig, r *RateLimitSchema) {
+		s.setCoreSchemaTableName(CoreSchemaRateLimits, tableName)
+	}
+}
+
+func WithRateLimitFieldID(fieldName string) SchemaConfigRateLimitOption {
+	return func(s *SchemaConfig, r *RateLimitSchema) {
+		s.setCoreSchemaField(CoreSchemaRateLimits, SchemaIDField, fieldName)
+	}
+}
+
+func WithRateLimitFieldKey(fieldName string) SchemaConfigRateLimitOption {
+	return func(s *SchemaConfig, r *RateLimitSchema) {
+		s.setCoreSchemaField(CoreSchemaRateLimits, RateLimitSchemaKeyField, fieldName)
+	}
+}
+
+func WithRateLimitFieldCount(fieldName string) SchemaConfigRateLimitOption {
+	return func(s *SchemaConfig, r *RateLimitSchema) {
+		s.setCoreSchemaField(CoreSchemaRateLimits, RateLimitSchemaCountField, fieldName)
+	}
+}
+
+func WithRateLimitFieldLastRequestAt(fieldName string) SchemaConfigRateLimitOption {
+	return func(s *SchemaConfig, r *RateLimitSchema) {
+		s.setCoreSchemaField(CoreSchemaRateLimits, RateLimitSchemaLastRequestAtField, fieldName)
+	}
+}
+
+func (r *RateLimitSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
+	tableName := RateLimitSchemaTableName
+	return &SchemaDefinition{
+		TableName: tableName,
+		Columns:   r.getDefaultColumns(config),
+		Indexes: []IndexDefinition{
+			{
+				Name:    "idx_rate_limits_key",
+				Columns: []SchemaField{RateLimitSchemaKeyField},
+				Unique:  true,
+			},
+		},
+		SchemaName: CoreSchemaRateLimits,
+		Schema:     r,
+	}
+}
+
+func (r *RateLimitSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition {
+	idType := config.GetIDColumnType()
+
+	return []ColumnDefinition{
+		{
+			Name:         string(SchemaIDField),
+			LogicalField: SchemaIDField,
+			Type:         idType,
+			IsNullable:   false,
+			IsPrimaryKey: true,
+			Tags: map[string]string{
+				"json": "id",
+			},
+		},
+		{
+			Name:         string(RateLimitSchemaKeyField),
+			LogicalField: RateLimitSchemaKeyField,
+			Type:         ColumnTypeString,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "key",
+			},
+		},
+		{
+			Name:         string(RateLimitSchemaCountField),
+			LogicalField: RateLimitSchemaCountField,
+			Type:         ColumnTypeInt,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "count",
+			},
+		},
+		{
+			Name:         string(RateLimitSchemaLastRequestAtField),
+			LogicalField: RateLimitSchemaLastRequestAtField,
+			Type:         ColumnTypeInt64,
+			IsNullable:   false,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": "last_request_at",
+			},
+		},
 	}
 }
 

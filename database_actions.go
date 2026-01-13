@@ -16,19 +16,32 @@ func newCommonDatabaseActionsHelper(core *AegisCore) *DatabaseActionHelper {
 }
 
 func (i *DatabaseActionHelper) FindUserByEmail(ctx context.Context, email string) (*User, error) {
-	return FindOne(ctx, i.core, i.core.Schema.User, []Where{
+	user, err := FindOne(ctx, i.core, i.core.Schema.User, []Where{
 		Eq(i.core.Schema.User.GetEmailField(), email),
 	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	return user.(*User), nil
 }
 
 func (i *DatabaseActionHelper) FindUser(ctx context.Context, conditions []Where) (*User, error) {
-	return FindOne(ctx, i.core, i.core.Schema.User, conditions, nil)
+	user, err := FindOne(ctx, i.core, i.core.Schema.User, conditions, nil)
+	if err != nil {
+		return nil, err
+	}
+	return user.(*User), nil
 }
 
 func (i *DatabaseActionHelper) FindUserByID(ctx context.Context, id any) (*User, error) {
-	return FindOne(ctx, i.core, i.core.Schema.User, []Where{
+	user, err := FindOne(ctx, i.core, i.core.Schema.User, []Where{
 		Eq(i.core.Schema.User.GetIDField(), id),
 	}, nil)
+
+	if err != nil {
+		return nil, err
+	}
+	return user.(*User), nil
 }
 
 func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data *User, additionalFields map[string]any) error {
@@ -69,7 +82,7 @@ func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 func (i *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, action string, identifier string) (*Verification, error) {
 	verificationSchema := i.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
-	return FindOne(ctx, i.core, verificationSchema,
+	verification, err := FindOne(ctx, i.core, verificationSchema,
 		[]Where{
 			Eq(verificationSchema.GetSubjectField(), actionValue),
 		},
@@ -79,11 +92,15 @@ func (i *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, act
 				Direction: OrderByDesc,
 			},
 		})
+	if err != nil {
+		return nil, err
+	}
+	return verification.(*Verification), nil
 }
 
 func (i *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context, token string) (*Verification, error) {
 	verificationSchema := i.core.Schema.Verification
-	return FindOne(ctx, i.core, verificationSchema,
+	verification, err := FindOne(ctx, i.core, verificationSchema,
 		[]Where{
 			Eq(verificationSchema.GetValueField(), token),
 			Gt(verificationSchema.GetExpiresAtField(), time.Now()),
@@ -94,6 +111,10 @@ func (i *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context,
 				Direction: OrderByDesc,
 			},
 		})
+	if err != nil {
+		return nil, err
+	}
+	return verification.(*Verification), nil
 }
 
 func (i *DatabaseActionHelper) DeleteVerificationToken(ctx context.Context, token string) error {
@@ -119,9 +140,13 @@ func (i *DatabaseActionHelper) UpdateSession(ctx context.Context, data *Session,
 
 func (i *DatabaseActionHelper) FindSessionByToken(ctx context.Context, sessionToken string) (*Session, error) {
 	sessionSchema := i.core.Schema.Session
-	return FindOne(ctx, i.core, sessionSchema, []Where{
+	session, err := FindOne(ctx, i.core, sessionSchema, []Where{
 		Eq(sessionSchema.GetTokenField(), sessionToken),
 	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	return session.(*Session), nil
 }
 
 func (i *DatabaseActionHelper) DeleteSessionByToken(ctx context.Context, sessionToken string) error {

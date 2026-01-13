@@ -76,7 +76,7 @@ func (p *emailPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *
 }
 
 func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
-	additionalFields, err := aegis.GetSchemaAdditionalFieldsForRequest(w, r, p.feature.userSchema)
+	additionalFields, err := aegis.GetAdditionalFieldsFromRequest(w, r, p.feature.userSchema)
 	if err != nil {
 		p.responder.Error(w, r, err.(*aegis.AegisError))
 		return
