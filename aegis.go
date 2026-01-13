@@ -25,7 +25,7 @@ type AegisCore struct {
 	DBAction       *DatabaseActionHelper
 	Schema         *SchemaConfig
 	SessionManager *SessionManager
-	FieldResolver  *FieldResolver
+	SchemaResolver *SchemaResolver
 }
 
 type AegisHTTPCore struct {
@@ -61,11 +61,13 @@ func New(config *Config) (*Aegis, error) {
 	sessionManager := newSessionManager(core, config.Session, config.HTTP.cookieConfig)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
-	discoveredSchemas, err := core.DiscoverAllSchemas(config.Features)
+
+	discoveredSchemas, err := discoverSchemas(config.Schema, config.Features)
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover schemas: %w", err)
 	}
-	core.FieldResolver = NewFieldResolver(discoveredSchemas)
+	core.SchemaResolver = newFieldResolver(discoveredSchemas)
+
 	aegis.core = core
 
 	// Serialize schemas for CLI if enabled
@@ -75,23 +77,11 @@ func New(config *Config) (*Aegis, error) {
 		}
 	}
 
-	// Build schema metadata for each feature
-	featureMetadata := make(map[FeatureName]map[string]*PluginSchemaMetadata)
-
-	coreSchemasMetadata, err := core.buildCoreSchemasMetadata(discoveredSchemas)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build core schemas metadata: %w", err)
-	}
-	featureMetadata[FeatureName("core")] = coreSchemasMetadata
-	for _, feature := range config.Features {
-		metadata, err := core.buildPluginSchemaMetadata(feature, discoveredSchemas)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build schema metadata for %s: %w", feature.Name(), err)
-		}
-		featureMetadata[feature.Name()] = metadata
+	if err := core.initializeSchemas(discoveredSchemas); err != nil {
+		return nil, fmt.Errorf("failed to initialize core schemas: %w", err)
 	}
 
-	// Initialize features with metadata
+	// Initialize features
 	for _, feature := range config.Features {
 		if err := feature.Initialize(core); err != nil {
 			return nil, fmt.Errorf("failed to initialize feature %s: %w", feature.Name(), err)

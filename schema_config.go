@@ -1,5 +1,13 @@
 package aegis
 
+// PluginSchemaConfig represents customization for a plugin schema
+type PluginSchemaConfig struct {
+	TableName SchemaTableName        //  override table name
+	Fields    map[SchemaField]string // Map of logical field name -> actual column name
+}
+
+type PluginSchemaConfigOption func(*PluginSchemaConfig)
+
 type SchemaConfig struct {
 	// A function to return a map of global fields to be added to all schemas when creating a record. e.g:
 	//  func(ctx context.Context) map[string]any {
@@ -23,9 +31,9 @@ type SchemaConfig struct {
 	// Rate limit schema configuration
 	RateLimit *RateLimitSchema
 	// Core schema customizations
-	coreSchemaCustomizations map[CoreSchemaName]PluginSchemaConfig
+	coreSchemaCustomizations map[SchemaName]PluginSchemaConfig
 	// Plugin schema customizations: FeatureName -> SchemaName -> Config
-	PluginSchemas map[FeatureName]map[string]PluginSchemaConfig
+	pluginSchemas map[FeatureName]map[SchemaName]PluginSchemaConfig
 }
 
 type SchemaConfigOption func(*SchemaConfig)
@@ -33,23 +41,16 @@ type SchemaConfigOption func(*SchemaConfig)
 // NewDefaultSchemaConfig creates a new SchemaConfig with default values.
 func NewDefaultSchemaConfig(opts ...SchemaConfigOption) *SchemaConfig {
 	config := &SchemaConfig{
-		PluginSchemas:            make(map[FeatureName]map[string]PluginSchemaConfig),
-		coreSchemaCustomizations: make(map[CoreSchemaName]PluginSchemaConfig),
+		pluginSchemas:            make(map[FeatureName]map[SchemaName]PluginSchemaConfig),
+		coreSchemaCustomizations: make(map[SchemaName]PluginSchemaConfig),
+		User:                     newDefaultUserSchema(nil),
+		Verification:             newDefaultVerificationSchema(nil),
+		Session:                  newDefaultSessionSchema(nil),
+		RateLimit:                newDefaultRateLimitSchema(nil),
 	}
 
 	for _, opt := range opts {
 		opt(config)
-	}
-
-	// Set defaults if not provided
-	if config.Verification == nil {
-		config.Verification = newDefaultVerificationSchema(config)
-	}
-	if config.Session == nil {
-		config.Session = newDefaultSessionSchema(config)
-	}
-	if config.RateLimit == nil {
-		config.RateLimit = newDefaultRateLimitSchema(config)
 	}
 
 	return config
@@ -64,7 +65,7 @@ func (c *SchemaConfig) GetIDColumnType() ColumnType {
 	return ColumnTypeInt64
 }
 
-func (c *SchemaConfig) getCoreSchemaCustomizationField(schemaName CoreSchemaName, field string) string {
+func (c *SchemaConfig) getCoreSchemaCustomizationField(schemaName SchemaName, field SchemaField) string {
 	exists, ok := c.coreSchemaCustomizations[schemaName]
 	if !ok || exists.Fields == nil {
 		return ""
@@ -72,10 +73,10 @@ func (c *SchemaConfig) getCoreSchemaCustomizationField(schemaName CoreSchemaName
 	return exists.Fields[field]
 }
 
-func (c *SchemaConfig) setCoreSchemaField(schemaName CoreSchemaName, field string, value string) {
+func (c *SchemaConfig) setCoreSchemaField(schemaName SchemaName, field SchemaField, value string) {
 	if exists, ok := c.coreSchemaCustomizations[schemaName]; ok {
 		if exists.Fields == nil {
-			exists.Fields = make(map[string]string)
+			exists.Fields = make(map[SchemaField]string)
 		}
 		exists.Fields[field] = value
 		c.coreSchemaCustomizations[schemaName] = exists
@@ -83,22 +84,22 @@ func (c *SchemaConfig) setCoreSchemaField(schemaName CoreSchemaName, field strin
 	}
 
 	c.coreSchemaCustomizations[schemaName] = PluginSchemaConfig{
-		Fields: map[string]string{
+		Fields: map[SchemaField]string{
 			field: value,
 		},
 	}
 }
 
-func (c *SchemaConfig) setCoreSchemaTableName(schemaName CoreSchemaName, tableName SchemaTableName) {
+func (c *SchemaConfig) setCoreSchemaTableName(schemaName SchemaName, tableName SchemaTableName) {
 	if exists, ok := c.coreSchemaCustomizations[schemaName]; ok {
-		exists.TableName = &tableName
+		exists.TableName = tableName
 		c.coreSchemaCustomizations[schemaName] = exists
 		return
 	}
 
 	c.coreSchemaCustomizations[schemaName] = PluginSchemaConfig{
-		TableName: &tableName,
-		Fields:    make(map[string]string),
+		TableName: tableName,
+		Fields:    make(map[SchemaField]string),
 	}
 }
 
@@ -144,46 +145,35 @@ func WithSchemaRateLimit(opts ...SchemaConfigRateLimitOption) SchemaConfigOption
 	}
 }
 
-// PluginSchemaConfig represents customization for a plugin schema
-type PluginSchemaConfig struct {
-	TableName *SchemaTableName  // Optional: override table name
-	Fields    map[string]string // Map of logical field name -> actual column name
-}
-
-type PluginSchemaConfigOption func(*PluginSchemaConfig)
-
 // WithPluginTableName sets the table name for a plugin schema
 func WithPluginTableName(tableName SchemaTableName) PluginSchemaConfigOption {
 	return func(c *PluginSchemaConfig) {
-		c.TableName = &tableName
+		c.TableName = tableName
 	}
 }
 
 // WithPluginFieldName sets a field name mapping for a plugin schema
-func WithPluginFieldName(logicalField, columnName string) PluginSchemaConfigOption {
+func WithPluginFieldName(logicalField SchemaField, columnName string) PluginSchemaConfigOption {
 	return func(c *PluginSchemaConfig) {
 		if c.Fields == nil {
-			c.Fields = make(map[string]string)
+			c.Fields = make(map[SchemaField]string)
 		}
 		c.Fields[logicalField] = columnName
 	}
 }
 
 // WithPluginSchema sets the configuration for a plugin schema
-func WithPluginSchema(featureName FeatureName, schemaName string, opts ...PluginSchemaConfigOption) SchemaConfigOption {
+func WithPluginSchema(featureName FeatureName, schemaName SchemaName, opts ...PluginSchemaConfigOption) SchemaConfigOption {
 	return func(c *SchemaConfig) {
-		if c.PluginSchemas == nil {
-			c.PluginSchemas = make(map[FeatureName]map[string]PluginSchemaConfig)
-		}
-		if c.PluginSchemas[featureName] == nil {
-			c.PluginSchemas[featureName] = make(map[string]PluginSchemaConfig)
+		if c.pluginSchemas[featureName] == nil {
+			c.pluginSchemas[featureName] = make(map[SchemaName]PluginSchemaConfig)
 		}
 		config := PluginSchemaConfig{
-			Fields: make(map[string]string),
+			Fields: make(map[SchemaField]string),
 		}
 		for _, opt := range opts {
 			opt(&config)
 		}
-		c.PluginSchemas[featureName][schemaName] = config
+		c.pluginSchemas[featureName][schemaName] = config
 	}
 }

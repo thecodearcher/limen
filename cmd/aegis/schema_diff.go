@@ -82,7 +82,7 @@ func indexKey(idx aegis.IndexDefinition) string {
 		key.WriteString("unique:")
 	}
 	for _, col := range idx.Columns {
-		key.WriteString(col + ",")
+		key.WriteString(string(col) + ",")
 	}
 	return key.String()
 }

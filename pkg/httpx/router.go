@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"maps"
 	"net/http"
@@ -186,8 +185,6 @@ func (r *Router) handleStaticSegment(current *RadixNode, segment string) *RadixN
 
 // ServeHTTP implements http.Handler
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	fmt.Printf("ServeHTTP called\n %s %s\n", req.Method, req.URL.Path)
-
 	segments := r.splitPath(req.URL.Path)
 	route, params := r.matchRoute(segments, HTTPMethod(req.Method))
 	if route != nil {

@@ -9,7 +9,7 @@ import (
 	"github.com/thecodearcher/aegis"
 )
 
-func loadSchemaFromConfig(filePath string) (map[string]aegis.SchemaDefinition, error) {
+func loadSchemaFromConfig(filePath string) (aegis.SchemaDefinitionMap, error) {
 	loaded, err := loadConfig(filePath)
 	if err != nil {
 		return nil, err

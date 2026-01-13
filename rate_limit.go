@@ -42,19 +42,19 @@ func newDefaultRateLimitSchema(c *SchemaConfig, opts ...SchemaConfigRateLimitOpt
 }
 
 func (r *RateLimitSchema) GetIDField() string {
-	return r.GetField(string(SchemaIDField))
+	return r.GetField(SchemaIDField)
 }
 
 func (r *RateLimitSchema) GetKeyField() string {
-	return r.GetField(string(RateLimitSchemaKeyField))
+	return r.GetField(RateLimitSchemaKeyField)
 }
 
 func (r *RateLimitSchema) GetCountField() string {
-	return r.GetField(string(RateLimitSchemaCountField))
+	return r.GetField(RateLimitSchemaCountField)
 }
 
 func (r *RateLimitSchema) GetLastRequestAtField() string {
-	return r.GetField(string(RateLimitSchemaLastRequestAtField))
+	return r.GetField(RateLimitSchemaLastRequestAtField)
 }
 
 func (r *RateLimitSchema) FromStorage(data map[string]any) Model {
@@ -84,42 +84,41 @@ func WithRateLimitTableName(tableName SchemaTableName) SchemaConfigRateLimitOpti
 
 func WithRateLimitFieldID(fieldName string) SchemaConfigRateLimitOption {
 	return func(s *SchemaConfig, r *RateLimitSchema) {
-		s.setCoreSchemaField(CoreSchemaRateLimits, string(SchemaIDField), fieldName)
+		s.setCoreSchemaField(CoreSchemaRateLimits, SchemaIDField, fieldName)
 	}
 }
 
 func WithRateLimitFieldKey(fieldName string) SchemaConfigRateLimitOption {
 	return func(s *SchemaConfig, r *RateLimitSchema) {
-		s.setCoreSchemaField(CoreSchemaRateLimits, string(RateLimitSchemaKeyField), fieldName)
+		s.setCoreSchemaField(CoreSchemaRateLimits, RateLimitSchemaKeyField, fieldName)
 	}
 }
 
 func WithRateLimitFieldCount(fieldName string) SchemaConfigRateLimitOption {
 	return func(s *SchemaConfig, r *RateLimitSchema) {
-		s.setCoreSchemaField(CoreSchemaRateLimits, string(RateLimitSchemaCountField), fieldName)
+		s.setCoreSchemaField(CoreSchemaRateLimits, RateLimitSchemaCountField, fieldName)
 	}
 }
 
 func WithRateLimitFieldLastRequestAt(fieldName string) SchemaConfigRateLimitOption {
 	return func(s *SchemaConfig, r *RateLimitSchema) {
-		s.setCoreSchemaField(CoreSchemaRateLimits, string(RateLimitSchemaLastRequestAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaRateLimits, RateLimitSchemaLastRequestAtField, fieldName)
 	}
 }
 
 func (r *RateLimitSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	tableName := RateLimitSchemaTableName
 	return &SchemaDefinition{
-		TableName: &tableName,
+		TableName: tableName,
 		Columns:   r.getDefaultColumns(config),
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_rate_limits_key",
-				Columns: []string{string(RateLimitSchemaKeyField)},
+				Columns: []SchemaField{RateLimitSchemaKeyField},
 				Unique:  true,
 			},
 		},
-		SchemaName: string(CoreSchemaRateLimits),
-		Extends:    nil,
+		SchemaName: CoreSchemaRateLimits,
 		Schema:     r,
 	}
 }
@@ -130,7 +129,7 @@ func (r *RateLimitSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefini
 	return []ColumnDefinition{
 		{
 			Name:         string(SchemaIDField),
-			LogicalField: string(SchemaIDField),
+			LogicalField: SchemaIDField,
 			Type:         idType,
 			IsNullable:   false,
 			IsPrimaryKey: true,
@@ -140,7 +139,7 @@ func (r *RateLimitSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefini
 		},
 		{
 			Name:         string(RateLimitSchemaKeyField),
-			LogicalField: string(RateLimitSchemaKeyField),
+			LogicalField: RateLimitSchemaKeyField,
 			Type:         ColumnTypeString,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -150,7 +149,7 @@ func (r *RateLimitSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefini
 		},
 		{
 			Name:         string(RateLimitSchemaCountField),
-			LogicalField: string(RateLimitSchemaCountField),
+			LogicalField: RateLimitSchemaCountField,
 			Type:         ColumnTypeInt,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -160,7 +159,7 @@ func (r *RateLimitSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefini
 		},
 		{
 			Name:         string(RateLimitSchemaLastRequestAtField),
-			LogicalField: string(RateLimitSchemaLastRequestAtField),
+			LogicalField: RateLimitSchemaLastRequestAtField,
 			Type:         ColumnTypeInt64,
 			IsNullable:   false,
 			IsPrimaryKey: false,

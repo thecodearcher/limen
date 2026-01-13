@@ -50,15 +50,15 @@ func newDefaultUserSchema(c *SchemaConfig, opts ...SchemaConfigUserOption) *User
 }
 
 func (u *UserSchema) GetEmailField() string {
-	return u.GetField(string(UserSchemaEmailField))
+	return u.GetField(UserSchemaEmailField)
 }
 
 func (u *UserSchema) GetPasswordField() string {
-	return u.GetField(string(UserSchemaPasswordField))
+	return u.GetField(UserSchemaPasswordField)
 }
 
 func (u *UserSchema) GetEmailVerifiedAtField() string {
-	return u.GetField(string(UserSchemaEmailVerifiedAtField))
+	return u.GetField(UserSchemaEmailVerifiedAtField)
 }
 
 func (u *UserSchema) FromStorage(data map[string]any) Model {
@@ -109,31 +109,31 @@ func WithUserSerializer(serializer func(data *User) map[string]any) SchemaConfig
 
 func WithUserFieldID(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaIDField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, SchemaIDField, fieldName)
 	}
 }
 
 func WithUserFieldEmail(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaEmailField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, UserSchemaEmailField, fieldName)
 	}
 }
 
 func WithUserFieldPassword(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaPasswordField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, UserSchemaPasswordField, fieldName)
 	}
 }
 
 func WithUserFieldEmailVerifiedAt(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaEmailVerifiedAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, UserSchemaEmailVerifiedAtField, fieldName)
 	}
 }
 
 func WithUserFieldSoftDelete(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaSoftDeleteField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, SchemaSoftDeleteField, fieldName)
 	}
 }
 
@@ -145,43 +145,41 @@ func WithUserIncludeNameFields(include bool) SchemaConfigUserOption {
 
 func WithUserFirstNameField(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaFirstNameField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, UserSchemaFirstNameField, fieldName)
 	}
 }
 
 func WithUserLastNameField(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(UserSchemaLastNameField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, UserSchemaLastNameField, fieldName)
 	}
 }
 
 func WithUserFieldCreatedAt(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaCreatedAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, SchemaCreatedAtField, fieldName)
 	}
 }
 
 func WithUserFieldUpdatedAt(fieldName string) SchemaConfigUserOption {
 	return func(s *SchemaConfig, u *UserSchema) {
-		s.setCoreSchemaField(CoreSchemaUsers, string(SchemaUpdatedAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaUsers, SchemaUpdatedAtField, fieldName)
 	}
 }
 
 func (u *UserSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
-	tableName := UserSchemaTableName
 	return &SchemaDefinition{
-		TableName: &tableName,
+		TableName: UserSchemaTableName,
 		Columns:   u.getDefaultColumns(config),
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_users_email",
-				Columns: []string{string(UserSchemaEmailField)},
+				Columns: []SchemaField{UserSchemaEmailField},
 				Unique:  true,
 			},
 		},
 		ForeignKeys: []ForeignKeyDefinition{},
-		SchemaName:  string(CoreSchemaUsers),
-		Extends:     nil,
+		SchemaName:  CoreSchemaUsers,
 		Schema:      u,
 	}
 }
@@ -192,7 +190,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 	fields := []ColumnDefinition{
 		{
 			Name:         string(SchemaIDField),
-			LogicalField: string(SchemaIDField),
+			LogicalField: SchemaIDField,
 			Type:         idType,
 			IsNullable:   false,
 			IsPrimaryKey: true,
@@ -202,7 +200,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		},
 		{
 			Name:         string(UserSchemaEmailField),
-			LogicalField: string(UserSchemaEmailField),
+			LogicalField: UserSchemaEmailField,
 			Type:         ColumnTypeString,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -212,7 +210,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		},
 		{
 			Name:         string(UserSchemaPasswordField),
-			LogicalField: string(UserSchemaPasswordField),
+			LogicalField: UserSchemaPasswordField,
 			Type:         ColumnTypeString,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -222,7 +220,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		},
 		{
 			Name:         string(UserSchemaEmailVerifiedAtField),
-			LogicalField: string(UserSchemaEmailVerifiedAtField),
+			LogicalField: UserSchemaEmailVerifiedAtField,
 			Type:         ColumnTypeTime,
 			IsNullable:   true,
 			IsPrimaryKey: false,
@@ -236,7 +234,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		fields = append(fields,
 			ColumnDefinition{
 				Name:         string(UserSchemaFirstNameField),
-				LogicalField: string(UserSchemaFirstNameField),
+				LogicalField: UserSchemaFirstNameField,
 				Type:         ColumnTypeString,
 				IsNullable:   false,
 				IsPrimaryKey: false,
@@ -246,7 +244,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 			},
 			ColumnDefinition{
 				Name:         string(UserSchemaLastNameField),
-				LogicalField: string(UserSchemaLastNameField),
+				LogicalField: UserSchemaLastNameField,
 				Type:         ColumnTypeString,
 				IsNullable:   true,
 				IsPrimaryKey: false,
@@ -261,19 +259,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 		fields = addTimestampFields(fields)
 	}
 
-	softDeleteField := config.getCoreSchemaCustomizationField(CoreSchemaUsers, string(SchemaSoftDeleteField))
-	if softDeleteField != "" {
-		fields = append(fields, ColumnDefinition{
-			Name:         softDeleteField,
-			LogicalField: string(SchemaSoftDeleteField),
-			Type:         ColumnTypeTime,
-			IsNullable:   true,
-			IsPrimaryKey: false,
-			Tags: map[string]string{
-				"json": softDeleteField,
-			},
-		})
-	}
+	fields = addSoftDeleteField(fields, config, CoreSchemaUsers)
 
 	return fields
 }

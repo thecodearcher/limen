@@ -16,7 +16,7 @@ type GenerateOptions struct {
 }
 
 // GenerateGoStructs generates Go struct definitions from schema definitions
-func GenerateGoStructs(schemas map[string]aegis.SchemaDefinition, opts GenerateOptions) string {
+func GenerateGoStructs(schemas aegis.SchemaDefinitionMap, opts GenerateOptions) string {
 	var buf strings.Builder
 
 	fmt.Fprintf(&buf, "package %s\n\n", opts.PackageName)

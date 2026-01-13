@@ -1,5 +1,9 @@
 package aegis
 
+// ============================================================================
+// Authentication & Session Constants
+// ============================================================================
+
 // PendingAction represents a pending action for a user after authentication
 type PendingAction string
 
@@ -49,19 +53,89 @@ const (
 	RateLimiterStoreTypeDatabase RateLimiterStoreType = "database"
 )
 
-// CoreSchemaName represents a valid core schema name that can be extended by plugins
-type CoreSchemaName string
+// ============================================================================
+// Feature Constants
+// ============================================================================
 
+// FeatureName represents the name of a feature/plugin
+type FeatureName string
+
+// Feature Names
+const (
+	FeatureEmailPassword    FeatureName = "email-password"
+	FeatureUsernamePassword FeatureName = "username-password"
+)
+
+// ============================================================================
+// Schema Constants
+// ============================================================================
+
+// SchemaName represents the logical name of a schema
+type SchemaName string
+
+// SchemaField represents a logical field name in a schema
+type SchemaField string
+
+// SchemaTableName represents the actual database table name
+type SchemaTableName string
+
+// Core Schema Names
 const (
 	// CoreSchemaUsers is the name of the users core schema
-	CoreSchemaUsers CoreSchemaName = "users"
+	CoreSchemaUsers SchemaName = "users"
 	// CoreSchemaSessions is the name of the sessions core schema
-	CoreSchemaSessions CoreSchemaName = "sessions"
+	CoreSchemaSessions SchemaName = "sessions"
 	// CoreSchemaVerifications is the name of the verifications core schema
-	CoreSchemaVerifications CoreSchemaName = "verifications"
+	CoreSchemaVerifications SchemaName = "verifications"
 	// CoreSchemaRateLimits is the name of the rate_limits core schema
-	CoreSchemaRateLimits CoreSchemaName = "rate_limits"
+	CoreSchemaRateLimits SchemaName = "rate_limits"
 )
+
+// Schema Table Names
+const (
+	UserSchemaTableName         SchemaTableName = "users"
+	VerificationSchemaTableName SchemaTableName = "verifications"
+	SessionSchemaTableName      SchemaTableName = "sessions"
+	RateLimitSchemaTableName    SchemaTableName = "rate_limits"
+)
+
+// Schema Field Names
+const (
+	// Common schema fields
+	SchemaIDField         SchemaField = "id"
+	SchemaCreatedAtField  SchemaField = "created_at"
+	SchemaUpdatedAtField  SchemaField = "updated_at"
+	SchemaSoftDeleteField SchemaField = "deleted_at"
+
+	// User schema fields
+	UserSchemaFirstNameField       SchemaField = "first_name"
+	UserSchemaLastNameField        SchemaField = "last_name"
+	UserSchemaEmailField           SchemaField = "email"
+	UserSchemaPasswordField        SchemaField = "password"
+	UserSchemaEmailVerifiedAtField SchemaField = "email_verified_at"
+
+	// Verification schema fields
+	VerificationSchemaSubjectField   SchemaField = "subject"
+	VerificationSchemaValueField     SchemaField = "value"
+	VerificationSchemaExpiresAtField SchemaField = "expires_at"
+
+	// Session schema fields
+	SessionSchemaUserIDField     SchemaField = "user_id"
+	SessionSchemaTokenField      SchemaField = "token"
+	SessionSchemaCreatedAtField  SchemaField = "created_at"
+	SessionSchemaExpiresAtField  SchemaField = "expires_at"
+	SessionSchemaLastAccessField SchemaField = "last_access"
+	SessionSchemaMetadataField   SchemaField = "metadata"
+
+	// Rate limit schema fields
+	RateLimitSchemaKeyField           SchemaField = "key"
+	RateLimitSchemaCountField         SchemaField = "count"
+	RateLimitSchemaLastRequestAtField SchemaField = "last_request_at"
+)
+
+// ============================================================================
+// Database Schema Constants
+// ============================================================================
 
 // ColumnType represents a Go type for a database column
 type ColumnType string

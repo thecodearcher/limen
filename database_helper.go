@@ -22,7 +22,7 @@ func FindOne(ctx context.Context, core *AegisCore, schema Schema, conditions []W
 
 func Create(ctx context.Context, core *AegisCore, schema Schema, data Model, additionalFields map[string]any) error {
 	payload := make(map[string]any)
-	additionalFieldsContext := NewAdditionalFieldsContext(nil, nil)
+	additionalFieldsContext := newAdditionalFieldsContext(nil, nil)
 	// the order of the copy of the fields is important here!
 	// global -> schema -> additional fields -> data
 	if core.Schema.AdditionalFields != nil {

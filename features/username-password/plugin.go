@@ -15,12 +15,15 @@ type usernamePasswordFeature struct {
 	config     *config
 	userSchema *UsernamePasswordUserSchema
 	dbAction   *aegis.DatabaseActionHelper
-	schemaMeta map[string]*aegis.PluginSchemaMetadata
 }
 
 func (p *usernamePasswordFeature) Name() aegis.FeatureName {
 	return aegis.FeatureUsernamePassword
 }
+
+const (
+	UserSchemaUsernameField aegis.SchemaField = "username"
+)
 
 func (p *usernamePasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
 	userWithUsername := NewUsernamePasswordUserSchema(schema)
@@ -29,10 +32,7 @@ func (p *usernamePasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis
 		aegis.CoreSchemaUsers,
 		userWithUsername,
 		aegis.WithSchemaField("username", aegis.ColumnTypeString),
-		aegis.WithSchemaIndex(aegis.IndexDefinition{
-			Columns: []string{"username"},
-			Unique:  true,
-		}),
+		aegis.WithSchemaIndex("idx_users_username", []aegis.SchemaField{UserSchemaUsernameField}),
 	)
 
 	// extension2 := aegis.NewPluginSchemaForExtension(
@@ -41,19 +41,15 @@ func (p *usernamePasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis
 	// 	aegis.WithPluginSchemaField("id_token", aegis.ColumnTypeString),
 	// )
 
-	// table := aegis.NewPluginSchemaForTable(
-	// 	aegis.SchemaName("users_username"),
-	// 	aegis.SchemaTableName("users_username"),
-	// 	p.core.Schema.User,
-	// 	aegis.WithPluginSchemaField("username", aegis.ColumnTypeString),
-	// 	aegis.WithPluginSchemaIndex(aegis.IndexDefinition{
-	// 		Columns: []string{"username"},
-	// 		Unique:  true,
-	// 	}),
-	// )
+	table := aegis.NewSchemaDefinitionForTable(
+		aegis.SchemaName("users_username"),
+		aegis.SchemaTableName("users_username"),
+		p.userSchema,
+		aegis.WithSchemaField("username", aegis.ColumnTypeString),
+		aegis.WithSchemaIndex("idx_users_username", []aegis.SchemaField{UserSchemaUsernameField}),
+	)
 
-	return []aegis.SchemaIntrospector{extension1}
-	// return []aegis.SchemaIntrospector{}
+	return []aegis.SchemaIntrospector{extension1, table}
 }
 
 func (p *usernamePasswordFeature) Initialize(core *aegis.AegisCore) error {

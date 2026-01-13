@@ -10,20 +10,10 @@ import (
 // and serves as a contract for the features of the library.
 // Ensures that the features are implemented correctly in their respective modules.
 
-type FeatureName string
-
-const (
-	FeatureEmailPassword    FeatureName = "email-password"
-	FeatureUsernamePassword FeatureName = "username-password"
-)
-
 type Feature interface {
 	// Unique identifier for the feature.
 	Name() FeatureName
 	// Initialize initializes the feature.
-	// schemas is a map of schema name (as declared in GetSchemas) to resolved schema metadata.
-	// For extensions, the key is the core schema name being extended (e.g., "users").
-	// For new tables, the key is the plugin's schema name.
 	Initialize(core *AegisCore) error
 	// PluginHTTPConfig returns the configuration for the plugin's HTTP surface.
 	PluginHTTPConfig() PluginHTTPConfig

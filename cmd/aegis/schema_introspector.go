@@ -57,11 +57,11 @@ func (s *schemaIntrospector) introspectTable(tableName aegis.SchemaTableName) (*
 	}
 
 	return &aegis.SchemaDefinition{
-		TableName:   &tableName,
+		TableName:   tableName,
 		Columns:     columns,
 		Indexes:     indexes,
 		ForeignKeys: foreignKeys,
-		SchemaName:  string(tableName),
+		SchemaName:  aegis.SchemaName(tableName),
 	}, nil
 }
 

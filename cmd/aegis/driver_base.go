@@ -19,9 +19,13 @@ func (d *baseDriver) ParseIndexRow(scan func(dest ...any) error) (aegis.IndexDef
 	}
 
 	columns := strings.Split(columnsStr, ",")
+	columnsFields := make([]aegis.SchemaField, len(columns))
+	for i, col := range columns {
+		columnsFields[i] = aegis.SchemaField(col)
+	}
 	return aegis.IndexDefinition{
 		Name:    idxName,
-		Columns: columns,
+		Columns: columnsFields,
 		Unique:  isUnique,
 	}, nil
 }
@@ -51,7 +55,7 @@ func (d *baseDriver) ParseColumnRow(scan func(dest ...any) error) (aegis.ColumnD
 
 	return aegis.ColumnDefinition{
 		Name:         colName,
-		LogicalField: colName,
+		LogicalField: aegis.SchemaField(colName),
 		Type:         aegis.ColumnTypeString,
 		IsNullable:   false,
 		IsPrimaryKey: false,

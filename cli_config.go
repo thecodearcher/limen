@@ -9,15 +9,10 @@ import (
 	"path/filepath"
 )
 
-// SchemasMetadata contains metadata about the schemas
-type SchemasMetadata struct {
-	UseAutoIncrementID bool `json:"useAutoIncrementID"`
-}
-
-// CliConfig represents the JSON file format containing schemas and metadata
+// CliConfig represents the JSON file format containing schemas
 type CliConfig struct {
-	Schemas            map[string]SchemaDefinition `json:"schemas"`
-	UseAutoIncrementID bool                        `json:"useAutoIncrementID"`
+	Schemas            SchemaDefinitionMap `json:"schemas"`
+	UseAutoIncrementID bool                `json:"useAutoIncrementID"`
 }
 
 // calculateHash computes MD5 hash of the given bytes and returns hex string
@@ -25,7 +20,7 @@ func calculateHash(data []byte) string {
 	return fmt.Sprintf("%x", md5.Sum(data))
 }
 
-func (c *Config) serializeSchemasToJSON(schemas map[string]SchemaDefinition) ([]byte, error) {
+func (c *Config) serializeSchemasToJSON(schemas SchemaDefinitionMap) ([]byte, error) {
 	file := CliConfig{
 		Schemas:            schemas,
 		UseAutoIncrementID: c.Schema.IDGenerator == nil,
@@ -39,8 +34,7 @@ func (c *Config) serializeSchemasToJSON(schemas map[string]SchemaDefinition) ([]
 	return buf.Bytes(), nil
 }
 
-// prepareCLIConfig prepares the CLI config by serializing discovered schemas to a file
-func (c *Config) prepareCLIConfig(schemas map[string]SchemaDefinition) error {
+func (c *Config) prepareCLIConfig(schemas SchemaDefinitionMap) error {
 	if c.CLI == nil || !c.CLI.Enabled {
 		return nil
 	}
@@ -64,11 +58,6 @@ func (c *Config) prepareCLIConfig(schemas map[string]SchemaDefinition) error {
 		if err != nil {
 			return writeToFile(currentJSON, outputPath)
 		}
-
-		fmt.Printf("existingData: %s\n", string(existingData))
-		fmt.Printf("currentJSON: %s\n", string(currentJSON))
-		fmt.Printf("calculateHash(existingData): %s\n", calculateHash(existingData))
-		fmt.Printf("calculateHash(currentJSON): %s\n", calculateHash(currentJSON))
 
 		if calculateHash(existingData) == calculateHash(currentJSON) {
 			// schemas haven't changed, skip write

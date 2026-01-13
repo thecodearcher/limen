@@ -211,7 +211,7 @@ func writeToFile(data []byte, outputPath string) error {
 func addTimestampFields(fields []ColumnDefinition) []ColumnDefinition {
 	return append(fields, ColumnDefinition{
 		Name:         string(SchemaCreatedAtField),
-		LogicalField: string(SchemaCreatedAtField),
+		LogicalField: SchemaCreatedAtField,
 		Type:         ColumnTypeTime,
 		IsNullable:   false,
 		IsPrimaryKey: false,
@@ -221,7 +221,7 @@ func addTimestampFields(fields []ColumnDefinition) []ColumnDefinition {
 		},
 	}, ColumnDefinition{
 		Name:         string(SchemaUpdatedAtField),
-		LogicalField: string(SchemaUpdatedAtField),
+		LogicalField: SchemaUpdatedAtField,
 		Type:         ColumnTypeTime,
 		IsNullable:   false,
 		IsPrimaryKey: false,
@@ -231,12 +231,56 @@ func addTimestampFields(fields []ColumnDefinition) []ColumnDefinition {
 	})
 }
 
+func addSoftDeleteField(fields []ColumnDefinition, config *SchemaConfig, schemaName SchemaName) []ColumnDefinition {
+	softDeleteField := config.getCoreSchemaCustomizationField(schemaName, SchemaSoftDeleteField)
+	if softDeleteField != "" {
+		return append(fields, ColumnDefinition{
+			Name:         softDeleteField,
+			LogicalField: SchemaSoftDeleteField,
+			Type:         ColumnTypeTime,
+			IsNullable:   true,
+			IsPrimaryKey: false,
+			Tags: map[string]string{
+				"json": softDeleteField,
+			},
+		})
+	}
+	return fields
+}
+
 // IsValidCoreSchema checks if a string is a valid core schema name
 func IsValidCoreSchema(name string) bool {
-	switch CoreSchemaName(name) {
+	switch SchemaName(name) {
 	case CoreSchemaUsers, CoreSchemaSessions, CoreSchemaVerifications, CoreSchemaRateLimits:
 		return true
 	default:
 		return false
 	}
+}
+
+func getNullableValue[T any](value any) *T {
+	if value == nil {
+		return nil
+	}
+	v := value.(T)
+	return &v
+}
+
+func GetAdditionalFieldsFromRequest(response http.ResponseWriter, request *http.Request, schema Schema) (map[string]any, error) {
+	if schema.GetAdditionalFields() != nil {
+		additionalFieldsContext := newAdditionalFieldsContext(request, response)
+		return schema.GetAdditionalFields()(additionalFieldsContext)
+	}
+	return make(map[string]any), nil
+}
+
+func joinCustomStringSlice[T ~string](fields []T, separator string) string {
+	var joined string
+	for i := range fields {
+		joined += string(fields[i])
+		if i < len(fields)-1 {
+			joined += separator
+		}
+	}
+	return joined
 }

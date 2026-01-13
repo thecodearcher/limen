@@ -70,27 +70,27 @@ func (s *SessionSchema) GetSoftDeleteField() string {
 }
 
 func (s *SessionSchema) GetUserIDField() string {
-	return s.GetField(string(SessionSchemaUserIDField))
+	return s.GetField(SessionSchemaUserIDField)
 }
 
 func (s *SessionSchema) GetTokenField() string {
-	return s.GetField(string(SessionSchemaTokenField))
+	return s.GetField(SessionSchemaTokenField)
 }
 
 func (s *SessionSchema) GetCreatedAtField() string {
-	return s.GetField(string(SessionSchemaCreatedAtField))
+	return s.GetField(SessionSchemaCreatedAtField)
 }
 
 func (s *SessionSchema) GetExpiresAtField() string {
-	return s.GetField(string(SessionSchemaExpiresAtField))
+	return s.GetField(SessionSchemaExpiresAtField)
 }
 
 func (s *SessionSchema) GetLastAccessField() string {
-	return s.GetField(string(SessionSchemaLastAccessField))
+	return s.GetField(SessionSchemaLastAccessField)
 }
 
 func (s *SessionSchema) GetMetadataField() string {
-	return s.GetField(string(SessionSchemaMetadataField))
+	return s.GetField(SessionSchemaMetadataField)
 }
 
 func (s *SessionSchema) FromStorage(data map[string]any) Model {
@@ -152,75 +152,73 @@ func WithSessionAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigSessionOpt
 
 func WithSessionFieldID(fieldName string) SchemaConfigSessionOption {
 	return func(s *SchemaConfig, sess *SessionSchema) {
-		s.setCoreSchemaField(CoreSchemaSessions, string(SchemaIDField), fieldName)
+		s.setCoreSchemaField(CoreSchemaSessions, SchemaIDField, fieldName)
 	}
 }
 
 func WithSessionFieldToken(fieldName string) SchemaConfigSessionOption {
 	return func(s *SchemaConfig, sess *SessionSchema) {
-		s.setCoreSchemaField(CoreSchemaSessions, string(SessionSchemaTokenField), fieldName)
+		s.setCoreSchemaField(CoreSchemaSessions, SessionSchemaTokenField, fieldName)
 	}
 }
 
 func WithSessionFieldUserID(fieldName string) SchemaConfigSessionOption {
 	return func(s *SchemaConfig, sess *SessionSchema) {
-		s.setCoreSchemaField(CoreSchemaSessions, string(SessionSchemaUserIDField), fieldName)
+		s.setCoreSchemaField(CoreSchemaSessions, SessionSchemaUserIDField, fieldName)
 	}
 }
 
 func WithSessionFieldCreatedAt(fieldName string) SchemaConfigSessionOption {
 	return func(s *SchemaConfig, sess *SessionSchema) {
-		s.setCoreSchemaField(CoreSchemaSessions, string(SessionSchemaCreatedAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaSessions, SessionSchemaCreatedAtField, fieldName)
 	}
 }
 
 func WithSessionFieldExpiresAt(fieldName string) SchemaConfigSessionOption {
 	return func(s *SchemaConfig, sess *SessionSchema) {
-		s.setCoreSchemaField(CoreSchemaSessions, string(SessionSchemaExpiresAtField), fieldName)
+		s.setCoreSchemaField(CoreSchemaSessions, SessionSchemaExpiresAtField, fieldName)
 	}
 }
 
 func WithSessionFieldLastAccess(fieldName string) SchemaConfigSessionOption {
 	return func(s *SchemaConfig, sess *SessionSchema) {
-		s.setCoreSchemaField(CoreSchemaSessions, string(SessionSchemaLastAccessField), fieldName)
+		s.setCoreSchemaField(CoreSchemaSessions, SessionSchemaLastAccessField, fieldName)
 	}
 }
 
 func WithSessionFieldMetadata(fieldName string) SchemaConfigSessionOption {
 	return func(s *SchemaConfig, sess *SessionSchema) {
-		s.setCoreSchemaField(CoreSchemaSessions, string(SessionSchemaMetadataField), fieldName)
+		s.setCoreSchemaField(CoreSchemaSessions, SessionSchemaMetadataField, fieldName)
 	}
 }
 
 func (s *SessionSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
-	tableName := SessionSchemaTableName
 	return &SchemaDefinition{
-		TableName: &tableName,
+		TableName: SessionSchemaTableName,
 		Columns:   s.getDefaultColumns(config),
 		Indexes: []IndexDefinition{
 			{
 				Name:    "idx_sessions_token",
-				Columns: []string{string(SessionSchemaTokenField)},
+				Columns: []SchemaField{SessionSchemaTokenField},
 				Unique:  true,
 			},
 			{
 				Name:    "idx_sessions_user_id",
-				Columns: []string{string(SessionSchemaUserIDField)},
+				Columns: []SchemaField{SessionSchemaUserIDField},
 				Unique:  false,
 			},
 		},
 		ForeignKeys: []ForeignKeyDefinition{
 			{
 				Name:             "fk_sessions_user_id",
-				Column:           string(SessionSchemaUserIDField),
-				ReferencedSchema: UserSchemaTableName,
+				Column:           SessionSchemaUserIDField,
+				ReferencedSchema: CoreSchemaUsers,
 				ReferencedField:  SchemaIDField,
 				OnDelete:         FKActionCascade,
 				OnUpdate:         FKActionCascade,
 			},
 		},
-		SchemaName: string(CoreSchemaSessions),
-		Extends:    nil,
+		SchemaName: CoreSchemaSessions,
 		Schema:     s,
 	}
 }
@@ -231,7 +229,7 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 	return []ColumnDefinition{
 		{
 			Name:         string(SchemaIDField),
-			LogicalField: string(SchemaIDField),
+			LogicalField: SchemaIDField,
 			Type:         idType,
 			IsNullable:   false,
 			IsPrimaryKey: true,
@@ -241,7 +239,7 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 		},
 		{
 			Name:         string(SessionSchemaTokenField),
-			LogicalField: string(SessionSchemaTokenField),
+			LogicalField: SessionSchemaTokenField,
 			Type:         ColumnTypeString,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -251,8 +249,8 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 		},
 		{
 			Name:         string(SessionSchemaUserIDField),
-			LogicalField: string(SessionSchemaUserIDField),
-			Type:         ColumnTypeAny,
+			LogicalField: SessionSchemaUserIDField,
+			Type:         idType,
 			IsNullable:   false,
 			IsPrimaryKey: false,
 			Tags: map[string]string{
@@ -261,7 +259,7 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 		},
 		{
 			Name:         string(SessionSchemaCreatedAtField),
-			LogicalField: string(SessionSchemaCreatedAtField),
+			LogicalField: SessionSchemaCreatedAtField,
 			Type:         ColumnTypeTime,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -272,7 +270,7 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 		},
 		{
 			Name:         string(SessionSchemaExpiresAtField),
-			LogicalField: string(SessionSchemaExpiresAtField),
+			LogicalField: SessionSchemaExpiresAtField,
 			Type:         ColumnTypeTime,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -282,7 +280,7 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 		},
 		{
 			Name:         string(SessionSchemaLastAccessField),
-			LogicalField: string(SessionSchemaLastAccessField),
+			LogicalField: SessionSchemaLastAccessField,
 			Type:         ColumnTypeTime,
 			IsNullable:   false,
 			IsPrimaryKey: false,
@@ -292,7 +290,7 @@ func (s *SessionSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefiniti
 		},
 		{
 			Name:         string(SessionSchemaMetadataField),
-			LogicalField: string(SessionSchemaMetadataField),
+			LogicalField: SessionSchemaMetadataField,
 			Type:         ColumnTypeMapStringAny,
 			IsNullable:   true,
 			IsPrimaryKey: false,

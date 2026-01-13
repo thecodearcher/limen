@@ -183,7 +183,7 @@ func (s *sqlMigrationGenerator) generateDownAlterTableStatement(tableName aegis.
 func (s *sqlMigrationGenerator) generateColumnDefinition(field *aegis.ColumnDefinition) string {
 	parts := []string{field.Name}
 
-	isAutoIncrement := field.LogicalField == string(aegis.SchemaIDField) && s.useAutoIncrementIDs
+	isAutoIncrement := field.LogicalField == aegis.SchemaIDField && s.useAutoIncrementIDs
 
 	sqlType := s.driver.MapGoTypeToSQL(field.Type, isAutoIncrement)
 	parts = append(parts, sqlType)
@@ -234,9 +234,20 @@ func (s *sqlMigrationGenerator) generateForeignKeyStatement(fk *aegis.ForeignKey
 func (s *sqlMigrationGenerator) generateCreateIndexStatement(idx *aegis.IndexDefinition, tableName aegis.SchemaTableName) string {
 	if idx.Unique {
 		return fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (%s);",
-			idx.Name, tableName, strings.Join(idx.Columns, ", "))
+			idx.Name, tableName, joinCustomStringSlice(idx.Columns, ", "))
 	}
 
 	return fmt.Sprintf("CREATE INDEX %s ON %s (%s);",
-		idx.Name, tableName, strings.Join(idx.Columns, ", "))
+		idx.Name, tableName, joinCustomStringSlice(idx.Columns, ", "))
+}
+
+func joinCustomStringSlice[T ~string](fields []T, separator string) string {
+	var joined string
+	for i := range fields {
+		joined += string(fields[i])
+		if i < len(fields)-1 {
+			joined += separator
+		}
+	}
+	return joined
 }

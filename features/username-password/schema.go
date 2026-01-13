@@ -1,15 +1,12 @@
 package usernamepassword
 
 import (
-	"fmt"
-
 	"github.com/thecodearcher/aegis"
 )
 
 // UsernamePasswordUserSchema extends UserSchema with username-specific functionality.
 // It wraps the core UserSchema and provides methods for working with username fields.
 type UsernamePasswordUserSchema struct {
-	// *aegis.BaseSchema
 	*aegis.UserSchema
 }
 
@@ -20,9 +17,7 @@ type UserWithUsername struct {
 
 // NewUsernamePasswordUserSchema creates a new UsernamePasswordUserSchema that wraps the core UserSchema.
 func NewUsernamePasswordUserSchema(schema *aegis.SchemaConfig) *UsernamePasswordUserSchema {
-	fmt.Printf("schema.User: %+v\n", schema.User)
 	return &UsernamePasswordUserSchema{
-		// BaseSchema: aegis.NewBaseSchema(aegis.UserSchemaTableName),
 		UserSchema: schema.User,
 	}
 }
@@ -46,9 +41,8 @@ func (s *UsernamePasswordUserSchema) FromStorage(data map[string]any) aegis.Mode
 // ToStorage converts a User to storage format.
 // It includes the username field from raw data using schema metadata.
 func (s *UsernamePasswordUserSchema) ToStorage(data aegis.Model) map[string]any {
-	result := s.ToStorage(data)
-	fmt.Printf("result: %+v\n", result)
-	//Add username field from raw data (read-only) if it exists
+	result := s.UserSchema.ToStorage(data)
+	// Add username field from raw data (read-only) if it exists
 	username := data.Raw()[s.GetUsernameField()]
 	if username != "" {
 		result[s.GetUsernameField()] = username

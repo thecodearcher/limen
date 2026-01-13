@@ -2,17 +2,18 @@ package aegis
 
 import (
 	"fmt"
-	"strings"
 )
 
 // DiscoverAllSchemas discovers all schemas from core and all registered features.
 // It merges plugin-extended fields into core schemas and returns a complete schema map.
-func (a *AegisCore) DiscoverAllSchemas(features []Feature) (map[string]SchemaDefinition, error) {
-	schemas := a.collectCoreSchemas()
-	schemas = a.applyCoreSchemaCustomizations(schemas, a.Schema)
+//
+// The returned map is the resolved schemas with all customizations applied.
+func discoverSchemas(schemaConfig *SchemaConfig, features []Feature) (map[SchemaName]SchemaDefinition, error) {
+	schemas := collectCoreSchemas(schemaConfig)
+	applyCoreSchemaCustomizations(schemas, schemaConfig)
 
 	for _, feature := range features {
-		if err := a.processFeatureSchemas(feature, schemas); err != nil {
+		if err := processFeatureSchemas(feature, schemaConfig, schemas); err != nil {
 			return nil, err
 		}
 	}
@@ -23,75 +24,84 @@ func (a *AegisCore) DiscoverAllSchemas(features []Feature) (map[string]SchemaDef
 		}
 	}
 
-	if err := resolveForeignKeyReferences(schemas); err != nil {
+	if err := resolveForeignKeys(schemas); err != nil {
 		return nil, err
 	}
 
-	if err := resolveIndexColumnNames(schemas); err != nil {
+	if err := resolveIndexes(schemas); err != nil {
 		return nil, err
 	}
 
 	return schemas, nil
 }
 
-// collectCoreSchemas collects all core schemas and returns them as a map
-func (a *AegisCore) collectCoreSchemas() map[string]SchemaDefinition {
-	userDef := a.Schema.User.Introspect(a.Schema).(*SchemaDefinition)
-	verificationDef := a.Schema.Verification.Introspect(a.Schema).(*SchemaDefinition)
-	sessionDef := a.Schema.Session.Introspect(a.Schema).(*SchemaDefinition)
-	rateLimitDef := a.Schema.RateLimit.Introspect(a.Schema).(*SchemaDefinition)
+func collectCoreSchemas(schemaConfig *SchemaConfig) map[SchemaName]SchemaDefinition {
+	userDef := schemaConfig.User.Introspect(schemaConfig).(*SchemaDefinition)
+	verificationDef := schemaConfig.Verification.Introspect(schemaConfig).(*SchemaDefinition)
+	sessionDef := schemaConfig.Session.Introspect(schemaConfig).(*SchemaDefinition)
+	rateLimitDef := schemaConfig.RateLimit.Introspect(schemaConfig).(*SchemaDefinition)
 
-	return map[string]SchemaDefinition{
-		string(CoreSchemaUsers):         *userDef,
-		string(CoreSchemaVerifications): *verificationDef,
-		string(CoreSchemaSessions):      *sessionDef,
-		string(CoreSchemaRateLimits):    *rateLimitDef,
+	return map[SchemaName]SchemaDefinition{
+		CoreSchemaUsers:         *userDef,
+		CoreSchemaVerifications: *verificationDef,
+		CoreSchemaSessions:      *sessionDef,
+		CoreSchemaRateLimits:    *rateLimitDef,
 	}
 }
 
-func (a *AegisCore) applyCoreSchemaCustomizations(schemas map[string]SchemaDefinition, config *SchemaConfig) map[string]SchemaDefinition {
-	modifiedSchemas := make(map[string]SchemaDefinition)
+func applySchemaCustomizations(schema *SchemaDefinition, config *PluginSchemaConfig) {
+	if config.TableName != "" {
+		schema.TableName = config.TableName
+	}
+
+	for i, col := range schema.Columns {
+		if newName, exists := config.Fields[col.LogicalField]; exists {
+			col.Name = newName
+			schema.Columns[i] = col
+		}
+	}
+}
+
+func applyCoreSchemaCustomizations(schemas map[SchemaName]SchemaDefinition, config *SchemaConfig) {
 	for schemaName, schema := range schemas {
-		customConfig, exists := config.coreSchemaCustomizations[CoreSchemaName(schemaName)]
+		customConfig, exists := config.coreSchemaCustomizations[schemaName]
 		if !exists {
-			modifiedSchemas[schemaName] = schema
 			continue
 		}
-		if customConfig.TableName != nil {
-			tableName := *customConfig.TableName
-			schema.TableName = &tableName
-		}
-
-		for i, col := range schema.Columns {
-			if newName, exists := customConfig.Fields[col.LogicalField]; exists {
-				col.Name = newName
-				schema.Columns[i] = col
-			}
-		}
-		modifiedSchemas[schemaName] = schema
+		applySchemaCustomizations(&schema, &customConfig)
+		schemas[schemaName] = schema
 	}
-	return modifiedSchemas
 }
 
-// processFeatureSchemas processes all schemas from a feature and updates the schemas map
-func (a *AegisCore) processFeatureSchemas(feature Feature, schemas map[string]SchemaDefinition) error {
-	featureSchemas := feature.GetSchemas(a.Schema)
+func applyPluginCustomizations(def *SchemaDefinition, featureName FeatureName, schemaName SchemaName, config *SchemaConfig) {
+	schemaConfigs, exists := config.pluginSchemas[featureName]
+	if !exists {
+		return
+	}
+	schemaConfig, exists := schemaConfigs[schemaName]
+	if !exists || (schemaConfig.TableName == "" && len(schemaConfig.Fields) == 0) {
+		return
+	}
+
+	applySchemaCustomizations(def, &schemaConfig)
+}
+
+func processFeatureSchemas(feature Feature, schemaConfig *SchemaConfig, schemas map[SchemaName]SchemaDefinition) error {
+	featureSchemas := feature.GetSchemas(schemaConfig)
 	for _, introspector := range featureSchemas {
 		def := introspector.(*SchemaDefinition)
 		def.PluginName = string(feature.Name())
 
-		if err := applyPluginCustomizations(def, feature.Name(), def.SchemaName, a.Schema); err != nil {
-			return err
-		}
+		applyPluginCustomizations(def, feature.Name(), def.SchemaName, schemaConfig)
 
-		if def.Extends != nil {
-			if err := a.mergeSchemaExtension(feature, def, schemas); err != nil {
+		if def.Extends != "" {
+			if err := mergeSchemaExtension(feature, def, schemas); err != nil {
 				return err
 			}
 			continue
 		}
 
-		if err := a.mergeSchemaTable(feature, def, def.SchemaName, schemas); err != nil {
+		if err := mergeSchemaTable(feature, def, def.SchemaName, schemas); err != nil {
 			return err
 		}
 	}
@@ -99,39 +109,12 @@ func (a *AegisCore) processFeatureSchemas(feature Feature, schemas map[string]Sc
 	return nil
 }
 
-// applyPluginCustomizations applies user customizations to a plugin schema definition
-func applyPluginCustomizations(def *SchemaDefinition, featureName FeatureName, schemaName string, config *SchemaConfig) error {
-	schemaConfigs, exists := config.PluginSchemas[featureName]
-	if !exists {
-		return nil
-	}
-	schemaConfig, exists := schemaConfigs[schemaName]
-	if !exists || (schemaConfig.TableName == nil && len(schemaConfig.Fields) == 0) {
-		return nil
-	}
-
-	if schemaConfig.TableName != nil {
-		tableName := *schemaConfig.TableName
-		def.TableName = &tableName
-	}
-
-	for i := range def.Columns {
-		col := &def.Columns[i]
-		if newName, exists := schemaConfig.Fields[col.LogicalField]; exists {
-			col.Name = newName
-		}
-	}
-
-	return nil
-}
-
-func (a *AegisCore) mergeSchemaTable(feature Feature, def *SchemaDefinition, schemaName string, schemas map[string]SchemaDefinition) error {
+func mergeSchemaTable(feature Feature, def *SchemaDefinition, schemaName SchemaName, schemas map[SchemaName]SchemaDefinition) error {
 	if _, exists := schemas[schemaName]; exists {
 		return fmt.Errorf("plugin %s defines schema %s which already exists", feature.Name(), schemaName)
 	}
 
 	for _, schema := range schemas {
-		// Compare table names, handling nil pointers
 		schemaTableName := schema.GetTableName()
 		defTableName := def.GetTableName()
 		if schemaTableName != defTableName {
@@ -150,11 +133,10 @@ func (a *AegisCore) mergeSchemaTable(feature Feature, def *SchemaDefinition, sch
 	return nil
 }
 
-// mergeSchemaExtension merges a plugin schema extension into a core schema
-func (a *AegisCore) mergeSchemaExtension(feature Feature, def *SchemaDefinition, schemas map[string]SchemaDefinition) error {
-	extendsName := string(*def.Extends)
+func mergeSchemaExtension(feature Feature, def *SchemaDefinition, schemas map[SchemaName]SchemaDefinition) error {
+	extendsName := def.Extends
 
-	if !IsValidCoreSchema(extendsName) {
+	if !IsValidCoreSchema(string(extendsName)) {
 		return fmt.Errorf("plugin %s extends invalid core schema: %s", feature.Name(), extendsName)
 	}
 
@@ -170,7 +152,7 @@ func (a *AegisCore) mergeSchemaExtension(feature Feature, def *SchemaDefinition,
 	return nil
 }
 
-func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
+func resolveForeignKeys(schemas map[SchemaName]SchemaDefinition) error {
 	for schemaName, schema := range schemas {
 		for i := range schema.ForeignKeys {
 			fk := &schema.ForeignKeys[i]
@@ -179,34 +161,25 @@ func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
 				fk.Name = fmt.Sprintf("fk_%s_%s", schemaName, fk.Column)
 			}
 
-			referencedSchema, exists := schemas[string(fk.ReferencedSchema)]
+			referencedSchema, exists := schemas[fk.ReferencedSchema]
 			if !exists {
 				return fmt.Errorf("schema %s has foreign key referencing unknown schema: %s", schemaName, fk.ReferencedSchema)
 			}
 
-			referencedColumn := findColumnByLogicalField(referencedSchema.Columns, SchemaField(fk.ReferencedField))
+			referencedColumn := findColumnByLogicalField(referencedSchema.Columns, fk.ReferencedField)
 			if referencedColumn == nil {
 				return fmt.Errorf("schema %s has foreign key referencing unknown field %s in schema %s", schemaName, fk.ReferencedField, fk.ReferencedSchema)
 			}
 
-			fk.ReferencedSchema = referencedSchema.GetTableName()
+			fk.ReferencedSchema = SchemaName(string(referencedSchema.GetTableName()))
 			fk.ReferencedField = SchemaField(referencedColumn.Name)
 
-			resolvedColumn := findColumnByLogicalField(schema.Columns, SchemaField(fk.Column))
+			resolvedColumn := findColumnByLogicalField(schema.Columns, fk.Column)
 			if resolvedColumn == nil {
 				return fmt.Errorf("schema %s has foreign key with unknown local column %s", schemaName, fk.Column)
 			}
+			fk.Column = SchemaField(resolvedColumn.Name)
 
-			localColumnLogicalField := resolvedColumn.LogicalField
-			fk.Column = resolvedColumn.Name
-
-			// Update the foreign key local column type to match the referenced column type
-			for j := range schema.Columns {
-				if schema.Columns[j].LogicalField == localColumnLogicalField {
-					schema.Columns[j].Type = referencedColumn.Type
-					break
-				}
-			}
 		}
 
 		schemas[schemaName] = schema
@@ -215,36 +188,45 @@ func resolveForeignKeyReferences(schemas map[string]SchemaDefinition) error {
 	return nil
 }
 
-func resolveIndexColumnNames(schemas map[string]SchemaDefinition) error {
+func resolveIndexes(schemas map[SchemaName]SchemaDefinition) error {
 	for schemaName, schema := range schemas {
 		for i := range schema.Indexes {
 			index := &schema.Indexes[i]
 			if index.Name == "" {
-				index.Name = fmt.Sprintf("idx_%s_%s", schemaName, strings.Join(index.Columns, "_"))
+				index.Name = fmt.Sprintf("idx_%s_%s", schemaName, joinCustomStringSlice(index.Columns, "_"))
 			}
 
-			for j := range index.Columns {
-				column := index.Columns[j]
-				resolvedColumn := findColumnByLogicalField(schema.Columns, SchemaField(column))
-				if resolvedColumn == nil {
-					return fmt.Errorf("schema %s has index with unknown column %s", schema.SchemaName, column)
-				}
-				index.Columns[j] = resolvedColumn.Name
+			resolvedColumns, err := resolveIndexColumns(schema.Columns)
+			if err != nil {
+				return fmt.Errorf("failed to resolve index columns for schema %s : %w", schema.SchemaName, err)
 			}
+			index.Columns = resolvedColumns
 		}
 		schemas[schemaName] = schema
 	}
 	return nil
 }
 
+func resolveIndexColumns(columns []ColumnDefinition) ([]SchemaField, error) {
+	resolvedColumns := make([]SchemaField, len(columns))
+	for i, col := range columns {
+		resolvedColumn := findColumnByLogicalField(columns, col.LogicalField)
+		if resolvedColumn == nil {
+			return nil, fmt.Errorf("unknown column %s", col.LogicalField)
+		}
+		resolvedColumns[i] = SchemaField(resolvedColumn.Name)
+	}
+	return resolvedColumns, nil
+}
+
 // validateSchemaFields validates that a schema definition has no internal conflicts
 // It checks for duplicate logicalField and name values within the schema
-func validateSchemaFields(schema SchemaDefinition, schemaName string, ownerName string) error {
+func validateSchemaFields(schema SchemaDefinition, schemaName SchemaName, ownerName string) error {
 	if ownerName == "" {
 		ownerName = "core"
 	}
-	logicalFields := make(map[string]string)
-	names := make(map[string]string)
+	logicalFields := make(map[SchemaField]string)
+	names := make(map[string]SchemaField)
 
 	for _, col := range schema.Columns {
 		if col.LogicalField == "" || col.Name == "" {
@@ -274,97 +256,23 @@ func validateSchemaFields(schema SchemaDefinition, schemaName string, ownerName 
 
 func findColumnByLogicalField(columns []ColumnDefinition, logicalField SchemaField) *ColumnDefinition {
 	for _, col := range columns {
-		if col.LogicalField == string(logicalField) {
+		if col.LogicalField == logicalField {
 			return &col
 		}
 	}
 	return nil
 }
 
-// buildPluginSchemaMetadata builds schema metadata for a feature's schemas.
-// It returns a map where the key is the schema name that should be used to look up metadata.
-func (a *AegisCore) buildPluginSchemaMetadata(feature Feature, discoveredSchemas map[string]SchemaDefinition) (map[string]*PluginSchemaMetadata, error) {
-	metadata := make(map[string]*PluginSchemaMetadata)
-	featureSchemas := feature.GetSchemas(a.Schema)
-
-	for _, introspector := range featureSchemas {
-		originalDef := introspector.(*SchemaDefinition)
-
-		schemaName := originalDef.SchemaName
-		if originalDef.Extends != nil {
-			schemaName = string(*originalDef.Extends)
-		}
-
-		meta, err := a.buildSchemaMetadata(*originalDef, discoveredSchemas)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build schema metadata for %s: %w", schemaName, err)
-		}
-
-		metadata[schemaName] = meta
-
-		if err := introspector.GetSchema().Initialize(a, meta); err != nil {
-			return nil, fmt.Errorf("failed to initialize schema instance for %s: %w", schemaName, err)
-		}
+func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDefinition) error {
+	if a.SchemaResolver == nil {
+		return fmt.Errorf("schema resolver must be instantiated before initializing schemas")
 	}
 
-	return metadata, nil
-}
-
-func (a *AegisCore) buildCoreSchemasMetadata(discoveredSchemas map[string]SchemaDefinition) (map[string]*PluginSchemaMetadata, error) {
-	metadata := make(map[string]*PluginSchemaMetadata)
-
-	// Use schemas from discoveredSchemas instead of calling Introspect() again
-	coreSchemaNames := []string{
-		string(CoreSchemaUsers),
-		string(CoreSchemaVerifications),
-		string(CoreSchemaSessions),
-		string(CoreSchemaRateLimits),
-	}
-
-	for _, schemaName := range coreSchemaNames {
-		schema, exists := discoveredSchemas[schemaName]
-		if !exists {
-			return nil, fmt.Errorf("core schema %s not found in discovered schemas", schemaName)
-		}
-
-		meta, err := a.buildSchemaMetadata(schema, discoveredSchemas)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build schema fields for %s: %w", schema.SchemaName, err)
-		}
-
-		metadata[schema.SchemaName] = meta
-		if err := schema.Schema.Initialize(a, meta); err != nil {
-			return nil, fmt.Errorf("failed to initialize schema instance for %s: %w", schema.SchemaName, err)
+	for schemaName, schema := range discoveredSchemas {
+		schemaInfo := newSchemaInfo(schemaName, schema.TableName, a.SchemaResolver)
+		if err := schema.Schema.Initialize(schemaInfo); err != nil {
+			return fmt.Errorf("failed to initialize schema instance for %s: %w", schemaName, err)
 		}
 	}
-	return metadata, nil
-}
-
-func (a *AegisCore) buildSchemaMetadata(schema SchemaDefinition, discoveredSchemas map[string]SchemaDefinition) (*PluginSchemaMetadata, error) {
-	resolvedSchema, exists := discoveredSchemas[schema.SchemaName]
-	if !exists {
-		return nil, fmt.Errorf("schema %s not found", schema.SchemaName)
-	}
-
-	// Build a map of logicalField->columnName from resolvedSchema for O(1) lookup
-	resolvedFieldMap := make(map[string]string, len(resolvedSchema.Columns))
-	for _, resolvedCol := range resolvedSchema.Columns {
-		resolvedFieldMap[resolvedCol.LogicalField] = resolvedCol.Name
-	}
-
-	// Build field mappings for fields declared by this plugin
-	// We only include fields that were in the original plugin definition
-	fields := make(map[string]string, len(schema.Columns))
-	for _, col := range schema.Columns {
-		if resolvedName, exists := resolvedFieldMap[col.LogicalField]; exists {
-			fields[col.LogicalField] = resolvedName
-		}
-	}
-
-	return &PluginSchemaMetadata{
-		SchemaName:    schema.SchemaName,
-		TableName:     resolvedSchema.GetTableName(),
-		FieldResolver: a.FieldResolver,
-		Fields:        fields,
-	}, nil
+	return nil
 }

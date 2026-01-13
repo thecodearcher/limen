@@ -72,8 +72,8 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 		Schema: aegis.NewDefaultSchemaConfig(
 			// aegis.WithSchemaIDGenerator(&UUIDGenerator{}),
 			aegis.WithSchemaUser(
-				// aegis.WithUserTableName("usersz_from_personal_user_schema"),
-				// aegis.WithUserFieldID("id_from_personal"),
+				aegis.WithUserTableName("usersz_from_personal_user_schema"),
+				aegis.WithUserFieldID("id_from_personal"),
 				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
 				// aegis.WithUserFieldEmail("email_from_personal"),
 				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
@@ -104,11 +104,15 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 				}),
 			),
 			// Example: Customize plugin schema table and field names
-			aegis.WithPluginSchema(aegis.FeatureUsernamePassword, string(aegis.CoreSchemaUsers),
+			aegis.WithPluginSchema(aegis.FeatureUsernamePassword, aegis.CoreSchemaUsers,
 				aegis.WithPluginFieldName("username", "username2"),
 			),
 			aegis.WithPluginSchema(aegis.FeatureEmailPassword, "something_map_name2",
 				aegis.WithPluginFieldName("name", "name_from_plugin"),
+			),
+			aegis.WithPluginSchema(aegis.FeatureUsernamePassword, "users_username",
+				aegis.WithPluginTableName("users_username_from_plugin"),
+				aegis.WithPluginFieldName("username", "username_brian"),
 			),
 		),
 		// Schema: aegis.SchemaConfig{

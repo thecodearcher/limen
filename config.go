@@ -9,15 +9,13 @@ type Config struct {
 	Schema   *SchemaConfig
 	Session  *sessionConfig
 	HTTP     *httpConfig
-	CLI      *CLIConfig // Optional: CLI support configuration
+	CLI      *CLIConfig
 }
 
 // CLIConfig contains configuration for CLI tool support
 // When enabled, discovered schemas are serialized to a JSON file that the CLI can read directly
 type CLIConfig struct {
-	Enabled    bool   // Whether CLI support is enabled
-	Models     string // Path to the models directory (default: "./models")
-	Migrations string // Path to the migrations directory (default: "./migrations")
+	Enabled bool
 }
 
 func (c *Config) validate() error {
