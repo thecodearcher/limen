@@ -196,7 +196,7 @@ func resolveIndexes(schemas map[SchemaName]SchemaDefinition) error {
 				index.Name = fmt.Sprintf("idx_%s_%s", schemaName, joinCustomStringSlice(index.Columns, "_"))
 			}
 
-			resolvedColumns, err := resolveIndexColumns(schema.Columns)
+			resolvedColumns, err := resolveIndexColumns(schema.Columns, index.Columns)
 			if err != nil {
 				return fmt.Errorf("failed to resolve index columns for schema %s : %w", schema.SchemaName, err)
 			}
@@ -207,12 +207,12 @@ func resolveIndexes(schemas map[SchemaName]SchemaDefinition) error {
 	return nil
 }
 
-func resolveIndexColumns(columns []ColumnDefinition) ([]SchemaField, error) {
-	resolvedColumns := make([]SchemaField, len(columns))
-	for i, col := range columns {
-		resolvedColumn := findColumnByLogicalField(columns, col.LogicalField)
+func resolveIndexColumns(schemaColumns []ColumnDefinition, indexColumns []SchemaField) ([]SchemaField, error) {
+	resolvedColumns := make([]SchemaField, len(indexColumns))
+	for i, col := range indexColumns {
+		resolvedColumn := findColumnByLogicalField(schemaColumns, col)
 		if resolvedColumn == nil {
-			return nil, fmt.Errorf("unknown column %s", col.LogicalField)
+			return nil, fmt.Errorf("unknown column %s", col)
 		}
 		resolvedColumns[i] = SchemaField(resolvedColumn.Name)
 	}
