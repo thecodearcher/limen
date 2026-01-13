@@ -169,39 +169,3 @@ func (r *RateLimitSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefini
 		},
 	}
 }
-
-func WithRateLimitTableName(tableName TableName) RateLimitSchemaOption {
-	return func(s *RateLimitSchema) {
-		s.TableName = tableName
-	}
-}
-
-func WithRateLimitFields(fields RateLimitFields) RateLimitSchemaOption {
-	return func(s *RateLimitSchema) {
-		s.Fields = fields
-	}
-}
-
-func WithRateLimitFieldID(fieldName string) RateLimitSchemaOption {
-	return func(s *RateLimitSchema) {
-		s.Fields.ID = fieldName
-	}
-}
-
-func WithRateLimitFieldKey(fieldName string) RateLimitSchemaOption {
-	return func(s *RateLimitSchema) {
-		s.Fields.Key = fieldName
-	}
-}
-
-func WithRateLimitFieldCount(fieldName string) RateLimitSchemaOption {
-	return func(s *RateLimitSchema) {
-		s.Fields.Count = fieldName
-	}
-}
-
-func WithRateLimitFieldLastRequestAt(fieldName string) RateLimitSchemaOption {
-	return func(s *RateLimitSchema) {
-		s.Fields.LastRequestAt = fieldName
-	}
-}

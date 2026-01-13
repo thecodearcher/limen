@@ -55,7 +55,7 @@ func New(config *Config) (*Aegis, error) {
 
 	core := &AegisCore{
 		DB:     config.Database,
-		Schema: *config.Schema,
+		Schema: config.Schema,
 	}
 
 	sessionManager := newSessionManager(core, config.Session, config.HTTP.cookieConfig)
