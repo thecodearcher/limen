@@ -73,7 +73,7 @@ func New(config *Config) (*Aegis, error) {
 	// Serialize schemas for CLI if enabled
 	if config.CLI != nil && config.CLI.Enabled {
 		if err := config.prepareCLIConfig(discoveredSchemas); err != nil {
-			log.Printf("Warning: failed to prepare CLI config: %v", err)
+			return nil, fmt.Errorf("failed to prepare CLI config: %w", err)
 		}
 	}
 
