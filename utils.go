@@ -6,10 +6,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -283,4 +285,65 @@ func joinCustomStringSlice[T ~string](fields []T, separator string) string {
 		}
 	}
 	return joined
+}
+
+func compileTrustedOrigins(httpConfig *httpConfig) []*regexp.Regexp {
+	patterns := make([]*regexp.Regexp, 0, len(httpConfig.trustedOrigins))
+	for _, pattern := range httpConfig.trustedOrigins {
+		normalizedPattern := pattern
+		if !strings.Contains(pattern, "://") {
+			normalizedPattern = "*://" + pattern
+		}
+		regexPattern := globToRegex(normalizedPattern)
+		re, err := regexp.Compile(regexPattern)
+		if err != nil {
+			log.Panicf("failed to compile pattern for trusted origin %s: %v", pattern, err)
+		}
+		patterns = append(patterns, re)
+	}
+	return patterns
+}
+
+func processCustomRateLimitRules(basePath string, customRules map[string]*RateLimitRule) map[string]*RateLimitRule {
+	rules := make(map[string]*RateLimitRule)
+
+	for pattern, rule := range customRules {
+		completePath := path.Join(basePath, pattern)
+
+		if err := compileAndSetRulePattern(rule, completePath); err != nil {
+			log.Panicf("failed to compile pattern for path %s: %v", completePath, err)
+		}
+
+		rules[completePath] = rule
+	}
+
+	return rules
+}
+
+// compileAndSetRulePattern compiles the pattern and sets it on the rule
+func compileAndSetRulePattern(rule *RateLimitRule, completePath string) error {
+	compiledPattern, err := compilePattern(completePath)
+	if err != nil {
+		return fmt.Errorf("failed to compile pattern: %w", err)
+	}
+
+	rule.path = completePath
+	rule.pathRegex = compiledPattern
+	return nil
+}
+
+func resolveRuleOverride(rule *RateLimitRule, customRules map[string]*RateLimitRule) *RateLimitRule {
+	if customRule, exists := customRules[rule.path]; exists {
+		delete(customRules, rule.path)
+		return customRule
+	}
+	return rule
+}
+
+func normalizePluginPath(basePath string, pluginBasePath string, override *PluginHTTPOverride) string {
+	if override != nil && override.BasePath != "" {
+		pluginBasePath = override.BasePath
+	}
+
+	return path.Join(basePath, httpx.NormalizePath(pluginBasePath))
 }

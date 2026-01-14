@@ -2,12 +2,23 @@ package aegis
 
 import (
 	"net/http"
+
+	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type aegisAPI struct {
 	core      *AegisCore
 	responder *Responder
 	config    *httpConfig
+}
+
+func registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore, core *AegisCore, basePath string) {
+	routeBuilder := &RouteBuilder{
+		group: router.Group(basePath),
+		core:  httpCore,
+	}
+	api := newAegisAPI(httpCore, core)
+	api.RegisterRoutes(routeBuilder)
 }
 
 func newAegisAPI(httpCore *AegisHTTPCore, core *AegisCore) *aegisAPI {
