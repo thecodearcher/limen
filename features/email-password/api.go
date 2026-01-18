@@ -76,12 +76,6 @@ func (p *emailPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *
 }
 
 func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
-	additionalFields, err := aegis.GetAdditionalFieldsFromRequest(w, r, p.feature.userSchema)
-	if err != nil {
-		p.responder.Error(w, r, err.(*aegis.AegisError))
-		return
-	}
-
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("email", data["email"]).
@@ -96,7 +90,7 @@ func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *
 	result, err := p.feature.SignUpWithEmailAndPassword(r.Context(), &aegis.User{
 		Email:    body["email"].(string),
 		Password: body["password"].(string),
-	}, additionalFields)
+	}, nil)
 
 	if err != nil {
 		if errors.Is(err, ErrEmailAlreadyExists) {

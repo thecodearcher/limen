@@ -109,3 +109,15 @@ func (httpCore *AegisHTTPCore) middlewareCSRFProtection() httpx.Middleware {
 		})
 	}
 }
+
+// middlewareAdditionalFieldsContext stores AdditionalFieldsContext in request context.
+// This allows additional fields functions to access request/response data automatically.
+func middlewareAdditionalFieldsContext() httpx.Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := withAdditionalFieldsContext(r.Context(), r, w)
+			r = r.WithContext(ctx)
+			next.ServeHTTP(w, r)
+		})
+	}
+}

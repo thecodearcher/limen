@@ -22,9 +22,11 @@ func FindOne(ctx context.Context, core *AegisCore, schema Schema, conditions []W
 
 func Create(ctx context.Context, core *AegisCore, schema Schema, data Model, additionalFields map[string]any) error {
 	payload := make(map[string]any)
-	additionalFieldsContext := newAdditionalFieldsContext(nil, nil)
+
+	additionalFieldsContext := getAdditionalFieldsContext(ctx)
+
 	// the order of the copy of the fields is important here!
-	// global -> schema -> additional fields -> data
+	// global additional fields -> schema additional fields -> directly passed additional fields -> data
 	if core.Schema.AdditionalFields != nil {
 		additionalFields, err := core.Schema.AdditionalFields(additionalFieldsContext)
 		if err != nil {
@@ -45,13 +47,6 @@ func Create(ctx context.Context, core *AegisCore, schema Schema, data Model, add
 
 	if err := assignID(ctx, core, schema, payload); err != nil {
 		return err
-	}
-
-	for key, value := range payload {
-		// empty strings are converted to nil to avoid empty strings in the database
-		if value == "" {
-			payload[key] = nil
-		}
 	}
 
 	err := core.DB.Create(ctx, schema.GetTableName(), payload)

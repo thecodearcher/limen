@@ -58,12 +58,6 @@ func (u *usernamePasswordAPI) SignInWithUsernameAndPassword(w http.ResponseWrite
 }
 
 func (u *usernamePasswordAPI) SignUpWithUsernameAndPassword(w http.ResponseWriter, r *http.Request) {
-	additionalFields, err := aegis.GetAdditionalFieldsFromRequest(w, r, u.feature.userSchema)
-	if err != nil {
-		u.responder.Error(w, r, err.(*aegis.AegisError))
-		return
-	}
-
 	body := validator.ValidateJSON(w, r, u.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("username", data["username"]).
@@ -78,17 +72,12 @@ func (u *usernamePasswordAPI) SignUpWithUsernameAndPassword(w http.ResponseWrite
 
 	username := body["username"].(string)
 
-	// Add username to additionalFields so it gets stored in the database
-	if additionalFields == nil {
-		additionalFields = make(map[string]any)
-	}
-
 	user := &aegis.User{
 		Email:    body["email"].(string),
 		Password: body["password"].(string),
 	}
 
-	result, err := u.feature.SignUpWithUsernameAndPassword(r.Context(), user, username, additionalFields)
+	result, err := u.feature.SignUpWithUsernameAndPassword(r.Context(), user, username, nil)
 
 	if err != nil {
 		if errors.Is(err, ErrUsernameAlreadyExists) {

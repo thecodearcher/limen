@@ -128,6 +128,7 @@ func (a *Aegis) Handler() http.Handler {
 	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Features)
 
 	router := httpx.NewRouter(globalMiddlewares...)
+
 	registerBaseRoutes(router, httpCore, a.core, config.basePath)
 	registerPluginRoutes(router, a.config.Features, httpCore, config)
 
@@ -160,7 +161,8 @@ func registerPluginRoutes(router *httpx.Router, features []Feature, httpCore *Ae
 }
 
 func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, features []Feature) []httpx.Middleware {
-	globalMiddlewares := []httpx.Middleware{}
+	globalMiddlewares := []httpx.Middleware{middlewareAdditionalFieldsContext()}
+
 	if config.originCheck {
 		globalMiddlewares = append(globalMiddlewares, httpCore.middlewareCheckOrigin())
 	}
@@ -170,8 +172,8 @@ func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, featu
 
 	rateLimiterRules := prepareRateLimiterRules(config.basePath, config, features)
 	rateLimiter := newRateLimiter(config.rateLimiter, httpCore, rateLimiterRules)
-
 	globalMiddlewares = append(globalMiddlewares, rateLimiter.handle)
+
 	globalMiddlewares = append(globalMiddlewares, config.middleware...)
 	return globalMiddlewares
 }

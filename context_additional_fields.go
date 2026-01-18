@@ -1,12 +1,15 @@
 package aegis
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
-type AdditionalFieldsFunc func(ctx *AdditionalFieldsContext) (map[string]any, *AegisError)
+type contextKeyAdditionalFields struct{}
+
+type AdditionalFieldsFunc func(ctx *AdditionalFieldsContext) (map[string]any, error)
 
 type AdditionalFieldsContext struct {
 	request  *http.Request
@@ -38,4 +41,22 @@ func (ctx *AdditionalFieldsContext) GetHeader(key string) string {
 
 func (ctx *AdditionalFieldsContext) GetHeaders() http.Header {
 	return ctx.request.Header
+}
+
+func (ctx *AdditionalFieldsContext) IsEmpty(key string) bool {
+	return ctx.body[key] == nil || ctx.body[key] == ""
+}
+
+func withAdditionalFieldsContext(ctx context.Context, r *http.Request, w http.ResponseWriter) context.Context {
+	return context.WithValue(ctx, contextKeyAdditionalFields{}, newAdditionalFieldsContext(r, w))
+}
+
+// getAdditionalFieldsContext retrieves the AdditionalFieldsContext from the req context.
+// Returns an empty context (with nil request/response) if not in HTTP context (e.g., background jobs, CLI).
+func getAdditionalFieldsContext(ctx context.Context) *AdditionalFieldsContext {
+	if afCtx, ok := ctx.Value(contextKeyAdditionalFields{}).(*AdditionalFieldsContext); ok {
+		return afCtx
+	}
+
+	return newAdditionalFieldsContext(nil, nil)
 }
