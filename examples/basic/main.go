@@ -53,15 +53,15 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 
 			emailpassword.New(
 				emailpassword.WithRequireEmailVerification(true),
-				emailpassword.WithSendVerificationEmail(func(email string, token string) error {
+				emailpassword.WithSendVerificationEmail(func(email string, token string) {
 					fmt.Printf("Sending verification email to %s\n", email)
 					fmt.Printf("Verification token: %s\n", token)
-					return nil
+
 				}),
-				emailpassword.WithSendPasswordResetEmail(func(email string, token string) error {
+				emailpassword.WithSendPasswordResetEmail(func(email string, token string) {
 					fmt.Printf("Sending password reset email to %s\n", email)
 					fmt.Printf("Password reset token: %s\n", token)
-					return nil
+
 				}),
 			),
 			usernamepassword.New(),
@@ -72,11 +72,17 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 		Schema: aegis.NewDefaultSchemaConfig(
 			// aegis.WithSchemaIDGenerator(&UUIDGenerator{}),
 			aegis.WithSchemaUser(
-				aegis.WithUserTableName("usersz_from_personal_user_schema"),
-				aegis.WithUserFieldID("id_from_personal"),
+				// aegis.WithUserTableName("usersz_from_personal_user_schema"),
+				// aegis.WithUserFieldID("id_from_personal"),
 				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
 				// aegis.WithUserFieldEmail("email_from_personal"),
-				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
+				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, error) {
+					if ctx.IsEmpty("firstname") {
+						return nil, aegis.NewAegisError("firstname is required", http.StatusBadRequest, nil)
+					}
+					if ctx.IsEmpty("lastname") {
+						return nil, aegis.NewAegisError("lastname is required", http.StatusBadRequest, nil)
+					}
 					return map[string]any{
 						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
 						"first_name": ctx.GetBodyValue("firstname"),
@@ -95,7 +101,7 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 				// }),
 			),
 			aegis.WithSchemaVerification(
-				aegis.WithVerificationAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
+				aegis.WithVerificationAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, error) {
 					return map[string]any{
 						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
 						"created_at": time.Now().Format(time.RFC3339),
@@ -147,6 +153,7 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			aegis.WithHTTPBasePath("/api/auth"),
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
 			aegis.WithHTTPCookieName("default_session"),
+			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterDisableForPaths("/me", "/signin/email")),
 			// aegis.WithHTTPTrustedOrigins([]string{
 			// 	"*.localhost:3000", "https://localhost:3000",
 			// 	"myapp://",                             // Mobile app scheme
@@ -157,8 +164,9 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			// 	"https://*.example.com",
 			// 	"http://*.dev.example.com",
 			// }),
-		), // 	aegis.WithRateLimiterWindow(time.Minute),
-		// 	aegis.WithRateLimiterDisableForPaths("/me", "/signin/email"),
+		),
+		// 	aegis.WithRateLimiterWindow(time.Minute),
+
 		// aegis.WithRateLimiterStore(aegis.RateLimiterStoreTypeDatabase),
 	}
 }

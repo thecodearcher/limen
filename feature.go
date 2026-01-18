@@ -74,7 +74,7 @@ type EmailPasswordFeature interface {
 	UpdatePassword(ctx context.Context, user *User, currentPassword string, newPassword string, revokeOtherSessions bool) error
 
 	// RequestEmailVerification requests an email verification for the given user.
-	RequestEmailVerification(ctx context.Context, user *User) (*Verification, error)
+	RequestEmailVerification(ctx context.Context, user *User, shouldSendEmail bool) (*Verification, error)
 
 	// VerifyEmail verifies the email using the given token.
 	VerifyEmail(ctx context.Context, token string) error

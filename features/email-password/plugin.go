@@ -22,21 +22,21 @@ type emailPasswordFeature struct {
 
 // Config defines the configuration for the email password feature.
 type config struct {
-	passwordMinLength           int                                               // Minimum length of the password
-	passwordRequireUppercase    bool                                              // Require uppercase letters in the password
-	passwordRequireNumbers      bool                                              // Require numbers in the password
-	passwordRequireSymbols      bool                                              // Require symbols in the password
-	hashFn                      func(password string) (string, error)             // Custom function to hash the password
-	compareFn                   func(password string, hash string) (bool, error)  // Custom function to compare the password and the hash
-	passwordHasherConfig        passwordHasherConfig                              // Custom Argon2id configuration for the password hasher
-	requireEmailVerification    bool                                              // require email verification after sign up
-	emailVerificationExpiration time.Duration                                     // Custom expiration duration for the email verification
-	resetTokenExpiration        time.Duration                                     // Custom expiration duration for the reset token
-	generateResetToken          func(*aegis.User) (string, error)                 // custom function to generate the reset token e.g generating TOTP code
-	autoSignInOnSignUp          bool                                              // auto sign in the user after sign up
-	sendVerificationEmail       func(email string, token string) error            // function to send the email verification message
-	sendPasswordResetEmail      func(email string, token string) error            // function to send the password reset message
-	onPasswordResetSuccess      func(ctx context.Context, user *aegis.User) error // function to call when the password reset is successful
+	passwordMinLength           int                                              // Minimum length of the password
+	passwordRequireUppercase    bool                                             // Require uppercase letters in the password
+	passwordRequireNumbers      bool                                             // Require numbers in the password
+	passwordRequireSymbols      bool                                             // Require symbols in the password
+	hashFn                      func(password string) (string, error)            // Custom function to hash the password
+	compareFn                   func(password string, hash string) (bool, error) // Custom function to compare the password and the hash
+	passwordHasherConfig        passwordHasherConfig                             // Custom Argon2id configuration for the password hasher
+	requireEmailVerification    bool                                             // require email verification after sign up
+	emailVerificationExpiration time.Duration                                    // Custom expiration duration for the email verification
+	resetTokenExpiration        time.Duration                                    // Custom expiration duration for the reset token
+	generateResetToken          func(*aegis.User) (string, error)                // custom function to generate the reset token e.g generating TOTP code
+	autoSignInOnSignUp          bool                                             // auto sign in the user after sign up
+	sendVerificationEmail       func(email string, token string)                 // function to send the email verification message
+	sendPasswordResetEmail      func(email string, token string)                 // function to send the password reset message
+	onPasswordResetSuccess      func(ctx context.Context, user *aegis.User)      // function to call when the password reset is successful
 }
 
 // New returns a new config with the default values.
@@ -119,8 +119,7 @@ func (p *emailPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, u
 	if err := p.validateUser(user); err != nil {
 		return nil, err
 	}
-
-	userExists, err := aegis.Exists(ctx, p.core, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), user.Email)})
+	userExists, err := p.core.Exists(ctx, p.userSchema, []aegis.Where{aegis.Eq(p.userSchema.GetEmailField(), user.Email)})
 	if err != nil {
 		return nil, err
 	}
@@ -134,25 +133,38 @@ func (p *emailPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, u
 		return nil, err
 	}
 
-	err = p.dbAction.CreateUser(ctx, &aegis.User{
-		Email:    user.Email,
-		Password: hashedPassword,
-	}, additionalFields)
+	var pendingActions []aegis.PendingAction
+
+	var verification *aegis.Verification
+	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := p.dbAction.CreateUser(ctx, &aegis.User{
+			Email:    user.Email,
+			Password: hashedPassword,
+		}, additionalFields); err != nil {
+			return err
+		}
+
+		if p.config.requireEmailVerification {
+			if verification, err = p.CreateEmailVerification(ctx, user); err != nil {
+				return err
+			}
+			pendingActions = append(pendingActions, aegis.PendingActionEmailVerification)
+		}
+		return nil
+	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	pendingActions := []aegis.PendingAction{}
-
-	if p.config.requireEmailVerification {
-		if _, err := p.RequestEmailVerification(ctx, user); err != nil {
-			return nil, err
-		}
-		pendingActions = append(pendingActions, aegis.PendingActionEmailVerification)
+	user, err = p.dbAction.FindUserByEmail(ctx, user.Email)
+	if err != nil {
+		return nil, err
 	}
 
-	user, err = p.dbAction.FindUserByEmail(ctx, user.Email)
+	if verification != nil {
+		p.SendVerificationEmail(ctx, user, verification)
+	}
 
 	return &aegis.AuthenticationResult{
 		User:           user,
@@ -193,9 +205,7 @@ func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email s
 	}
 
 	if p.config.sendPasswordResetEmail != nil {
-		if err := p.config.sendPasswordResetEmail(email, verification.Value); err != nil {
-			return nil, err
-		}
+		p.config.sendPasswordResetEmail(email, verification.Value)
 	}
 
 	return verification, nil
@@ -225,14 +235,15 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 		return err
 	}
 
-	err = p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
-		aegis.Eq(p.userSchema.GetEmailField(), identifier),
-	})
-	if err != nil {
-		return err
-	}
+	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
+			aegis.Eq(p.userSchema.GetEmailField(), identifier),
+		}); err != nil {
+			return err
+		}
 
-	err = p.dbAction.DeleteVerificationToken(ctx, token)
+		return p.dbAction.DeleteVerificationToken(ctx, token)
+	})
 	if err != nil {
 		return err
 	}
@@ -243,9 +254,7 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 			return err
 		}
 
-		if err := p.config.onPasswordResetSuccess(ctx, user); err != nil {
-			return err
-		}
+		p.config.onPasswordResetSuccess(ctx, user)
 	}
 
 	return nil
@@ -273,24 +282,22 @@ func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.U
 		return ErrInvalidCurrentPassword
 	}
 
-	if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
-		aegis.Eq(p.userSchema.GetIDField(), user.ID),
-	}); err != nil {
-		return err
-	}
-
-	if revokeOtherSessions {
-		if err := p.dbAction.DeleteSessionByUserID(ctx, user.ID); err != nil {
+	return p.core.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
+			aegis.Eq(p.userSchema.GetIDField(), user.ID),
+		}); err != nil {
 			return err
 		}
-	}
-
-	return nil
+		if revokeOtherSessions {
+			return p.dbAction.DeleteSessionByUserID(ctx, user.ID)
+		}
+		return nil
+	})
 }
 
 // RequestEmailVerification requests an email verification for the given user
 // and sends the verification email if the function is set.
-func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, user *aegis.User) (*aegis.Verification, error) {
+func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, user *aegis.User, shouldSendEmail bool) (*aegis.Verification, error) {
 	user, err := p.dbAction.FindUserByEmail(ctx, user.Email)
 	if err != nil {
 		return nil, err
@@ -300,23 +307,30 @@ func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, use
 		return nil, ErrEmailAlreadyVerified
 	}
 
+	verification, err := p.CreateEmailVerification(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	if shouldSendEmail && verification != nil {
+		p.SendVerificationEmail(ctx, user, verification)
+	}
+
+	return verification, nil
+}
+
+func (p *emailPasswordFeature) CreateEmailVerification(ctx context.Context, user *aegis.User) (*aegis.Verification, error) {
 	token, err := p.generateVerificationToken(user)
 	if err != nil {
 		return nil, err
 	}
+	return p.dbAction.CreateVerification(ctx, EmailVerificationAction, user.Email, token, p.config.emailVerificationExpiration)
+}
 
-	verification, err := p.dbAction.CreateVerification(ctx, EmailVerificationAction, user.Email, token, p.config.emailVerificationExpiration)
-	if err != nil {
-		return nil, err
-	}
-
+func (p *emailPasswordFeature) SendVerificationEmail(ctx context.Context, user *aegis.User, verification *aegis.Verification) {
 	if p.config.sendVerificationEmail != nil {
-		if err := p.config.sendVerificationEmail(user.Email, verification.Value); err != nil {
-			return nil, err
-		}
+		p.config.sendVerificationEmail(user.Email, verification.Value)
 	}
-
-	return verification, nil
 }
 
 func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) error {
@@ -335,18 +349,18 @@ func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) er
 	}
 
 	now := time.Now()
-	if err = p.dbAction.UpdateUser(ctx, &aegis.User{EmailVerifiedAt: &now},
-		[]aegis.Where{
-			aegis.Eq(p.userSchema.GetEmailField(), identifier),
-		}); err != nil {
-		return err
-	}
+	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := p.dbAction.UpdateUser(ctx, &aegis.User{EmailVerifiedAt: &now},
+			[]aegis.Where{
+				aegis.Eq(p.userSchema.GetEmailField(), identifier),
+			}); err != nil {
+			return err
+		}
 
-	if err = p.dbAction.DeleteVerificationToken(ctx, verification.Value); err != nil {
-		return err
-	}
+		return p.dbAction.DeleteVerificationToken(ctx, verification.Value)
+	})
 
-	return nil
+	return err
 }
 
 func (p *emailPasswordFeature) generateVerificationToken(user *aegis.User) (string, error) {

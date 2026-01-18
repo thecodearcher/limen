@@ -21,6 +21,11 @@ type DatabaseTx interface {
 	Rollback() error
 }
 
+// TransactionalAdapter is implemented by adapters that support transactions
+type TransactionalAdapter interface {
+	BeginTx(ctx context.Context) (DatabaseTx, error)
+}
+
 // Where represents a typed condition for database queries
 type Where struct {
 	Column    string    `json:"column"`

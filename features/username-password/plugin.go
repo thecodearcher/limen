@@ -41,15 +41,15 @@ func (p *usernamePasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis
 	// 	aegis.WithPluginSchemaField("id_token", aegis.ColumnTypeString),
 	// )
 
-	table := aegis.NewSchemaDefinitionForTable(
-		aegis.SchemaName("users_username"),
-		aegis.SchemaTableName("users_username"),
-		p.userSchema,
-		aegis.WithSchemaField("username", aegis.ColumnTypeString),
-		aegis.WithSchemaIndex("idx_users_username", []aegis.SchemaField{UserSchemaUsernameField}),
-	)
+	// table := aegis.NewSchemaDefinitionForTable(
+	// 	aegis.SchemaName("users_username"),
+	// 	aegis.SchemaTableName("users_username"),
+	// 	p.userSchema,
+	// 	aegis.WithSchemaField("username", aegis.ColumnTypeString),
+	// 	aegis.WithSchemaIndex("idx_users_username", []aegis.SchemaField{UserSchemaUsernameField}),
+	// )
 
-	return []aegis.SchemaIntrospector{extension1, table}
+	return []aegis.SchemaIntrospector{extension1}
 }
 
 func (p *usernamePasswordFeature) Initialize(core *aegis.AegisCore) error {
@@ -75,7 +75,7 @@ func (p *usernamePasswordFeature) Initialize(core *aegis.AegisCore) error {
 }
 
 func (i *usernamePasswordFeature) FindUserByUsername(ctx context.Context, username string) (*UserWithUsername, error) {
-	user, err := aegis.FindOne(ctx, i.core, i.userSchema, []aegis.Where{
+	user, err := i.core.FindOne(ctx, i.userSchema, []aegis.Where{
 		aegis.Eq(i.userSchema.GetUsernameField(), username),
 	}, nil)
 
@@ -128,7 +128,7 @@ func (p *usernamePasswordFeature) SignUpWithUsernameAndPassword(ctx context.Cont
 	}
 
 	// Check if username already exists
-	usernameExists, err := aegis.Exists(ctx, p.core, p.userSchema, []aegis.Where{
+	usernameExists, err := p.core.Exists(ctx, p.userSchema, []aegis.Where{
 		aegis.Eq(p.userSchema.GetUsernameField(), username),
 	})
 	if err != nil {
@@ -144,7 +144,7 @@ func (p *usernamePasswordFeature) SignUpWithUsernameAndPassword(ctx context.Cont
 		return nil, fmt.Errorf("email is required for username signup (needed for password reset)")
 	}
 
-	emailExists, err := aegis.Exists(ctx, p.core, p.userSchema, []aegis.Where{
+	emailExists, err := p.core.Exists(ctx, p.userSchema, []aegis.Where{
 		aegis.Eq(p.userSchema.GetEmailField(), user.Email),
 	})
 	if err != nil {

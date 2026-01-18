@@ -149,7 +149,7 @@ func (p *emailPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *ht
 
 	_, err := p.feature.RequestEmailVerification(r.Context(), &aegis.User{
 		Email: body["email"].(string),
-	})
+	}, true)
 
 	if err != nil {
 		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))

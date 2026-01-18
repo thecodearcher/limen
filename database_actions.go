@@ -15,9 +15,9 @@ func newCommonDatabaseActionsHelper(core *AegisCore) *DatabaseActionHelper {
 	return &DatabaseActionHelper{core: core}
 }
 
-func (i *DatabaseActionHelper) FindUserByEmail(ctx context.Context, email string) (*User, error) {
-	user, err := FindOne(ctx, i.core, i.core.Schema.User, []Where{
-		Eq(i.core.Schema.User.GetEmailField(), email),
+func (h *DatabaseActionHelper) FindUserByEmail(ctx context.Context, email string) (*User, error) {
+	user, err := h.core.FindOne(ctx, h.core.Schema.User, []Where{
+		Eq(h.core.Schema.User.GetEmailField(), email),
 	}, nil)
 	if err != nil {
 		return nil, err
@@ -25,17 +25,17 @@ func (i *DatabaseActionHelper) FindUserByEmail(ctx context.Context, email string
 	return user.(*User), nil
 }
 
-func (i *DatabaseActionHelper) FindUser(ctx context.Context, conditions []Where) (*User, error) {
-	user, err := FindOne(ctx, i.core, i.core.Schema.User, conditions, nil)
+func (h *DatabaseActionHelper) FindUser(ctx context.Context, conditions []Where) (*User, error) {
+	user, err := h.core.FindOne(ctx, h.core.Schema.User, conditions, nil)
 	if err != nil {
 		return nil, err
 	}
 	return user.(*User), nil
 }
 
-func (i *DatabaseActionHelper) FindUserByID(ctx context.Context, id any) (*User, error) {
-	user, err := FindOne(ctx, i.core, i.core.Schema.User, []Where{
-		Eq(i.core.Schema.User.GetIDField(), id),
+func (h *DatabaseActionHelper) FindUserByID(ctx context.Context, id any) (*User, error) {
+	user, err := h.core.FindOne(ctx, h.core.Schema.User, []Where{
+		Eq(h.core.Schema.User.GetIDField(), id),
 	}, nil)
 
 	if err != nil {
@@ -44,29 +44,29 @@ func (i *DatabaseActionHelper) FindUserByID(ctx context.Context, id any) (*User,
 	return user.(*User), nil
 }
 
-func (i *DatabaseActionHelper) CreateUser(ctx context.Context, data *User, additionalFields map[string]any) error {
-	if err := Create(ctx, i.core, i.core.Schema.User, data, additionalFields); err != nil {
+func (h *DatabaseActionHelper) CreateUser(ctx context.Context, data *User, additionalFields map[string]any) error {
+	if err := h.core.Create(ctx, h.core.Schema.User, data, additionalFields); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (i *DatabaseActionHelper) UpdateUser(ctx context.Context, updatedUser *User, conditions []Where) error {
-	if err := Update(ctx, i.core, i.core.Schema.User, updatedUser, conditions); err != nil {
+func (h *DatabaseActionHelper) UpdateUser(ctx context.Context, updatedUser *User, conditions []Where) error {
+	if err := h.core.Update(ctx, h.core.Schema.User, updatedUser, conditions); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action string, identifier string, token string, expiresAt time.Duration) (*Verification, error) {
+func (h *DatabaseActionHelper) CreateVerification(ctx context.Context, action string, identifier string, token string, expiresAt time.Duration) (*Verification, error) {
 	if identifier == "" {
 		return nil, errors.New("identifier is required")
 	}
-	verificationSchema := i.core.Schema.Verification
+	verificationSchema := h.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
 
-	if err := Create(ctx, i.core, verificationSchema, &Verification{
+	if err := h.core.Create(ctx, verificationSchema, &Verification{
 		Subject:   actionValue,
 		Value:     token,
 		ExpiresAt: time.Now().Add(expiresAt),
@@ -76,13 +76,13 @@ func (i *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 		return nil, err
 	}
 
-	return i.FindVerificationByAction(ctx, action, identifier)
+	return h.FindVerificationByAction(ctx, action, identifier)
 }
 
-func (i *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, action string, identifier string) (*Verification, error) {
-	verificationSchema := i.core.Schema.Verification
+func (h *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, action string, identifier string) (*Verification, error) {
+	verificationSchema := h.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
-	verification, err := FindOne(ctx, i.core, verificationSchema,
+	verification, err := h.core.FindOne(ctx, verificationSchema,
 		[]Where{
 			Eq(verificationSchema.GetSubjectField(), actionValue),
 		},
@@ -98,9 +98,9 @@ func (i *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, act
 	return verification.(*Verification), nil
 }
 
-func (i *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context, token string) (*Verification, error) {
-	verificationSchema := i.core.Schema.Verification
-	verification, err := FindOne(ctx, i.core, verificationSchema,
+func (h *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context, token string) (*Verification, error) {
+	verificationSchema := h.core.Schema.Verification
+	verification, err := h.core.FindOne(ctx, verificationSchema,
 		[]Where{
 			Eq(verificationSchema.GetValueField(), token),
 			Gt(verificationSchema.GetExpiresAtField(), time.Now()),
@@ -117,30 +117,30 @@ func (i *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context,
 	return verification.(*Verification), nil
 }
 
-func (i *DatabaseActionHelper) DeleteVerificationToken(ctx context.Context, token string) error {
-	verificationSchema := i.core.Schema.Verification
-	return Delete(ctx, i.core, verificationSchema, []Where{
+func (h *DatabaseActionHelper) DeleteVerificationToken(ctx context.Context, token string) error {
+	verificationSchema := h.core.Schema.Verification
+	return h.core.Delete(ctx, verificationSchema, []Where{
 		Eq(verificationSchema.GetValueField(), token),
 	})
 }
 
-func (i *DatabaseActionHelper) CreateSession(ctx context.Context, data *Session, additionalFields map[string]any) error {
-	if err := Create(ctx, i.core, i.core.Schema.Session, data, additionalFields); err != nil {
+func (h *DatabaseActionHelper) CreateSession(ctx context.Context, data *Session, additionalFields map[string]any) error {
+	if err := h.core.Create(ctx, h.core.Schema.Session, data, additionalFields); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (i *DatabaseActionHelper) UpdateSession(ctx context.Context, data *Session, conditions []Where) error {
-	if err := Update(ctx, i.core, i.core.Schema.Session, data, conditions); err != nil {
+func (h *DatabaseActionHelper) UpdateSession(ctx context.Context, data *Session, conditions []Where) error {
+	if err := h.core.Update(ctx, h.core.Schema.Session, data, conditions); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (i *DatabaseActionHelper) FindSessionByToken(ctx context.Context, sessionToken string) (*Session, error) {
-	sessionSchema := i.core.Schema.Session
-	session, err := FindOne(ctx, i.core, sessionSchema, []Where{
+func (h *DatabaseActionHelper) FindSessionByToken(ctx context.Context, sessionToken string) (*Session, error) {
+	sessionSchema := h.core.Schema.Session
+	session, err := h.core.FindOne(ctx, sessionSchema, []Where{
 		Eq(sessionSchema.GetTokenField(), sessionToken),
 	}, nil)
 	if err != nil {
@@ -149,16 +149,16 @@ func (i *DatabaseActionHelper) FindSessionByToken(ctx context.Context, sessionTo
 	return session.(*Session), nil
 }
 
-func (i *DatabaseActionHelper) DeleteSessionByToken(ctx context.Context, sessionToken string) error {
-	sessionSchema := i.core.Schema.Session
-	return Delete(ctx, i.core, sessionSchema, []Where{
+func (h *DatabaseActionHelper) DeleteSessionByToken(ctx context.Context, sessionToken string) error {
+	sessionSchema := h.core.Schema.Session
+	return h.core.Delete(ctx, sessionSchema, []Where{
 		Eq(sessionSchema.GetTokenField(), sessionToken),
 	})
 }
 
-func (i *DatabaseActionHelper) DeleteSessionByUserID(ctx context.Context, userID any) error {
-	sessionSchema := i.core.Schema.Session
-	return Delete(ctx, i.core, sessionSchema, []Where{
+func (h *DatabaseActionHelper) DeleteSessionByUserID(ctx context.Context, userID any) error {
+	sessionSchema := h.core.Schema.Session
+	return h.core.Delete(ctx, sessionSchema, []Where{
 		Eq(sessionSchema.GetUserIDField(), userID),
 	})
 }

@@ -2,6 +2,7 @@ package gorm
 
 import (
 	"context"
+	"fmt"
 
 	"gorm.io/gorm"
 
@@ -10,7 +11,8 @@ import (
 
 // Adapter implements aegis.DatabaseAdapter using GORM
 type Adapter struct {
-	db *gorm.DB
+	db *gorm.DB // Regular DB connection
+	tx *gorm.DB // Transaction DB (nil when not in transaction)
 }
 
 // New creates a new GORM adapter
@@ -18,13 +20,55 @@ func New(db *gorm.DB) *Adapter {
 	return &Adapter{db: db}
 }
 
+// getDB returns the transaction DB if in a transaction, otherwise returns the regular DB
+func (a *Adapter) getDB() *gorm.DB {
+	if a.tx != nil {
+		return a.tx
+	}
+	return a.db
+}
+
+// BeginTx starts a new transaction
+func (a *Adapter) BeginTx(ctx context.Context) (aegis.DatabaseTx, error) {
+	tx := a.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	return &Adapter{
+		db: a.db,
+		tx: tx,
+	}, nil
+}
+
+// Commit commits the transaction if this adapter is in transaction mode
+func (a *Adapter) Commit() error {
+	if a.tx == nil {
+		return fmt.Errorf("not in a transaction")
+	}
+	err := a.tx.Commit().Error
+	a.tx = nil
+	return err
+}
+
+// Rollback rolls back the transaction if this adapter is in transaction mode
+func (a *Adapter) Rollback() error {
+	if a.tx == nil {
+		return fmt.Errorf("not in a transaction")
+	}
+	err := a.tx.Rollback().Error
+	a.tx = nil // Clear transaction state
+	return err
+}
+
 func (a *Adapter) Create(ctx context.Context, tableName aegis.SchemaTableName, data map[string]any) error {
-	return a.db.WithContext(ctx).Table(string(tableName)).Create(data).Error
+	db := a.getDB()
+	return db.WithContext(ctx).Table(string(tableName)).Create(data).Error
 }
 
 func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, orderBy []aegis.OrderBy) (map[string]any, error) {
 	var result map[string]any
-	query := a.db.WithContext(ctx).Table(string(tableName))
+	db := a.getDB()
+	query := db.WithContext(ctx).Table(string(tableName))
 
 	query = a.applyConditions(query, conditions)
 
@@ -38,7 +82,8 @@ func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, 
 
 func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, options *aegis.QueryOptions) ([]map[string]any, error) {
 	var results []map[string]any
-	query := a.db.WithContext(ctx).Table(string(tableName))
+	db := a.getDB()
+	query := db.WithContext(ctx).Table(string(tableName))
 
 	query = a.applyConditions(query, conditions)
 
@@ -59,20 +104,23 @@ func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName,
 }
 
 func (a *Adapter) Update(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, updates map[string]any) error {
-	query := a.db.WithContext(ctx).Table(string(tableName))
+	db := a.getDB()
+	query := db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	return query.Updates(updates).Error
 }
 
 func (a *Adapter) Delete(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) error {
-	query := a.db.WithContext(ctx).Table(string(tableName))
+	db := a.getDB()
+	query := db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	return query.Delete(nil).Error
 }
 
 func (a *Adapter) Exists(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (bool, error) {
 	var count int64
-	query := a.db.WithContext(ctx).Table(string(tableName))
+	db := a.getDB()
+	query := db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	err := query.Count(&count).Error
 	return count > 0, err
@@ -80,7 +128,8 @@ func (a *Adapter) Exists(ctx context.Context, tableName aegis.SchemaTableName, c
 
 func (a *Adapter) Count(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (int64, error) {
 	var count int64
-	query := a.db.WithContext(ctx).Table(string(tableName))
+	db := a.getDB()
+	query := db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	err := query.Count(&count).Error
 	return count, err

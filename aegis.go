@@ -20,7 +20,7 @@ type Aegis struct {
 }
 
 type AegisCore struct {
-	DB             DatabaseAdapter
+	db             DatabaseAdapter
 	DBAction       *DatabaseActionHelper
 	Schema         *SchemaConfig
 	SessionManager *SessionManager
@@ -53,7 +53,7 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	core := &AegisCore{
-		DB:     config.Database,
+		db:     config.Database,
 		Schema: config.Schema,
 	}
 

@@ -80,7 +80,7 @@ func WithAutoSignInOnSignUp(autoSignInOnSignUp bool) ConfigOption {
 }
 
 // WithSendVerificationEmail sets the function to send the email verification message
-func WithSendVerificationEmail(sendVerificationEmail func(email string, token string) error) ConfigOption {
+func WithSendVerificationEmail(sendVerificationEmail func(email string, token string)) ConfigOption {
 	return func(c *config) {
 		c.sendVerificationEmail = sendVerificationEmail
 	}
@@ -94,14 +94,14 @@ func WithRequireEmailVerification(requireEmailVerification bool) ConfigOption {
 }
 
 // WithSendPasswordResetEmail sets the function to send the password reset message
-func WithSendPasswordResetEmail(sendPasswordResetEmail func(email string, token string) error) ConfigOption {
+func WithSendPasswordResetEmail(sendPasswordResetEmail func(email string, token string)) ConfigOption {
 	return func(c *config) {
 		c.sendPasswordResetEmail = sendPasswordResetEmail
 	}
 }
 
 // WithOnPasswordResetSuccess sets the function to call when the password reset is successful
-func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context, user *aegis.User) error) ConfigOption {
+func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context, user *aegis.User)) ConfigOption {
 	return func(c *config) {
 		c.onPasswordResetSuccess = onPasswordResetSuccess
 	}
