@@ -1,5 +1,9 @@
 package aegis
 
+import (
+	"fmt"
+)
+
 // SchemaDefinition represents a complete schema definition.
 type SchemaDefinition struct {
 	TableName   SchemaTableName
@@ -60,6 +64,11 @@ func NewSchemaDefinitionForTable(schemaName SchemaName, tableName SchemaTableNam
 		SchemaName:  schemaName,
 		Schema:      schema,
 	}
+
+	if isCoreSchema(schema) {
+		panic(fmt.Sprintf("Schema type %T is either a core schema or embeds a core schema and cannot be used as a new table schema", schema))
+	}
+
 	for _, opt := range opts {
 		opt(def)
 	}

@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	reflect "reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -346,4 +347,45 @@ func normalizePluginPath(basePath string, pluginBasePath string, override *Plugi
 	}
 
 	return path.Join(basePath, httpx.NormalizePath(pluginBasePath))
+}
+
+func isCoreSchema(schema Schema) bool {
+	switch schema.(type) {
+	case *UserSchema, *VerificationSchema, *SessionSchema, *RateLimitSchema:
+		return true
+	}
+
+	return embedsCoreSchema(schema)
+}
+
+func embedsCoreSchema(schema Schema) bool {
+	sType := reflect.TypeOf(schema)
+	if sType == nil || sType.Kind() != reflect.Pointer {
+		return false
+	}
+	sType = sType.Elem()
+	if sType.Kind() != reflect.Struct {
+		return false
+	}
+
+	coreTypes := map[reflect.Type]bool{
+		reflect.TypeFor[UserSchema]():         true,
+		reflect.TypeFor[VerificationSchema](): true,
+		reflect.TypeFor[SessionSchema]():      true,
+		reflect.TypeFor[RateLimitSchema]():    true,
+	}
+
+	for i := 0; i < sType.NumField(); i++ {
+		field := sType.Field(i)
+		if field.Anonymous {
+			fieldType := field.Type
+			if fieldType.Kind() == reflect.Pointer {
+				fieldType = fieldType.Elem()
+			}
+			if coreTypes[fieldType] {
+				return true
+			}
+		}
+	}
+	return false
 }
