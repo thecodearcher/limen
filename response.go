@@ -57,7 +57,8 @@ func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, pay
 	return json.NewEncoder(w).Encode(out)
 }
 
-func (rs Responder) Error(w http.ResponseWriter, r *http.Request, ae *AegisError) error {
+func (rs Responder) Error(w http.ResponseWriter, r *http.Request, err error) error {
+	ae := ToAegisError(err)
 	if rs.cfg.serializer != nil {
 		return rs.cfg.serializer(w, r, ae.Status(), nil, ae)
 	}

@@ -67,14 +67,14 @@ func NewSchemaDefinitionForTable(schemaName SchemaName, tableName SchemaTableNam
 }
 
 // NewSchemaDefinitionForExtension creates a new SchemaDefinition for extending a core schema
-func NewSchemaDefinitionForExtension(schemaName SchemaName, schema Schema, opts ...SchemaDefinitionOption) *SchemaDefinition {
+func NewSchemaDefinitionForExtension(schemaName SchemaName, modifiedSchema Schema, opts ...SchemaDefinitionOption) *SchemaDefinition {
 	def := &SchemaDefinition{
 		Extends:     schemaName,
 		Columns:     []ColumnDefinition{},
 		Indexes:     []IndexDefinition{},
 		ForeignKeys: []ForeignKeyDefinition{},
 		SchemaName:  schemaName,
-		Schema:      schema,
+		Schema:      modifiedSchema,
 	}
 	for _, opt := range opts {
 		opt(def)

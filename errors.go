@@ -2,6 +2,7 @@ package aegis
 
 import (
 	"errors"
+	"net/http"
 )
 
 type AegisError struct {
@@ -44,4 +45,12 @@ func (e AegisError) Details() any {
 
 func (e AegisError) Status() int {
 	return e.status
+}
+
+func ToAegisError(err error) *AegisError {
+	if err, ok := err.(*AegisError); ok {
+		return err
+	}
+
+	return NewAegisError(err.Error(), http.StatusInternalServerError, err)
 }
