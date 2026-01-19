@@ -45,7 +45,7 @@ func main() {
     registry := aegis.NewPluginRegistry()
 
     // Register authentication plugins
-    emailPasswordPlugin := emailpassword.New()
+    emailPasswordPlugin := credentialpassword.New()
     registry.RegisterPlugin(emailPasswordPlugin)
 
     // Use with your web framework
@@ -159,7 +159,7 @@ import (
 
 // Only import the plugins you need
 registry := aegis.NewPluginRegistry()
-registry.RegisterPlugin(emailpassword.New())
+registry.RegisterPlugin(credentialpassword.New())
 registry.RegisterPlugin(oauthgoogle.New(googleConfig))
 registry.RegisterPlugin(twofactor.New())
 ```

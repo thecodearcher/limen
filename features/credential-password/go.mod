@@ -1,4 +1,4 @@
-module github.com/thecodearcher/aegis/features/email-password
+module github.com/thecodearcher/aegis/features/credential-password
 
 go 1.23
 

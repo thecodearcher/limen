@@ -17,7 +17,7 @@ import (
 	"github.com/thecodearcher/aegis"
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
 	"github.com/thecodearcher/aegis/examples/basic/pkg"
-	emailpassword "github.com/thecodearcher/aegis/features/email-password"
+	credentialpassword "github.com/thecodearcher/aegis/features/credential-password"
 	usernamepassword "github.com/thecodearcher/aegis/features/username-password"
 )
 
@@ -51,14 +51,14 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 		Database: dbAdapter,
 		Features: []aegis.Feature{
 
-			emailpassword.New(
-				emailpassword.WithRequireEmailVerification(true),
-				emailpassword.WithSendVerificationEmail(func(email string, token string) {
+			credentialpassword.New(
+				credentialpassword.WithRequireEmailVerification(true),
+				credentialpassword.WithSendVerificationEmail(func(email string, token string) {
 					fmt.Printf("Sending verification email to %s\n", email)
 					fmt.Printf("Verification token: %s\n", token)
 
 				}),
-				emailpassword.WithSendPasswordResetEmail(func(email string, token string) {
+				credentialpassword.WithSendPasswordResetEmail(func(email string, token string) {
 					fmt.Printf("Sending password reset email to %s\n", email)
 					fmt.Printf("Password reset token: %s\n", token)
 

@@ -1,4 +1,4 @@
-package emailpassword
+package credentialpassword
 
 const (
 	defaultMinPasswordLength        = 4

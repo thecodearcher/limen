@@ -1,5 +1,5 @@
-// Package emailpassword provides email/password authentication for the aegis library.
-package emailpassword
+// Package credentialpassword provides credential(email/username) and password authentication for the aegis library.
+package credentialpassword
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/thecodearcher/aegis"
 )
 
-type emailPasswordFeature struct {
+type credentialPasswordFeature struct {
 	core               *aegis.AegisCore
 	config             *config
 	userSchema         *aegis.UserSchema
@@ -41,7 +41,7 @@ type config struct {
 
 // New returns a new config with the default values.
 // ConfigOptions can be provided to customize the configuration.
-func New(opts ...ConfigOption) *emailPasswordFeature {
+func New(opts ...ConfigOption) *credentialPasswordFeature {
 	config := &config{
 		passwordMinLength:           defaultMinPasswordLength,
 		passwordRequireUppercase:    defaultPasswordRequireUppercase,
@@ -58,20 +58,20 @@ func New(opts ...ConfigOption) *emailPasswordFeature {
 		opt(config)
 	}
 
-	return &emailPasswordFeature{
+	return &credentialPasswordFeature{
 		config: config,
 	}
 }
 
-func (p *emailPasswordFeature) Name() aegis.FeatureName {
+func (p *credentialPasswordFeature) Name() aegis.FeatureName {
 	return aegis.FeatureEmailPassword
 }
 
-func (p *emailPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
+func (p *credentialPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
 	return []aegis.SchemaIntrospector{}
 }
 
-func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
+func (p *credentialPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	p.core = core
 	p.userSchema = core.Schema.User
 	p.dbAction = core.DBAction
@@ -86,7 +86,7 @@ func (p *emailPasswordFeature) Initialize(core *aegis.AegisCore) error {
 	return nil
 }
 
-func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*aegis.AuthenticationResult, error) {
+func (p *credentialPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*aegis.AuthenticationResult, error) {
 	user, err := p.dbAction.FindUserByEmail(ctx, email)
 	if err != nil {
 		// hash the password to avoid timing attacks when the user is not found
@@ -115,7 +115,7 @@ func (p *emailPasswordFeature) SignInWithEmailAndPassword(ctx context.Context, e
 	}, nil
 }
 
-func (p *emailPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, user *aegis.User, additionalFields map[string]any) (*aegis.AuthenticationResult, error) {
+func (p *credentialPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, user *aegis.User, additionalFields map[string]any) (*aegis.AuthenticationResult, error) {
 	if err := p.validateUser(user); err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (p *emailPasswordFeature) SignUpWithEmailAndPassword(ctx context.Context, u
 	}, err
 }
 
-func (p *emailPasswordFeature) HashPassword(password string) (string, error) {
+func (p *credentialPasswordFeature) HashPassword(password string) (string, error) {
 	if p.config.hashFn != nil {
 		return p.config.hashFn(password)
 	}
@@ -180,7 +180,7 @@ func (p *emailPasswordFeature) HashPassword(password string) (string, error) {
 	return newPasswordHasher(p.config.passwordHasherConfig).hashPassword([]byte(password))
 }
 
-func (p *emailPasswordFeature) ComparePassword(password string, hash string) (bool, error) {
+func (p *credentialPasswordFeature) ComparePassword(password string, hash string) (bool, error) {
 	if p.config.compareFn != nil {
 		return p.config.compareFn(password, hash)
 	}
@@ -188,7 +188,7 @@ func (p *emailPasswordFeature) ComparePassword(password string, hash string) (bo
 	return newPasswordHasher(p.config.passwordHasherConfig).verifyPassword([]byte(password), hash)
 }
 
-func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email string) (*aegis.Verification, error) {
+func (p *credentialPasswordFeature) RequestPasswordReset(ctx context.Context, email string) (*aegis.Verification, error) {
 	user, err := p.dbAction.FindUserByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrEmailNotFound
@@ -211,7 +211,7 @@ func (p *emailPasswordFeature) RequestPasswordReset(ctx context.Context, email s
 	return verification, nil
 }
 
-func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, newPassword string) error {
+func (p *credentialPasswordFeature) ResetPassword(ctx context.Context, token string, newPassword string) error {
 	verification, err := p.dbAction.FindValidVerificationByToken(ctx, token)
 	if err != nil {
 		return ErrResetTokenInvalid
@@ -263,7 +263,7 @@ func (p *emailPasswordFeature) ResetPassword(ctx context.Context, token string, 
 // UpdatePassword updates the password for the given user and revokes other sessions if requested.
 //
 // Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
-func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.User, currentPassword string, newPassword string, revokeOtherSessions bool) error {
+func (p *credentialPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.User, currentPassword string, newPassword string, revokeOtherSessions bool) error {
 	if err := p.validatePassword(newPassword); err != nil {
 		return err
 	}
@@ -297,7 +297,7 @@ func (p *emailPasswordFeature) UpdatePassword(ctx context.Context, user *aegis.U
 
 // RequestEmailVerification requests an email verification for the given user
 // and sends the verification email if the function is set.
-func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, user *aegis.User, shouldSendEmail bool) (*aegis.Verification, error) {
+func (p *credentialPasswordFeature) RequestEmailVerification(ctx context.Context, user *aegis.User, shouldSendEmail bool) (*aegis.Verification, error) {
 	user, err := p.dbAction.FindUserByEmail(ctx, user.Email)
 	if err != nil {
 		return nil, err
@@ -319,7 +319,7 @@ func (p *emailPasswordFeature) RequestEmailVerification(ctx context.Context, use
 	return verification, nil
 }
 
-func (p *emailPasswordFeature) CreateEmailVerification(ctx context.Context, user *aegis.User) (*aegis.Verification, error) {
+func (p *credentialPasswordFeature) CreateEmailVerification(ctx context.Context, user *aegis.User) (*aegis.Verification, error) {
 	token, err := p.generateVerificationToken(user)
 	if err != nil {
 		return nil, err
@@ -327,13 +327,13 @@ func (p *emailPasswordFeature) CreateEmailVerification(ctx context.Context, user
 	return p.dbAction.CreateVerification(ctx, EmailVerificationAction, user.Email, token, p.config.emailVerificationExpiration)
 }
 
-func (p *emailPasswordFeature) SendVerificationEmail(ctx context.Context, user *aegis.User, verification *aegis.Verification) {
+func (p *credentialPasswordFeature) SendVerificationEmail(ctx context.Context, user *aegis.User, verification *aegis.Verification) {
 	if p.config.sendVerificationEmail != nil {
 		p.config.sendVerificationEmail(user.Email, verification.Value)
 	}
 }
 
-func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) error {
+func (p *credentialPasswordFeature) VerifyEmail(ctx context.Context, token string) error {
 	verification, err := p.dbAction.FindValidVerificationByToken(ctx, token)
 	if err != nil {
 		return ErrResetTokenInvalid
@@ -363,7 +363,7 @@ func (p *emailPasswordFeature) VerifyEmail(ctx context.Context, token string) er
 	return err
 }
 
-func (p *emailPasswordFeature) generateVerificationToken(user *aegis.User) (string, error) {
+func (p *credentialPasswordFeature) generateVerificationToken(user *aegis.User) (string, error) {
 	if p.config.generateResetToken != nil {
 		return p.config.generateResetToken(user)
 	}
@@ -376,7 +376,7 @@ func (p *emailPasswordFeature) generateVerificationToken(user *aegis.User) (stri
 	return base64.URLEncoding.EncodeToString(tokenBytes), nil
 }
 
-func (p *emailPasswordFeature) validatePassword(password string) error {
+func (p *credentialPasswordFeature) validatePassword(password string) error {
 	if password == "" {
 		return ErrPasswordRequired
 	}
@@ -395,7 +395,7 @@ func (p *emailPasswordFeature) validatePassword(password string) error {
 	return nil
 }
 
-func (p *emailPasswordFeature) validateUser(user *aegis.User) error {
+func (p *credentialPasswordFeature) validateUser(user *aegis.User) error {
 	if user.Email == "" {
 		return ErrEmailRequired
 	}

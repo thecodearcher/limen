@@ -1,4 +1,4 @@
-package emailpassword
+package credentialpassword
 
 import (
 	"errors"
@@ -10,21 +10,21 @@ import (
 	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
-type emailPasswordAPI struct {
-	feature   *emailPasswordFeature
+type credentialPasswordAPI struct {
+	feature   *credentialPasswordFeature
 	builder   *aegis.RouteBuilder
 	responder *aegis.Responder
 }
 
-func NewEmailPasswordAPI(emailPasswordFeature *emailPasswordFeature, httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) *emailPasswordAPI {
-	return &emailPasswordAPI{
+func NewCredentialPasswordAPI(emailPasswordFeature *credentialPasswordFeature, httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) *credentialPasswordAPI {
+	return &credentialPasswordAPI{
 		feature:   emailPasswordFeature,
 		builder:   routeBuilder,
 		responder: httpCore.Responder,
 	}
 }
 
-func (p *emailPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
+func (p *credentialPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	return aegis.PluginHTTPConfig{
 		Middleware: []httpx.Middleware{},
 		RateLimitRules: []*aegis.RateLimitRule{
@@ -33,12 +33,12 @@ func (p *emailPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	}
 }
 
-func (p *emailPasswordFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
-	api := NewEmailPasswordAPI(p, httpCore, routeBuilder)
+func (p *credentialPasswordFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+	api := NewCredentialPasswordAPI(p, httpCore, routeBuilder)
 	routes(api)
 }
 
-func routes(e *emailPasswordAPI) {
+func routes(e *credentialPasswordAPI) {
 	e.builder.POST("/signin/email", "signin", e.SignInWithEmailAndPassword)
 	e.builder.POST("/signup/email", "signup", e.SignUpWithEmailAndPassword)
 	e.builder.POST("/verify-email", "verify-email", e.VerifyEmail)
@@ -48,7 +48,7 @@ func routes(e *emailPasswordAPI) {
 	e.builder.ProtectedPOST("/passwords/change", "passwords-change", e.ChangePassword)
 }
 
-func (p *emailPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
+func (p *credentialPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder,
 		func(v *validator.Validator, data map[string]any) *validator.Validator {
 			return v.Required("email", data["email"]).
@@ -75,7 +75,7 @@ func (p *emailPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *
 	p.responder.SessionResponse(w, r, p.feature.core, result, sessionResult)
 }
 
-func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
+func (p *credentialPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("email", data["email"]).
@@ -119,7 +119,7 @@ func (p *emailPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *
 	p.responder.SessionResponse(w, r, p.feature.core, result, sessionResult)
 }
 
-func (p *emailPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+func (p *credentialPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.Required("token", data["token"])
 	})
@@ -138,7 +138,7 @@ func (p *emailPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO: update the request email verification to use the user from the request context instead of the email
-func (p *emailPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
+func (p *credentialPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.Required("email", data["email"])
 	})
@@ -159,7 +159,7 @@ func (p *emailPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *ht
 	p.responder.JSON(w, r, http.StatusOK, "email verification requested successfully")
 }
 
-func (p *emailPasswordAPI) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+func (p *credentialPasswordAPI) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("email", data["email"]).
@@ -186,7 +186,7 @@ func (p *emailPasswordAPI) RequestPasswordReset(w http.ResponseWriter, r *http.R
 	p.responder.JSON(w, r, http.StatusOK, message)
 }
 
-func (p *emailPasswordAPI) ResetPassword(w http.ResponseWriter, r *http.Request) {
+func (p *credentialPasswordAPI) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("token", data["token"]).
@@ -206,7 +206,7 @@ func (p *emailPasswordAPI) ResetPassword(w http.ResponseWriter, r *http.Request)
 	p.responder.JSON(w, r, http.StatusOK, "password reset successfully")
 }
 
-func (p *emailPasswordAPI) ChangePassword(w http.ResponseWriter, r *http.Request) {
+func (p *credentialPasswordAPI) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("current_password", data["current_password"]).

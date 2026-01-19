@@ -1,4 +1,4 @@
-package emailpassword
+package credentialpassword
 
 import (
 	"errors"

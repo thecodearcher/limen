@@ -7,7 +7,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/thecodearcher/aegis v0.0.0
 	github.com/thecodearcher/aegis/adapters/gorm v0.0.0
-	github.com/thecodearcher/aegis/features/email-password v0.0.0
+	github.com/thecodearcher/aegis/features/credential-password v0.0.0
 	github.com/thecodearcher/aegis/features/username-password v0.0.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.30.1
@@ -17,7 +17,7 @@ replace github.com/thecodearcher/aegis => ../../
 
 replace github.com/thecodearcher/aegis/adapters/gorm => ../../adapters/gorm
 
-replace github.com/thecodearcher/aegis/features/email-password => ../../features/email-password
+replace github.com/thecodearcher/aegis/features/credential-password => ../../features/credential-password
 
 replace github.com/thecodearcher/aegis/features/username-password => ../../features/username-password
 
