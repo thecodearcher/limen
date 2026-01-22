@@ -37,6 +37,7 @@ func (p *credentialPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 			aegis.NewRateLimitRule("/verify-email", 5, 10*time.Minute),
 			aegis.NewRateLimitRule("/passwords/reset", 5, 10*time.Minute),
 			aegis.NewRateLimitRule("/passwords/change", 5, 10*time.Minute),
+			aegis.NewRateLimitRule("/usernames/check", 10, 1*time.Minute),
 		},
 	}
 }
@@ -54,6 +55,7 @@ func routes(e *credentialPasswordAPI) {
 	e.builder.POST("/passwords/reset", "passwords-reset", e.ResetPassword)
 	e.builder.ProtectedPOST("/email-verifications", "email-verifications", e.RequestEmailVerification)
 	e.builder.ProtectedPOST("/passwords/change", "passwords-change", e.ChangePassword)
+	e.builder.POST("/usernames/check", "usernames-check", e.CheckUsernameAvailability)
 }
 
 // SignInWithCredentialAndPassword handles user sign-in with either email or username (if enabled) and password.
@@ -160,8 +162,6 @@ func (p *credentialPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Reque
 }
 
 // RequestEmailVerification handles requests for email verification.
-// To prevent email enumeration, this endpoint always returns success regardless of whether
-// the email exists or is already verified.
 func (p *credentialPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
 	session, err := aegis.GetCurrentSessionFromCtx(r)
 	if err != nil {
@@ -290,4 +290,32 @@ func (p *credentialPasswordAPI) ChangePassword(w http.ResponseWriter, r *http.Re
 	}
 
 	p.responder.SessionResponse(w, r, p.feature.core, authResult, nil)
+}
+
+// CheckUsernameAvailability handles username availability checks.
+func (p *credentialPasswordAPI) CheckUsernameAvailability(w http.ResponseWriter, r *http.Request) {
+	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.Required("username", data["username"]).
+			Custom("username", func() error {
+				username, ok := data["username"].(string)
+				if !ok {
+					username = ""
+				}
+				return p.feature.validateUsername(username)
+			}, false)
+	})
+
+	if body == nil {
+		return
+	}
+
+	available, err := p.feature.CheckUsernameAvailability(r.Context(), body["username"].(string))
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), errorStatus(err), nil))
+		return
+	}
+
+	p.responder.JSON(w, r, http.StatusOK, map[string]any{
+		"available": available,
+	})
 }

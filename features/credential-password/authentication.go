@@ -172,3 +172,23 @@ func (p *credentialPasswordFeature) checkEmailExists(ctx context.Context, email 
 	}
 	return exists, nil
 }
+
+// CheckUsernameAvailability validates the username format and checks if it's available.
+// Returns true if the username is available, false if it's already taken or invalid.
+func (p *credentialPasswordFeature) CheckUsernameAvailability(ctx context.Context, username string) (bool, error) {
+	if !p.config.enableUsername {
+		return false, fmt.Errorf("username support is not enabled")
+	}
+
+	trimmedUsername := strings.TrimSpace(username)
+	if err := p.validateUsername(trimmedUsername); err != nil {
+		return false, err
+	}
+
+	exists, err := p.checkUsernameExists(ctx, trimmedUsername)
+	if err != nil {
+		return false, err
+	}
+
+	return !exists, nil
+}
