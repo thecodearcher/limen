@@ -389,3 +389,15 @@ func embedsCoreSchema(schema Schema) bool {
 	}
 	return false
 }
+
+func GetFromMap[T any](m map[string]any, key string) T {
+	var result T
+	if m == nil {
+		return result
+	}
+
+	if value, ok := m[key].(T); ok {
+		result = value
+	}
+	return result
+}

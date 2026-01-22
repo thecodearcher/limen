@@ -3,6 +3,7 @@ package credentialpassword
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/thecodearcher/aegis"
@@ -24,11 +25,18 @@ func NewCredentialPasswordAPI(emailPasswordFeature *credentialPasswordFeature, h
 	}
 }
 
+// PluginHTTPConfig returns the HTTP configuration for the credential password feature,
+// including rate limiting rules for all authentication endpoints.
 func (p *credentialPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	return aegis.PluginHTTPConfig{
 		Middleware: []httpx.Middleware{},
 		RateLimitRules: []*aegis.RateLimitRule{
-			aegis.NewRateLimitRule("/signin/email", 5, 10*time.Second),
+			aegis.NewRateLimitRule("/signin/credential", 5, 10*time.Second),
+			aegis.NewRateLimitRule("/signup/credential", 5, 10*time.Second),
+			aegis.NewRateLimitRule("/passwords/request-reset", 5, 10*time.Minute),
+			aegis.NewRateLimitRule("/verify-email", 5, 10*time.Minute),
+			aegis.NewRateLimitRule("/passwords/reset", 5, 10*time.Minute),
+			aegis.NewRateLimitRule("/passwords/change", 5, 10*time.Minute),
 		},
 	}
 }
@@ -39,20 +47,21 @@ func (p *credentialPasswordFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore
 }
 
 func routes(e *credentialPasswordAPI) {
-	e.builder.POST("/signin/email", "signin", e.SignInWithEmailAndPassword)
-	e.builder.POST("/signup/email", "signup", e.SignUpWithEmailAndPassword)
+	e.builder.POST("/signin/credential", "signin", e.SignInWithCredentialAndPassword)
+	e.builder.POST("/signup/credential", "signup", e.SignUpWithCredentialAndPassword)
 	e.builder.POST("/verify-email", "verify-email", e.VerifyEmail)
-	e.builder.POST("/email-verifications", "email-verifications", e.RequestEmailVerification)
 	e.builder.POST("/passwords/request-reset", "passwords-request-reset", e.RequestPasswordReset)
 	e.builder.POST("/passwords/reset", "passwords-reset", e.ResetPassword)
+	e.builder.ProtectedPOST("/email-verifications", "email-verifications", e.RequestEmailVerification)
 	e.builder.ProtectedPOST("/passwords/change", "passwords-change", e.ChangePassword)
 }
 
-func (p *credentialPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
+// SignInWithCredentialAndPassword handles user sign-in with either email or username (if enabled) and password.
+// The credential can be either an email address or a username.
+func (p *credentialPasswordAPI) SignInWithCredentialAndPassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder,
 		func(v *validator.Validator, data map[string]any) *validator.Validator {
-			return v.Required("email", data["email"]).
-				Email("email", data["email"]).
+			return v.Required("credential", data["credential"]).
 				Required("password", data["password"])
 		})
 
@@ -60,9 +69,9 @@ func (p *credentialPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter
 		return
 	}
 
-	result, err := p.feature.SignInWithEmailAndPassword(r.Context(), body["email"].(string), body["password"].(string))
+	result, err := p.feature.SignInWithCredentialAndPassword(r.Context(), body["credential"].(string), body["password"].(string))
 	if err != nil {
-		p.responder.Error(w, r, ErrAPIInvalidCredentials)
+		p.responder.Error(w, r, aegis.NewAegisError(ErrInvalidCredential.Error(), errorStatus(ErrInvalidCredential), nil))
 		return
 	}
 
@@ -75,33 +84,45 @@ func (p *credentialPasswordAPI) SignInWithEmailAndPassword(w http.ResponseWriter
 	p.responder.SessionResponse(w, r, p.feature.core, result, sessionResult)
 }
 
-func (p *credentialPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter, r *http.Request) {
+// SignUpWithCredentialAndPassword handles user registration with email and password.
+// If username support is enabled, a username can be provided in the request body.
+func (p *credentialPasswordAPI) SignUpWithCredentialAndPassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
-		return v.
-			Required("email", data["email"]).
+		return v.Required("email", data["email"]).
 			Required("password", data["password"]).
-			Email("email", data["email"])
+			Email("email", data["email"]).
+			Custom("username", func() error {
+				username, ok := data["username"].(string)
+				if !ok {
+					username = ""
+				}
+				return p.feature.validateUsername(username)
+			}, false).
+			Custom("password", func() error {
+				password, ok := data["password"].(string)
+				if !ok {
+					password = ""
+				}
+				return p.feature.validatePassword(password)
+			}, false)
 	})
 
 	if body == nil {
 		return
 	}
 
-	result, err := p.feature.SignUpWithEmailAndPassword(r.Context(), &aegis.User{
+	additionalFields := map[string]any{}
+	if p.feature.config.enableUsername && body["username"] != nil {
+		additionalFields["username"] = strings.TrimSpace(body["username"].(string))
+	}
+
+	result, err := p.feature.SignUpWithCredentialAndPassword(r.Context(), &aegis.User{
 		Email:    body["email"].(string),
 		Password: body["password"].(string),
-	}, nil)
+	}, additionalFields)
 
 	if err != nil {
-		if errors.Is(err, ErrEmailAlreadyExists) {
-			p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusConflict, nil))
-			return
-		}
-		if errors.Is(err, ErrInvalidPassword) {
-			p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnprocessableEntity, nil))
-			return
-		}
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), errorStatus(err), nil))
 		return
 	}
 
@@ -119,6 +140,7 @@ func (p *credentialPasswordAPI) SignUpWithEmailAndPassword(w http.ResponseWriter
 	p.responder.SessionResponse(w, r, p.feature.core, result, sessionResult)
 }
 
+// VerifyEmail handles email verification using a verification token.
 func (p *credentialPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.Required("token", data["token"])
@@ -137,18 +159,18 @@ func (p *credentialPasswordAPI) VerifyEmail(w http.ResponseWriter, r *http.Reque
 	p.responder.JSON(w, r, http.StatusOK, "email verified successfully")
 }
 
-// TODO: update the request email verification to use the user from the request context instead of the email
+// RequestEmailVerification handles requests for email verification.
+// To prevent email enumeration, this endpoint always returns success regardless of whether
+// the email exists or is already verified.
 func (p *credentialPasswordAPI) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
-		return v.Required("email", data["email"])
-	})
-
-	if body == nil {
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 		return
 	}
 
-	_, err := p.feature.RequestEmailVerification(r.Context(), &aegis.User{
-		Email: body["email"].(string),
+	_, err = p.feature.RequestEmailVerification(r.Context(), &aegis.User{
+		Email: session.User.Email,
 	}, true)
 
 	if err != nil {
@@ -159,6 +181,8 @@ func (p *credentialPasswordAPI) RequestEmailVerification(w http.ResponseWriter, 
 	p.responder.JSON(w, r, http.StatusOK, "email verification requested successfully")
 }
 
+// RequestPasswordReset handles password reset requests.
+// To prevent email enumeration, always returns success regardless of whether the email exists.
 func (p *credentialPasswordAPI) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
@@ -186,11 +210,19 @@ func (p *credentialPasswordAPI) RequestPasswordReset(w http.ResponseWriter, r *h
 	p.responder.JSON(w, r, http.StatusOK, message)
 }
 
+// ResetPassword handles password reset using a valid reset token.
 func (p *credentialPasswordAPI) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("token", data["token"]).
-			Required("new_password", data["new_password"])
+			Required("new_password", data["new_password"]).
+			Custom("new_password", func() error {
+				newPassword, ok := data["new_password"].(string)
+				if !ok {
+					newPassword = ""
+				}
+				return p.feature.validatePassword(newPassword)
+			}, false)
 	})
 
 	if body == nil {
@@ -199,18 +231,27 @@ func (p *credentialPasswordAPI) ResetPassword(w http.ResponseWriter, r *http.Req
 
 	err := p.feature.ResetPassword(r.Context(), body["token"].(string), body["new_password"].(string))
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), errorStatus(err), nil))
 		return
 	}
 
 	p.responder.JSON(w, r, http.StatusOK, "password reset successfully")
 }
 
+// ChangePassword handles password changes for authenticated users.
+// Optionally revokes all other sessions when revoke_other_sessions is true.
 func (p *credentialPasswordAPI) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.
 			Required("current_password", data["current_password"]).
-			Required("new_password", data["new_password"])
+			Required("new_password", data["new_password"]).
+			Custom("new_password", func() error {
+				newPassword, ok := data["new_password"].(string)
+				if !ok {
+					newPassword = ""
+				}
+				return p.feature.validatePassword(newPassword)
+			}, false)
 	})
 
 	if body == nil {

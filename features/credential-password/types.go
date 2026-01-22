@@ -2,6 +2,7 @@ package credentialpassword
 
 import (
 	"context"
+	"regexp"
 	"time"
 
 	"github.com/thecodearcher/aegis"
@@ -111,5 +112,47 @@ func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context,
 func WithEmailVerificationExpiration(emailVerificationExpiration time.Duration) ConfigOption {
 	return func(c *config) {
 		c.emailVerificationExpiration = emailVerificationExpiration
+	}
+}
+
+// WithUsernameMinLength sets the minimum length of the username
+func WithUsernameMinLength(minLength int) ConfigOption {
+	return func(c *config) {
+		c.usernameMinLength = minLength
+	}
+}
+
+// WithUsernameMaxLength sets the maximum length of the username
+func WithUsernameMaxLength(maxLength int) ConfigOption {
+	return func(c *config) {
+		c.usernameMaxLength = maxLength
+	}
+}
+
+// WithUsernameValidationRegex sets a custom regex pattern for username validation
+func WithUsernameValidationRegex(pattern *regexp.Regexp) ConfigOption {
+	return func(c *config) {
+		c.usernameValidationRegex = pattern
+	}
+}
+
+// WithUsernameSupport enables or disables username support for the credential-password feature.
+// When enabled, users can sign in and sign up using either email or username.
+// Default: false (username support is disabled)
+func WithUsernameSupport(enabled bool) ConfigOption {
+	return func(c *config) {
+		c.enableUsername = enabled
+	}
+}
+
+// WithRequireUsernameOnSignUp sets whether a username is required during sign up.
+// If requireUsername is true, username support will be automatically enabled.
+func WithRequireUsernameOnSignUp(requireUsername bool) ConfigOption {
+	return func(c *config) {
+		c.usernameRequiredOnSignup = requireUsername
+		// If requiring username, we must enable username support
+		if requireUsername {
+			c.enableUsername = true
+		}
 	}
 }

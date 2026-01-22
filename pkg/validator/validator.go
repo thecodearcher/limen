@@ -12,12 +12,13 @@ import (
 )
 
 type ValidationError struct {
-	Field   string
-	Message string
+	Field              string
+	Message            string
+	formatErrorMessage bool
 }
 
 func (e *ValidationError) Error() string {
-	if e.Field != "" {
+	if e.Field != "" && e.formatErrorMessage {
 		return fmt.Sprintf("%s %s", e.Field, e.Message)
 	}
 	return e.Message
@@ -41,10 +42,11 @@ func (e *Errors) Error() string {
 	return strings.Join(messages, "; ")
 }
 
-func (e *Errors) Add(field, message string) {
+func (e *Errors) Add(field, message string, formatErrorMessage bool) {
 	e.errors = append(e.errors, &ValidationError{
-		Field:   field,
-		Message: message,
+		Field:              field,
+		Message:            message,
+		formatErrorMessage: formatErrorMessage,
 	})
 }
 
@@ -75,13 +77,13 @@ func (v *Validator) Validate() error {
 
 func (v *Validator) Required(field string, value any) *Validator {
 	if value == nil {
-		v.errors.Add(field, "is required")
+		v.errors.Add(field, "is required", true)
 		return v
 	}
 
 	valueString, ok := value.(string)
 	if ok && strings.TrimSpace(valueString) == "" {
-		v.errors.Add(field, "is required")
+		v.errors.Add(field, "is required", true)
 	}
 
 	return v
@@ -89,21 +91,21 @@ func (v *Validator) Required(field string, value any) *Validator {
 
 func (v *Validator) MinLength(field, value string, min int) *Validator {
 	if len(value) < min {
-		v.errors.Add(field, fmt.Sprintf("must be at least %d characters", min))
+		v.errors.Add(field, fmt.Sprintf("must be at least %d characters", min), true)
 	}
 	return v
 }
 
 func (v *Validator) MaxLength(field, value string, max int) *Validator {
 	if len(value) > max {
-		v.errors.Add(field, fmt.Sprintf("must be at most %d characters", max))
+		v.errors.Add(field, fmt.Sprintf("must be at most %d characters", max), true)
 	}
 	return v
 }
 
 func (v *Validator) Length(field, value string, length int) *Validator {
 	if len(value) != length {
-		v.errors.Add(field, fmt.Sprintf("must be exactly %d characters", length))
+		v.errors.Add(field, fmt.Sprintf("must be exactly %d characters", length), true)
 	}
 	return v
 }
@@ -115,14 +117,15 @@ func (v *Validator) Email(field string, value any) *Validator {
 	emailRegex := `^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`
 	matched, err := regexp.MatchString(emailRegex, value.(string))
 	if err != nil || !matched {
-		v.errors.Add(field, "must be a valid email address")
+		v.errors.Add(field, "must be a valid email address", true)
 	}
 	return v
 }
 
-func (v *Validator) Custom(field string, valid bool, message string) *Validator {
-	if !valid {
-		v.errors.Add(field, message)
+func (v *Validator) Custom(field string, fn func() error, formatErrorMessage bool) *Validator {
+	err := fn()
+	if err != nil {
+		v.errors.Add(field, err.Error(), formatErrorMessage)
 	}
 	return v
 }
@@ -134,7 +137,7 @@ func (v *Validator) URL(field, value string) *Validator {
 	urlRegex := `^https?://[^\s/$.?#].[^\s]*$`
 	matched, err := regexp.MatchString(urlRegex, value)
 	if err != nil || !matched {
-		v.errors.Add(field, "must be a valid URL")
+		v.errors.Add(field, "must be a valid URL", true)
 	}
 	return v
 }
@@ -143,27 +146,27 @@ func (v *Validator) In(field, value string, allowed []string) *Validator {
 	if slices.Contains(allowed, value) {
 		return v
 	}
-	v.errors.Add(field, fmt.Sprintf("must be one of: %s", strings.Join(allowed, ", ")))
+	v.errors.Add(field, fmt.Sprintf("must be one of: %s", strings.Join(allowed, ", ")), true)
 	return v
 }
 
 func (v *Validator) Contains(field, value, substr string) *Validator {
 	if !strings.Contains(value, substr) {
-		v.errors.Add(field, fmt.Sprintf("must contain '%s'", substr))
+		v.errors.Add(field, fmt.Sprintf("must contain '%s'", substr), true)
 	}
 	return v
 }
 
 func (v *Validator) ContainsAny(field, value, chars string) *Validator {
 	if !strings.ContainsAny(value, chars) {
-		v.errors.Add(field, fmt.Sprintf("must contain at least one of: %s", chars))
+		v.errors.Add(field, fmt.Sprintf("must contain at least one of: %s", chars), true)
 	}
 	return v
 }
 
 func (v *Validator) NotContains(field, value, substr string) *Validator {
 	if strings.Contains(value, substr) {
-		v.errors.Add(field, fmt.Sprintf("must not contain '%s'", substr))
+		v.errors.Add(field, fmt.Sprintf("must not contain '%s'", substr), true)
 	}
 	return v
 }
@@ -171,21 +174,13 @@ func (v *Validator) NotContains(field, value, substr string) *Validator {
 func (v *Validator) Matches(field, value, pattern string) *Validator {
 	matched, err := regexp.MatchString(pattern, value)
 	if err != nil {
-		v.errors.Add(field, "invalid pattern")
+		v.errors.Add(field, "invalid pattern", true)
 		return v
 	}
 	if !matched {
-		v.errors.Add(field, "does not match required format")
+		v.errors.Add(field, "does not match required format", true)
 	}
 	return v
-}
-
-type DecodeError struct {
-	Message string
-}
-
-func (e *DecodeError) Error() string {
-	return e.Message
 }
 
 // ValidateJSON decodes the JSON body of the request and validates it using the validateFunc.

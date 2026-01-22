@@ -43,14 +43,14 @@ type PluginHTTPConfig struct {
 type EmailPasswordFeature interface {
 	// SignInWithEmailAndPassword signs in a user with the given email and password
 	// and returns the authentication result.
-	SignInWithEmailAndPassword(ctx context.Context, email string, password string) (*AuthenticationResult, error)
+	SignInWithCredentialAndPassword(ctx context.Context, credential string, password string) (*AuthenticationResult, error)
 
-	// SignUpWithEmailAndPassword creates a new user with the given email and password
+	// SignUpWithCredentialAndPassword creates a new user with the given credential and password
 	// and returns the authentication result.
 	// additionalFields are additional fields to be added to the user.
 	//
 	// Note: When a key in additionalFields is already present in User, the value in additionalFields will be overwritten by the value associated with the key in User.
-	SignUpWithEmailAndPassword(ctx context.Context, user *User, additionalFields map[string]any) (*AuthenticationResult, error)
+	SignUpWithCredentialAndPassword(ctx context.Context, user *User, additionalFields map[string]any) (*AuthenticationResult, error)
 
 	// HashPassword hashes the given password and returns the hash.
 	// This is used to hash the password before storing it in the database.

@@ -18,7 +18,6 @@ import (
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
 	"github.com/thecodearcher/aegis/examples/basic/pkg"
 	credentialpassword "github.com/thecodearcher/aegis/features/credential-password"
-	usernamepassword "github.com/thecodearcher/aegis/features/username-password"
 )
 
 // GetConfig returns the aegis configuration
@@ -63,8 +62,9 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 					fmt.Printf("Password reset token: %s\n", token)
 
 				}),
+				credentialpassword.WithUsernameSupport(true),
+				credentialpassword.WithRequireUsernameOnSignUp(true),
 			),
-			usernamepassword.New(),
 		},
 		CLI: &aegis.CLIConfig{
 			Enabled: true,
@@ -144,11 +144,11 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 		// 		},
 		// 	},
 		// },
-		Session: aegis.NewDefaultSessionConfig(
-			// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
-			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
-			aegis.WithSessionTokenDeliveryMethod(aegis.TokenDeliveryHeader),
-		),
+		// Session: aegis.NewDefaultSessionConfig(
+		// 	// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
+		// 	// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
+		// 	// aegis.WithSessionTokenDeliveryMethod(aegis.TokenDeliveryHeader),
+		// ),
 		HTTP: aegis.NewDefaultHTTPConfig(
 			aegis.WithHTTPBasePath("/api/auth"),
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
