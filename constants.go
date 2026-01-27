@@ -62,8 +62,8 @@ type FeatureName string
 
 // Feature Names
 const (
-	FeatureEmailPassword    FeatureName = "email-password"
-	FeatureUsernamePassword FeatureName = "username-password"
+	FeatureCredentialPassword FeatureName = "credential-password"
+	FeatureTwoFactor          FeatureName = "two-factor"
 )
 
 // ============================================================================
@@ -143,8 +143,10 @@ type ColumnType string
 const (
 	// ColumnTypeUUID represents the uuid string type
 	ColumnTypeUUID ColumnType = "uuid"
-	// ColumnTypeString represents the string type
+	// ColumnTypeString represents the string (VARCHAR(255)) type
 	ColumnTypeString ColumnType = "string"
+	// ColumnTypeText represents the text (TEXT) type
+	ColumnTypeText ColumnType = "text"
 	// ColumnTypeInt represents the int type
 	ColumnTypeInt ColumnType = "int"
 	// ColumnTypeInt32 represents the int32 type

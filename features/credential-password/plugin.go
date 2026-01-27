@@ -81,7 +81,7 @@ func New(opts ...ConfigOption) *credentialPasswordFeature {
 }
 
 func (p *credentialPasswordFeature) Name() aegis.FeatureName {
-	return aegis.FeatureEmailPassword
+	return aegis.FeatureCredentialPassword
 }
 
 func (p *credentialPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {

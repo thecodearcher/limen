@@ -75,14 +75,14 @@ func (v *Validator) Validate() error {
 	return nil
 }
 
-func (v *Validator) Required(field string, value any) *Validator {
+func (v *Validator) RequiredString(field string, value any) *Validator {
 	if value == nil {
 		v.errors.Add(field, "is required", true)
 		return v
 	}
 
 	valueString, ok := value.(string)
-	if ok && strings.TrimSpace(valueString) == "" {
+	if !ok || (ok && strings.TrimSpace(valueString) == "") {
 		v.errors.Add(field, "is required", true)
 	}
 
@@ -132,7 +132,7 @@ func (v *Validator) Custom(field string, fn func() error, formatErrorMessage boo
 
 func (v *Validator) URL(field, value string) *Validator {
 	if value == "" {
-		return v // Empty URLs are handled by Required()
+		return v // Empty URLs are handled by RequiredString()
 	}
 	urlRegex := `^https?://[^\s/$.?#].[^\s]*$`
 	matched, err := regexp.MatchString(urlRegex, value)

@@ -10,10 +10,10 @@ import (
 	"github.com/thecodearcher/aegis"
 )
 
-func TestRequired(t *testing.T) {
+func TestRequiredString(t *testing.T) {
 	v := New()
-	v.Required("email", "")
-	v.Required("name", "John")
+	v.RequiredString("email", "")
+	v.RequiredString("name", "John")
 
 	err := v.Validate()
 	if err == nil {
@@ -60,7 +60,7 @@ func TestEmail(t *testing.T) {
 
 func TestChaining(t *testing.T) {
 	v := New()
-	v.Required("email", "").
+	v.RequiredString("email", "").
 		Email("email2", "invalid-email").
 		MinLength("password", "abc", 8).
 		MaxLength("username", "toolongusername", 10)
@@ -139,9 +139,9 @@ func TestValidateJSON(t *testing.T) {
 		responder := aegis.NewResponder(nil)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
-			return v.Required("email", d["email"].(string)).
+			return v.RequiredString("email", d["email"].(string)).
 				Email("email", d["email"].(string)).
-				Required("password", d["password"].(string)).
+				RequiredString("password", d["password"].(string)).
 				MinLength("password", d["password"].(string), 8)
 		})
 
@@ -167,9 +167,9 @@ func TestValidateJSON(t *testing.T) {
 		responder := aegis.NewResponder(nil)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
-			return v.Required("email", d["email"].(string)).
+			return v.RequiredString("email", d["email"].(string)).
 				Email("email", d["email"].(string)).
-				Required("password", d["password"].(string)).
+				RequiredString("password", d["password"].(string)).
 				MinLength("password", d["password"].(string), 8)
 		})
 
@@ -210,9 +210,9 @@ func TestValidateJSON(t *testing.T) {
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			email, _ := d["email"].(string)
 			password, _ := d["password"].(string)
-			return v.Required("email", email).
+			return v.RequiredString("email", email).
 				Email("email", email).
-				Required("password", password)
+				RequiredString("password", password)
 		})
 
 		if data != nil {
