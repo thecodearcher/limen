@@ -13,18 +13,9 @@ import (
 )
 
 type Aegis struct {
-	EmailPassword    EmailPasswordFeature
-	UsernamePassword UsernamePasswordFeature
-	config           *Config
-	core             *AegisCore
-}
-
-type AegisCore struct {
-	db             DatabaseAdapter
-	DBAction       *DatabaseActionHelper
-	Schema         *SchemaConfig
-	SessionManager *SessionManager
-	SchemaResolver *SchemaResolver
+	EmailPassword CredentialPasswordFeature
+	config        *Config
+	core          *AegisCore
 }
 
 type AegisHTTPCore struct {
@@ -53,8 +44,9 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	core := &AegisCore{
-		db:     config.Database,
-		Schema: config.Schema,
+		db:       config.Database,
+		Schema:   config.Schema,
+		features: make(map[FeatureName]Feature),
 	}
 
 	sessionManager := newSessionManager(core, config.Session, config.HTTP.cookieConfig)
@@ -65,7 +57,7 @@ func New(config *Config) (*Aegis, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover schemas: %w", err)
 	}
-	core.SchemaResolver = newFieldResolver(discoveredSchemas)
+	core.schemaResolver = newFieldResolver(discoveredSchemas)
 
 	aegis.core = core
 
@@ -86,30 +78,16 @@ func New(config *Config) (*Aegis, error) {
 			return nil, fmt.Errorf("failed to initialize feature %s: %w", feature.Name(), err)
 		}
 
+		// Register feature in the plugin registry
+		core.features[feature.Name()] = feature
+
 		switch feature.Name() {
-		case FeatureEmailPassword:
-			aegis.EmailPassword = feature.(EmailPasswordFeature)
-		case FeatureUsernamePassword:
-			aegis.UsernamePassword = feature.(UsernamePasswordFeature)
+		case FeatureCredentialPassword:
+			aegis.EmailPassword = feature.(CredentialPasswordFeature)
 		}
 	}
-
-	injectPluginDependencies(aegis)
 
 	return aegis, nil
-}
-
-// injectPluginDependencies injects the plugin dependencies into the Aegis instance.
-// for now this really only injects the EmailPasswordFeature into the UsernamePasswordFeature.
-// I'd have to figure out a better way to do this if we want to add more plugins in the future.
-func injectPluginDependencies(aegis *Aegis) {
-	if aegis.UsernamePassword != nil && aegis.EmailPassword != nil {
-		if usernamePlugin, ok := aegis.UsernamePassword.(interface {
-			SetEmailPasswordFeature(EmailPasswordFeature)
-		}); ok {
-			usernamePlugin.SetEmailPasswordFeature(aegis.EmailPassword)
-		}
-	}
 }
 
 func (a *Aegis) Handler() http.Handler {

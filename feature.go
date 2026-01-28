@@ -40,7 +40,7 @@ type PluginHTTPConfig struct {
 	RateLimitRules []*RateLimitRule
 }
 
-type EmailPasswordFeature interface {
+type CredentialPasswordFeature interface {
 	// SignInWithEmailAndPassword signs in a user with the given email and password
 	// and returns the authentication result.
 	SignInWithCredentialAndPassword(ctx context.Context, credential string, password string) (*AuthenticationResult, error)
