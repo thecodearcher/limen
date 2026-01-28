@@ -2,6 +2,7 @@ package gorm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -77,7 +78,7 @@ func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, 
 	}
 
 	err := query.Take(&result).Error
-	return result, err
+	return result, a.formatError(err)
 }
 
 func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, options *aegis.QueryOptions) ([]map[string]any, error) {
@@ -100,7 +101,7 @@ func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName,
 	}
 
 	err := query.Find(&results).Error
-	return results, err
+	return results, a.formatError(err)
 }
 
 func (a *Adapter) Update(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, updates map[string]any) error {
@@ -179,4 +180,11 @@ func (a *Adapter) buildWhereClause(condition aegis.Where) (string, []any) {
 	default:
 		return "", nil
 	}
+}
+
+func (a *Adapter) formatError(err error) error {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return aegis.ErrRecordNotFound
+	}
+	return err
 }

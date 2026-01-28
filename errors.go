@@ -16,6 +16,7 @@ var (
 	ErrPluginNotFound          = errors.New("plugin not found")
 	ErrPluginAlreadyRegistered = errors.New("plugin already registered")
 	ErrInvalidConfiguration    = errors.New("invalid configuration")
+	ErrRecordNotFound          = errors.New("record not found")
 )
 
 // Session-specific errors
@@ -31,25 +32,35 @@ var (
 	ErrRateLimitNotFound = errors.New("rate limit not found")
 )
 
+// Verification errors
+var (
+	ErrVerificationTokenInvalid = errors.New("verification token is invalid")
+)
+
 func NewAegisError(message string, status int, details any) *AegisError {
 	return &AegisError{message: message, details: details, status: status}
 }
 
-func (e AegisError) Error() string {
+func (e *AegisError) Error() string {
 	return e.message
 }
 
-func (e AegisError) Details() any {
+func (e *AegisError) Details() any {
 	return e.details
 }
 
-func (e AegisError) Status() int {
+func (e *AegisError) Status() int {
 	return e.status
 }
 
 func ToAegisError(err error) *AegisError {
-	if err, ok := err.(*AegisError); ok {
-		return err
+	var aegisErr *AegisError
+	if errors.As(err, &aegisErr) {
+		return err.(*AegisError)
+	}
+
+	if errors.Is(err, ErrRecordNotFound) {
+		return NewAegisError(err.Error(), http.StatusNotFound, err)
 	}
 
 	return NewAegisError(err.Error(), http.StatusInternalServerError, err)
