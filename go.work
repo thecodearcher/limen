@@ -6,6 +6,7 @@ use (
 	./cmd/aegis
 	./examples/basic
 	./features/credential-password
+	./features/two-factor
 )
 
 replace github.com/thecodearcher/aegis v0.0.0 => ./
@@ -13,3 +14,5 @@ replace github.com/thecodearcher/aegis v0.0.0 => ./
 replace github.com/thecodearcher/aegis/adapters/gorm v0.0.0 => ./adapters/gorm
 
 replace github.com/thecodearcher/aegis/features/credential-password v0.0.0 => ./features/credential-password
+
+replace github.com/thecodearcher/aegis/features/two-factor v0.0.0 => ./features/two-factor

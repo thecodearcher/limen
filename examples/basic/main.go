@@ -18,6 +18,7 @@ import (
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
 	"github.com/thecodearcher/aegis/examples/basic/pkg"
 	credentialpassword "github.com/thecodearcher/aegis/features/credential-password"
+	twofactor "github.com/thecodearcher/aegis/features/two-factor"
 )
 
 // GetConfig returns the aegis configuration
@@ -65,6 +66,28 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(true),
 			),
+			twofactor.New(
+				twofactor.WithTOTP(
+					// twofactor.WithTOTPSecret([]byte("default_secret")),
+					twofactor.WithTOTPIssuer("Aegis"),
+					twofactor.WithTOTPTTL(30*time.Second),
+					twofactor.WithTOTPDigits(twofactor.TOTPDigitsEight),
+					twofactor.WithTOTPAlgorithm(twofactor.TOTPAlgorithmSHA1),
+				),
+				twofactor.WithBackupCodes(
+					twofactor.WithBackupCodesCount(20),
+					twofactor.WithBackupCodesLength(10),
+				),
+				twofactor.WithOTP(
+					twofactor.WithOTPDigits(twofactor.TOTPDigitsSix),
+					twofactor.WithOTPCodeExpiration(30*time.Second),
+					twofactor.WithOTPSendCode(func(ctx context.Context, user *twofactor.UserWithTwoFactor, code string) {
+						fmt.Printf("Sending OTP code to %s\n", user.Email)
+						fmt.Printf("OTP code: %s\n", code)
+
+					}),
+				),
+			),
 		},
 		CLI: &aegis.CLIConfig{
 			Enabled: true,
@@ -103,22 +126,16 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			aegis.WithSchemaVerification(
 				aegis.WithVerificationAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, error) {
 					return map[string]any{
-						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
+						"uuid":       uuid.New().String(),
 						"created_at": time.Now().Format(time.RFC3339),
 						"updated_at": time.Now().Format(time.RFC3339),
 					}, nil
 				}),
 			),
 			// Example: Customize plugin schema table and field names
-			aegis.WithPluginSchema(aegis.FeatureUsernamePassword, aegis.CoreSchemaUsers,
-				aegis.WithPluginFieldName("username", "username2"),
-			),
-			aegis.WithPluginSchema(aegis.FeatureEmailPassword, "something_map_name2",
+
+			aegis.WithPluginSchema(aegis.FeatureCredentialPassword, "something_map_name2",
 				aegis.WithPluginFieldName("name", "name_from_plugin"),
-			),
-			aegis.WithPluginSchema(aegis.FeatureUsernamePassword, "users_username",
-				aegis.WithPluginTableName("users_username_from_plugin"),
-				aegis.WithPluginFieldName("username", "username_brian"),
 			),
 		),
 		// Schema: aegis.SchemaConfig{

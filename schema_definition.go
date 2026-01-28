@@ -93,6 +93,20 @@ func NewSchemaDefinitionForExtension(schemaName SchemaName, modifiedSchema Schem
 
 type SchemaDefinitionOption func(*SchemaDefinition)
 
+func WithSchemaIDField(config *SchemaConfig) SchemaDefinitionOption {
+	idType := config.GetIDColumnType()
+
+	return func(d *SchemaDefinition) {
+		d.Columns = append(d.Columns, ColumnDefinition{
+			Name:         string(SchemaIDField),
+			LogicalField: SchemaIDField,
+			Type:         idType,
+			IsNullable:   false,
+			IsPrimaryKey: true,
+		})
+	}
+}
+
 // WithSchemaField adds a field to the schema.
 // If the logical field name is not provided, it will be set to the name parameter.
 func WithSchemaField(name string, columnType ColumnType, opts ...ColumnDefinitionOption) SchemaDefinitionOption {

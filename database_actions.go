@@ -117,6 +117,24 @@ func (h *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context,
 	return verification.(*Verification), nil
 }
 
+// VerifyVerificationToken verifies a verification token for a given action and identifier.
+// Returns an error if the token is invalid or the action and identifier do not match.
+//
+// Note: This function will delete the verification token after it is verified.
+func (h *DatabaseActionHelper) VerifyVerificationToken(ctx context.Context, token string, action string, identifier string) error {
+	verification, err := h.FindValidVerificationByToken(ctx, token)
+	if err != nil {
+		return ErrVerificationTokenInvalid
+	}
+
+	verificationAction, verificationIdentifier := ParseVerificationAction(verification.Subject)
+	if action != verificationAction || identifier != verificationIdentifier {
+		return ErrVerificationTokenInvalid
+	}
+
+	return h.DeleteVerificationToken(ctx, token)
+}
+
 func (h *DatabaseActionHelper) DeleteVerificationToken(ctx context.Context, token string) error {
 	verificationSchema := h.core.Schema.Verification
 	return h.core.Delete(ctx, verificationSchema, []Where{

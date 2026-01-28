@@ -23,9 +23,18 @@ type Sessions struct {
 	Metadata *map[string]any `json:"metadata"`
 }
 
-// UserszFromPersonalUserSchema represents the usersz_from_personal_user_schema table
-type UserszFromPersonalUserSchema struct {
-	IdFromPersonal int64 `json:"id"` // primary key
+// TwoFactors represents the two_factors table
+// This schema is provided by plugin: two-factor
+type TwoFactors struct {
+	Id any `json:"id"` // primary key
+	UserId any `json:"user_id"`
+	Secret *string `json:"secret"`
+	BackupCodes *map[string]any `json:"backup_codes"`
+}
+
+// Users represents the users table
+type Users struct {
+	Id int64 `json:"id"` // primary key
 	Email string `json:"email"`
 	Password string `json:"-"`
 	EmailVerified *time.Time `json:"email_verified_at"`
@@ -33,13 +42,8 @@ type UserszFromPersonalUserSchema struct {
 	LastName *string `json:"last_name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Username2 string `json:"username2"`
-}
-
-// UsersUsernameFromPlugin represents the users_username_from_plugin table
-// This schema is provided by plugin: username-password
-type UsersUsernameFromPlugin struct {
-	UsernameBrian string `json:"username_brian"`
+	Username string `json:"username"`
+	TwoFactorEnabled bool `json:"two_factor_enabled"`
 }
 
 // Verifications represents the verifications table
