@@ -20,14 +20,38 @@ import (
 	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
-// generateCryptoSecureRandomString generates a cryptographically secure random string
-func generateCryptoSecureRandomString() (string, error) {
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", fmt.Errorf("failed to generate random bytes: %w", err)
-	}
+type CharSetType int
 
-	return base64.URLEncoding.EncodeToString(bytes), nil
+const (
+	CharSetAlphanumeric CharSetType = iota
+	CharSetNumeric
+)
+
+var (
+	alphanumericChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	numericChars      = "0123456789"
+)
+
+// generateCryptoSecureRandomString generates a cryptographically secure random string
+func generateCryptoSecureRandomString() string {
+	bytes := make([]byte, 32)
+	rand.Read(bytes)
+	return base64.URLEncoding.EncodeToString(bytes)
+}
+
+func GenerateRandomString(length int, charSetType ...CharSetType) string {
+	chars := alphanumericChars
+	if len(charSetType) > 0 && charSetType[0] == CharSetNumeric {
+		chars = numericChars
+	}
+	charCount := len(chars)
+	expectedBytes := make([]byte, length)
+
+	rand.Read(expectedBytes)
+	for i := range length {
+		expectedBytes[i] = chars[int(expectedBytes[i])%charCount]
+	}
+	return string(expectedBytes)
 }
 
 func ipExtractorFromRemoteAddr(request *http.Request) string {

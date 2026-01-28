@@ -35,10 +35,7 @@ func (s *opaqueTokenStrategy) SupportsExpirationExtension() bool {
 }
 
 func (s *opaqueTokenStrategy) Create(ctx context.Context, user *User, options *SessionCreateOptions) (*SessionCreateResult, error) {
-	sessionToken, err := generateCryptoSecureRandomString()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate session ID: %w", err)
-	}
+	sessionToken := generateCryptoSecureRandomString()
 
 	return &SessionCreateResult{
 		SessionValue: sessionToken,
