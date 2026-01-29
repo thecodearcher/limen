@@ -7,19 +7,19 @@ import (
 	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
-type twoFactorAPI struct {
+type twoFactorHandlers struct {
 	feature   *twoFactorFeature
 	responder *aegis.Responder
 }
 
-func newTwoFactorAPI(feature *twoFactorFeature, responder *aegis.Responder) *twoFactorAPI {
-	return &twoFactorAPI{
+func newTwoFactorHandlers(feature *twoFactorFeature, responder *aegis.Responder) *twoFactorHandlers {
+	return &twoFactorHandlers{
 		feature:   feature,
 		responder: responder,
 	}
 }
 
-func (a *twoFactorAPI) InitiateTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
+func (a *twoFactorHandlers) InitiateTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, a.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.RequiredString("password", data["password"])
 	})
@@ -44,7 +44,7 @@ func (a *twoFactorAPI) InitiateTwoFactorSetup(w http.ResponseWriter, r *http.Req
 	a.responder.JSON(w, r, http.StatusOK, result)
 }
 
-func (a *twoFactorAPI) FinalizeTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
+func (a *twoFactorHandlers) FinalizeTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, a.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.RequiredString("code", data["code"])
 	})
@@ -72,7 +72,7 @@ func (a *twoFactorAPI) FinalizeTwoFactorSetup(w http.ResponseWriter, r *http.Req
 }
 
 // Disable disables 2FA for the current user
-func (a *twoFactorAPI) Disable(w http.ResponseWriter, r *http.Request) {
+func (a *twoFactorHandlers) Disable(w http.ResponseWriter, r *http.Request) {
 	body := validator.ValidateJSON(w, r, a.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
 		return v.RequiredString("password", data["password"])
 	})
