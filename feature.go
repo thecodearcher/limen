@@ -28,13 +28,14 @@ type Feature interface {
 }
 
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.
-//
-// Note: The base path is relative to the Aegis base path and can be overridden by the end user.
 type PluginHTTPConfig struct {
 	// The base path where the plugin's routes will be mounted.
+	// This is relative to the Aegis base path and can be overridden by the end user.
 	BasePath string
 	// Middleware to be applied to the plugin's routes.
 	Middleware []httpx.Middleware
+	// Hooks run before/after requests. PathMatcher, when set, restricts which paths trigger the hooks
+	Hooks *httpx.Hooks
 	// Specific rate limit rules to be applied to the plugin's routes.
 	// These rules can be overridden by the end user.
 	RateLimitRules []*RateLimitRule

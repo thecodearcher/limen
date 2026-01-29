@@ -66,11 +66,14 @@ type Router struct {
 	root             *RadixNode
 	exactRoutes      map[string]http.HandlerFunc
 	globalMiddleware []Middleware
-	hooks            *Hooks
+	beforeHooks      []Hook
+	afterHooks       []Hook
 }
 
 type RouteMetadata struct {
 	AllowedContentTypes []string
+	// OriginalPattern is the original pattern of the route before any normalization or prefixing
+	OriginalPattern string
 }
 
 // Route represents a single route with its handler and metadata
@@ -95,13 +98,27 @@ type RouterGroup struct {
 	middleware []Middleware
 }
 
-// NewRouter creates a new radix tree router instance
+// NewRouter creates a new radix tree router instance.
+// Add global or plugin hooks with AddHooks.
 func NewRouter(globalMiddleware ...Middleware) *Router {
 	return &Router{
 		root: &RadixNode{
 			children: make(map[string]*RadixNode),
 		},
 		globalMiddleware: globalMiddleware,
+	}
+}
+
+// AddHooks appends the hook set's Before and After to the router.
+func (r *Router) AddHooks(h *Hooks) {
+	if h == nil {
+		return
+	}
+	if h.Before != nil {
+		r.beforeHooks = append(r.beforeHooks, *h.Before)
+	}
+	if h.After != nil {
+		r.afterHooks = append(r.afterHooks, *h.After)
 	}
 }
 
@@ -201,44 +218,67 @@ func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middlew
 	allMiddleware := append(r.globalMiddleware, routeMiddleware...)
 	wrapped := r.applyMiddleware(allMiddleware, http.HandlerFunc(handler))
 
-	return func(w http.ResponseWriter, rw *http.Request) {
-		hookCtx := &HookContext{
-			Context:      rw.Context(),
-			Request:      rw,
-			Response:     w,
-			Method:       rw.Method,
-			Path:         rw.URL.Path,
-			RouteID:      string(route.RouteID),
-			RoutePattern: route.Pattern,
+	return func(w http.ResponseWriter, req *http.Request) {
+		hookCtx := r.prepareHookContext(req, w, route)
+		if !r.runBeforeHooks(hookCtx) {
+			return
 		}
 
-		if r.hooks != nil && r.hooks.Before != nil {
-			if !r.hooks.Before(hookCtx) {
-				return
-			}
-
-			if hookCtx.bodyModified {
-				bodyBytes, _ := json.Marshal(hookCtx.modifiedData)
-				// restore the body for future handlers that need to read it
-				rw.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-				rw = rw.WithContext(context.WithValue(rw.Context(), bodyContextKey{}, hookCtx.modifiedData))
-			}
+		if hookCtx.bodyModified {
+			bodyBytes, _ := json.Marshal(hookCtx.modifiedData)
+			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			req = req.WithContext(context.WithValue(req.Context(), bodyContextKey{}, hookCtx.modifiedData))
 		}
 
-		rw, _ = parseAndStoreBody(rw)
+		req, _ = parseAndStoreBody(req)
 
 		responseWriter := &responseWriter{
 			ResponseWriter: w,
 			wroteHeader:    false,
 		}
 
-		wrapped.ServeHTTP(responseWriter, rw)
+		hookCtx.StatusCode = responseWriter.statusCode
 
-		if r.hooks != nil && r.hooks.After != nil {
-			hookCtx.StatusCode = responseWriter.statusCode
-			r.hooks.After(hookCtx)
+		wrapped.ServeHTTP(responseWriter, req)
+
+		if !r.runAfterHooks(hookCtx) {
+			return
 		}
 	}
+}
+
+func (r *Router) prepareHookContext(req *http.Request, w http.ResponseWriter, route *Route) *HookContext {
+	return &HookContext{
+		Context:      req.Context(),
+		Request:      req,
+		Response:     w,
+		Method:       req.Method,
+		Path:         req.URL.Path,
+		RouteID:      string(route.RouteID),
+		RoutePattern: route.Metadata.OriginalPattern,
+	}
+}
+
+func (r *Router) runBeforeHooks(hookCtx *HookContext) bool {
+	for _, hook := range r.beforeHooks {
+		if hook.PathMatcher == nil || hook.PathMatcher(hookCtx) {
+			if !hook.Run(hookCtx) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (r *Router) runAfterHooks(hookCtx *HookContext) bool {
+	for _, hook := range r.afterHooks {
+		if hook.PathMatcher == nil || hook.PathMatcher(hookCtx) {
+			if !hook.Run(hookCtx) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // handleRoute handles a matched route with parameters
@@ -332,6 +372,10 @@ func (r *Router) splitPath(pathStr string) []string {
 func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
 	allMiddleware := append(g.middleware, middleware...)
 	fullPattern := g.prefix + NormalizePath(pattern)
+	if metadata == nil {
+		metadata = &RouteMetadata{}
+	}
+	metadata.OriginalPattern = pattern
 	g.router.AddRoute(method, fullPattern, handler, routeID, metadata, allMiddleware...)
 }
 

@@ -6,10 +6,20 @@ import (
 )
 
 type HookFunc func(ctx *HookContext) bool
+type PathMatcherFunc func(ctx *HookContext) bool
 
+// Hook is a function that runs before or after a request and can optionally restrict which requests it runs for.
+type Hook struct {
+	// Run is the function to execute for the hook. It can return false to stop the request from continuing.
+	Run HookFunc
+	// PathMatcher is a function that returns whether the hook should run for the given context.
+	PathMatcher PathMatcherFunc
+}
+
+// Hooks is a container for optional before and after hooks to add to the router.
 type Hooks struct {
-	Before HookFunc
-	After  HookFunc
+	Before *Hook
+	After  *Hook
 }
 
 type HookContext struct {

@@ -106,6 +106,9 @@ func (a *Aegis) Handler() http.Handler {
 	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Features)
 
 	router := httpx.NewRouter(globalMiddlewares...)
+	if config.hooks != nil {
+		router.AddHooks(config.hooks)
+	}
 
 	registerBaseRoutes(router, httpCore, a.core, config.basePath)
 	registerPluginRoutes(router, a.config.Features, httpCore, config)
@@ -134,7 +137,12 @@ func registerPluginRoutes(router *httpx.Router, features []Feature, httpCore *Ae
 			group: router.Group(normalizedBasePath, featureConfig.Middleware...),
 			core:  httpCore,
 		}
+
 		feature.RegisterRoutes(httpCore, routeBuilder)
+
+		if featureConfig.Hooks != nil {
+			router.AddHooks(featureConfig.Hooks)
+		}
 	}
 }
 
