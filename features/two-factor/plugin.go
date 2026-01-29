@@ -2,9 +2,10 @@ package twofactor
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type twoFactorFeature struct {
@@ -49,17 +50,32 @@ func (t *twoFactorFeature) Initialize(core *aegis.AegisCore) error {
 func (t *twoFactorFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	return aegis.PluginHTTPConfig{
 		BasePath:   "/two-factor",
-		Middleware: []httpx.Middleware{},
+		Middleware: []aegis.Middleware{},
+		Hooks: &aegis.Hooks{
+			After: &aegis.Hook{
+				PathMatcher: func(ctx *aegis.HookContext) bool {
+					return ctx.RouteID == "signin" || ctx.RouteID == "signup"
+				},
+				Run: func(ctx *aegis.HookContext) bool {
+					fmt.Printf("Before request for two-factor %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+					fmt.Printf("Status code: %v\n", ctx.Response)
+					fmt.Printf("Body: %v\n", ctx)
+					ctx.Response.Write([]byte("Hello, world!"))
+					ctx.Response.WriteHeader(http.StatusBadRequest)
+					return false
+				},
+			},
+		},
 	}
 }
 
 func (t *twoFactorFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
-	api := newTwoFactorAPI(t, httpCore.Responder)
+	handlers := newTwoFactorHandlers(t, httpCore.Responder)
 
 	// Global endpoints
-	routeBuilder.ProtectedPOST("/initiate-setup", "two-factor-initiate-setup", api.InitiateTwoFactorSetup)
-	routeBuilder.ProtectedPOST("/finalize-setup", "two-factor-finalize-setup", api.FinalizeTwoFactorSetup)
-	routeBuilder.ProtectedPOST("/disable", "two-factor-disable", api.Disable)
+	routeBuilder.ProtectedPOST("/initiate-setup", "two-factor-initiate-setup", handlers.InitiateTwoFactorSetup)
+	routeBuilder.ProtectedPOST("/finalize-setup", "two-factor-finalize-setup", handlers.FinalizeTwoFactorSetup)
+	routeBuilder.ProtectedPOST("/disable", "two-factor-disable", handlers.Disable)
 
 	t.totp.registerRoutes(httpCore, routeBuilder)
 	t.backupCodes.registerRoutes(httpCore, routeBuilder)

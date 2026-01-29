@@ -171,6 +171,23 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
 			aegis.WithHTTPCookieName("default_session"),
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterDisableForPaths("/me", "/signin/email")),
+			aegis.WithHTTPHooks(&aegis.Hooks{
+				Before: &aegis.Hook{
+					PathMatcher: func(ctx *aegis.HookContext) bool {
+						fmt.Printf("Route Pattern: %+v\n", ctx.RoutePattern)
+						return ctx.RouteID == "signin"
+					},
+					Run: aegis.HookFunc(func(ctx *aegis.HookContext) bool {
+						fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+
+						return true
+					})},
+				After: &aegis.Hook{
+					Run: aegis.HookFunc(func(ctx *aegis.HookContext) bool {
+						fmt.Printf("After request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+						return true
+					})},
+			}),
 			// aegis.WithHTTPTrustedOrigins([]string{
 			// 	"*.localhost:3000", "https://localhost:3000",
 			// 	"myapp://",                             // Mobile app scheme

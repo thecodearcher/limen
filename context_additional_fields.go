@@ -3,8 +3,6 @@ package aegis
 import (
 	"context"
 	"net/http"
-
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type contextKeyAdditionalFields struct{}
@@ -21,7 +19,7 @@ func newAdditionalFieldsContext(request *http.Request, response http.ResponseWri
 	ctx := &AdditionalFieldsContext{
 		request:  request,
 		response: response,
-		body:     httpx.GetJSONBody(request),
+		body:     GetJSONBody(request),
 	}
 
 	return ctx

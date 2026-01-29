@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type ValidationError struct {
@@ -186,7 +185,7 @@ func (v *Validator) Matches(field, value, pattern string) *Validator {
 // ValidateJSON decodes the JSON body of the request and validates it using the validateFunc.
 // It returns the decoded data if the validation succeeds, otherwise it returns nil and an error is written to the response.
 func ValidateJSON(w http.ResponseWriter, r *http.Request, responder *aegis.Responder, validateFunc func(*Validator, map[string]any) *Validator) map[string]any {
-	body := httpx.GetJSONBody(r)
+	body := aegis.GetJSONBody(r)
 
 	if len(body) == 0 || body == nil {
 		responder.Error(w, r, aegis.NewAegisError("empty JSON body", http.StatusBadRequest, nil))

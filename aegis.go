@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"path"
 	"regexp"
-
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type Aegis struct {
@@ -93,7 +91,7 @@ func New(config *Config) (*Aegis, error) {
 func (a *Aegis) Handler() http.Handler {
 	config := a.config.HTTP
 
-	config.basePath = httpx.NormalizePath(config.basePath)
+	config.basePath = NormalizePath(config.basePath)
 
 	httpCore := &AegisHTTPCore{
 		Responder:              NewResponder(config),
@@ -105,7 +103,7 @@ func (a *Aegis) Handler() http.Handler {
 
 	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Features)
 
-	router := httpx.NewRouter(globalMiddlewares...)
+	router := NewRouter(globalMiddlewares...)
 	if config.hooks != nil {
 		router.AddHooks(config.hooks)
 	}
@@ -127,7 +125,7 @@ func (a *Aegis) GetSession(req *http.Request) (*AegisSession, error) {
 	}, nil
 }
 
-func registerPluginRoutes(router *httpx.Router, features []Feature, httpCore *AegisHTTPCore, config *httpConfig) {
+func registerPluginRoutes(router *Router, features []Feature, httpCore *AegisHTTPCore, config *httpConfig) {
 	for _, feature := range features {
 		featureConfig := feature.PluginHTTPConfig()
 		basePath := featureConfig.BasePath
@@ -146,8 +144,8 @@ func registerPluginRoutes(router *httpx.Router, features []Feature, httpCore *Ae
 	}
 }
 
-func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, features []Feature) []httpx.Middleware {
-	globalMiddlewares := []httpx.Middleware{middlewareAdditionalFieldsContext()}
+func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, features []Feature) []Middleware {
+	globalMiddlewares := []Middleware{middlewareAdditionalFieldsContext()}
 
 	if config.originCheck {
 		globalMiddlewares = append(globalMiddlewares, httpCore.middlewareCheckOrigin())

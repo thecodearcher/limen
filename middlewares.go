@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"slices"
 	"strings"
-
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type contextKeyActiveSession struct{}
@@ -21,7 +19,7 @@ func GetCurrentSessionFromCtx(r *http.Request) (*AegisSession, error) {
 // MiddlewareRequireSession is a middleware that requires a session to be present in the request context.
 //
 // When a session is present, it is added to the request context and can be accessed using the GetCurrentSessionFromCtx() function.
-func (httpCore *AegisHTTPCore) MiddlewareRequireSession() httpx.Middleware {
+func (httpCore *AegisHTTPCore) MiddlewareRequireSession() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, err := httpCore.authInstance.GetSession(r)
@@ -49,7 +47,7 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() httpx.Middleware {
 	}
 }
 
-func (httpCore *AegisHTTPCore) middlewareCheckOrigin() httpx.Middleware {
+func (httpCore *AegisHTTPCore) middlewareCheckOrigin() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// allow non-mutating methods to pass through
@@ -72,7 +70,7 @@ func (httpCore *AegisHTTPCore) middlewareCheckOrigin() httpx.Middleware {
 	}
 }
 
-func (httpCore *AegisHTTPCore) middlewareCSRFProtection() httpx.Middleware {
+func (httpCore *AegisHTTPCore) middlewareCSRFProtection() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip CSRF check for GET, HEAD, OPTIONS
@@ -82,7 +80,7 @@ func (httpCore *AegisHTTPCore) middlewareCSRFProtection() httpx.Middleware {
 			}
 
 			contentType := strings.Split(r.Header.Get("Content-Type"), ";")[0]
-			route := httpx.GetCurrentRouteFromContext(r.Context())
+			route := GetCurrentRouteFromContext(r.Context())
 
 			if route != nil && route.Metadata != nil && len(route.Metadata.AllowedContentTypes) > 0 {
 				if !slices.Contains(route.Metadata.AllowedContentTypes, contentType) {
@@ -112,7 +110,7 @@ func (httpCore *AegisHTTPCore) middlewareCSRFProtection() httpx.Middleware {
 
 // middlewareAdditionalFieldsContext stores AdditionalFieldsContext in request context.
 // This allows additional fields functions to access request/response data automatically.
-func middlewareAdditionalFieldsContext() httpx.Middleware {
+func middlewareAdditionalFieldsContext() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := withAdditionalFieldsContext(r.Context(), r, w)

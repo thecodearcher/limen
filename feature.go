@@ -2,8 +2,6 @@ package aegis
 
 import (
 	"context"
-
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 // This file contains the interfaces for the features of the aegis library.
@@ -33,9 +31,9 @@ type PluginHTTPConfig struct {
 	// This is relative to the Aegis base path and can be overridden by the end user.
 	BasePath string
 	// Middleware to be applied to the plugin's routes.
-	Middleware []httpx.Middleware
+	Middleware []Middleware
 	// Hooks run before/after requests. PathMatcher, when set, restricts which paths trigger the hooks
-	Hooks *httpx.Hooks
+	Hooks *Hooks
 	// Specific rate limit rules to be applied to the plugin's routes.
 	// These rules can be overridden by the end user.
 	RateLimitRules []*RateLimitRule

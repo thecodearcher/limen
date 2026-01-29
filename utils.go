@@ -16,8 +16,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type CharSetType int
@@ -183,7 +181,7 @@ func countWildcards(path string) int {
 }
 
 func pathMatcher(req *http.Request, pathRegex *regexp.Regexp) bool {
-	normalizedPath := httpx.NormalizePath(req.URL.Path)
+	normalizedPath := NormalizePath(req.URL.Path)
 	return pathRegex.MatchString(normalizedPath)
 }
 
@@ -370,7 +368,7 @@ func normalizePluginPath(basePath string, pluginBasePath string, override *Plugi
 		pluginBasePath = override.BasePath
 	}
 
-	return path.Join(basePath, httpx.NormalizePath(pluginBasePath))
+	return path.Join(basePath, NormalizePath(pluginBasePath))
 }
 
 func isCoreSchema(schema Schema) bool {

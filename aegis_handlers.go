@@ -2,8 +2,6 @@ package aegis
 
 import (
 	"net/http"
-
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type aegisHandlers struct {
@@ -12,7 +10,7 @@ type aegisHandlers struct {
 	config    *httpConfig
 }
 
-func registerBaseRoutes(router *httpx.Router, httpCore *AegisHTTPCore, core *AegisCore, basePath string) {
+func registerBaseRoutes(router *Router, httpCore *AegisHTTPCore, core *AegisCore, basePath string) {
 	routeBuilder := &RouteBuilder{
 		group: router.Group(basePath),
 		core:  httpCore,

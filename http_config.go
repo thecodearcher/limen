@@ -2,15 +2,13 @@ package aegis
 
 import (
 	"net/http"
-
-	"github.com/thecodearcher/aegis/pkg/httpx"
 )
 
 type HTTPConfigOption func(*httpConfig)
 
 type httpConfig struct {
 	// Global middleware
-	middleware []httpx.Middleware
+	middleware []Middleware
 	// The base path where all the routes will be mounted
 	basePath string
 	// overrides for specific plugins
@@ -23,7 +21,7 @@ type httpConfig struct {
 	// Returns a map[string]any for the response body, or an AegisError to handle an error condition.
 	sessionTransformer SessionTransformer
 	// HTTPHooks are functions that are called before and after the request is processed
-	hooks *httpx.Hooks
+	hooks *Hooks
 	// RateLimiter configuration
 	rateLimiter *RateLimiterConfig
 	// trustedOrigins: list of trusted origins.
@@ -81,12 +79,12 @@ type responseEnvelopeConfig struct {
 type PluginHTTPOverride struct {
 	BasePath string
 	// Middleware to be applied to the plugin's routes
-	Middleware []httpx.Middleware
+	Middleware []Middleware
 }
 
 func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *httpConfig {
 	config := &httpConfig{
-		middleware:    []httpx.Middleware{},
+		middleware:    []Middleware{},
 		basePath:      "/auth",
 		overrides:     map[string]*PluginHTTPOverride{},
 		disabledPaths: []string{},
@@ -128,7 +126,7 @@ func WithHTTPTrustedOrigins(trustedOrigins []string) HTTPConfigOption {
 	}
 }
 
-func WithHTTPMiddleware(globalMW ...httpx.Middleware) HTTPConfigOption {
+func WithHTTPMiddleware(globalMW ...Middleware) HTTPConfigOption {
 	return func(c *httpConfig) {
 		c.middleware = append(c.middleware, globalMW...)
 	}
@@ -171,7 +169,7 @@ func WithHTTPSessionTransformer(transformer SessionTransformer) HTTPConfigOption
 	}
 }
 
-func WithHTTPHooks(hooks *httpx.Hooks) HTTPConfigOption {
+func WithHTTPHooks(hooks *Hooks) HTTPConfigOption {
 	return func(c *httpConfig) {
 		c.hooks = hooks
 	}

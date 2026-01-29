@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/pkg/httpx"
 	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
@@ -29,7 +28,7 @@ func NewCredentialPasswordAPI(emailPasswordFeature *credentialPasswordFeature, h
 // including rate limiting rules for all authentication endpoints.
 func (p *credentialPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	return aegis.PluginHTTPConfig{
-		Middleware: []httpx.Middleware{},
+		Middleware: []aegis.Middleware{},
 		RateLimitRules: []*aegis.RateLimitRule{
 			aegis.NewRateLimitRule("/signin/credential", 5, 10*time.Second),
 			aegis.NewRateLimitRule("/signup/credential", 5, 10*time.Second),
