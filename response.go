@@ -10,7 +10,7 @@ type Responder struct {
 	sessionTransformer SessionTransformer
 }
 
-func NewResponder(cfg *httpConfig) *Responder {
+func newResponder(cfg *httpConfig) *Responder {
 	if cfg == nil {
 		cfg = &httpConfig{}
 	}
@@ -26,7 +26,25 @@ func NewResponder(cfg *httpConfig) *Responder {
 	return &Responder{cfg: envelopeConfig, sessionTransformer: cfg.sessionTransformer}
 }
 
+// tryDeferResponse attempts to store response data for deferred writing.
+// Returns true if the response was deferred (caller should return early).
+func tryDeferResponse(w http.ResponseWriter, status int, payload any, isError bool) bool {
+	rw, ok := w.(*responseWriter)
+	if !ok || !rw.deferWrite {
+		return false
+	}
+	rw.statusCode = status
+	rw.payload = payload
+	rw.isError = isError
+	rw.written = true
+	return true
+}
+
 func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, payload any) error {
+	if tryDeferResponse(w, status, payload, false) {
+		return nil
+	}
+
 	if rs.cfg.serializer != nil {
 		body, _ := json.Marshal(payload)
 		return rs.cfg.serializer(w, r, status, body, nil)
@@ -59,6 +77,10 @@ func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, pay
 
 func (rs Responder) Error(w http.ResponseWriter, r *http.Request, err error) error {
 	ae := ToAegisError(err)
+	if tryDeferResponse(w, ae.Status(), ae, true) {
+		return nil
+	}
+
 	if rs.cfg.serializer != nil {
 		return rs.cfg.serializer(w, r, ae.Status(), nil, ae)
 	}
@@ -109,6 +131,33 @@ func (rs Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Requ
 		return rs.Error(w, r, err)
 	}
 	return rs.JSON(w, r, http.StatusOK, payload)
+}
+
+// SetHeader sets a response header
+func (rs Responder) SetHeader(w http.ResponseWriter, key, value string) {
+	w.Header().Set(key, value)
+}
+
+// AddHeader adds a response header (allows multiple values for same key)
+func (rs Responder) AddHeader(w http.ResponseWriter, key, value string) {
+	w.Header().Add(key, value)
+}
+
+// SetCookie sets a cookie on the response
+func (rs Responder) SetCookie(w http.ResponseWriter, cookie *http.Cookie) {
+	if cookie == nil {
+		return
+	}
+	http.SetCookie(w, cookie)
+}
+
+// DeleteCookie removes a cookie by setting MaxAge to -1
+func (rs Responder) DeleteCookie(w http.ResponseWriter, name string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:   name,
+		Value:  "",
+		MaxAge: -1,
+	})
 }
 
 func (rs Responder) setCookies(w http.ResponseWriter, sessionResult *SessionResult) {

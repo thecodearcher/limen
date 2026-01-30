@@ -94,7 +94,7 @@ func (a *Aegis) Handler() http.Handler {
 	config.basePath = NormalizePath(config.basePath)
 
 	httpCore := &AegisHTTPCore{
-		Responder:              NewResponder(config),
+		Responder:              newResponder(config),
 		authInstance:           a,
 		config:                 config,
 		core:                   a.core,
@@ -103,7 +103,7 @@ func (a *Aegis) Handler() http.Handler {
 
 	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Features)
 
-	router := NewRouter(globalMiddlewares...)
+	router := NewRouter(httpCore.Responder, globalMiddlewares...)
 	if config.hooks != nil {
 		router.AddHooks(config.hooks)
 	}

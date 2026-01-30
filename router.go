@@ -68,6 +68,7 @@ type Router struct {
 	globalMiddleware []Middleware
 	beforeHooks      []Hook
 	afterHooks       []Hook
+	responder        *Responder // For final response writing after hooks
 }
 
 type RouteMetadata struct {
@@ -100,12 +101,13 @@ type RouterGroup struct {
 
 // NewRouter creates a new radix tree router instance.
 // Add global or plugin hooks with AddHooks.
-func NewRouter(globalMiddleware ...Middleware) *Router {
+func NewRouter(responder *Responder, globalMiddleware ...Middleware) *Router {
 	return &Router{
 		root: &RadixNode{
 			children: make(map[string]*RadixNode),
 		},
 		globalMiddleware: globalMiddleware,
+		responder:        responder,
 	}
 }
 
@@ -217,6 +219,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware, route *Route) http.HandlerFunc {
 	allMiddleware := append(r.globalMiddleware, routeMiddleware...)
 	wrapped := r.applyMiddleware(allMiddleware, http.HandlerFunc(handler))
+	hasAfterHooks := len(r.afterHooks) > 0
 
 	return func(w http.ResponseWriter, req *http.Request) {
 		hookCtx := r.prepareHookContext(req, w, route)
@@ -232,30 +235,63 @@ func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middlew
 
 		req, _ = parseAndStoreBody(req)
 
-		responseWriter := &responseWriter{
+		rw := &responseWriter{
 			ResponseWriter: w,
 			wroteHeader:    false,
+			deferWrite:     hasAfterHooks,
 		}
+		hookCtx.response = rw
 
-		hookCtx.StatusCode = responseWriter.statusCode
+		wrapped.ServeHTTP(rw, req)
 
-		wrapped.ServeHTTP(responseWriter, req)
+		// Only run after hooks logic if we have them
+		if hasAfterHooks {
+			hookCtx.statusCode = rw.statusCode
+			r.runAfterHooks(hookCtx)
 
-		if !r.runAfterHooks(hookCtx) {
-			return
+			r.writeFinalResponse(rw, req)
 		}
 	}
 }
 
+// writeFinalResponse writes the final response after hooks have run
+func (r *Router) writeFinalResponse(rw *responseWriter, req *http.Request) {
+	if !rw.written || r.responder == nil {
+		return // Handler didn't use Responder, response already sent
+	}
+
+	status := rw.statusCode
+	payload := rw.payload
+	isError := rw.isError
+
+	if rw.modified {
+		status = rw.modifiedStatus
+		payload = rw.modifiedPayload
+		isError = false // Modified responses are treated as success
+	}
+
+	if isError {
+		if ae, ok := payload.(*AegisError); ok {
+			r.responder.Error(rw.ResponseWriter, req, ae)
+		}
+		return
+	}
+
+	r.responder.JSON(rw.ResponseWriter, req, status, payload)
+}
+
 func (r *Router) prepareHookContext(req *http.Request, w http.ResponseWriter, route *Route) *HookContext {
+	routePattern := ""
+	if route.Metadata != nil {
+		routePattern = route.Metadata.OriginalPattern
+	}
 	return &HookContext{
-		Context:      req.Context(),
-		Request:      req,
-		Response:     w,
-		Method:       req.Method,
-		Path:         req.URL.Path,
-		RouteID:      string(route.RouteID),
-		RoutePattern: route.Metadata.OriginalPattern,
+		request:      req,
+		response:     w,
+		method:       req.Method,
+		path:         req.URL.Path,
+		routeID:      string(route.RouteID),
+		routePattern: routePattern,
 	}
 }
 

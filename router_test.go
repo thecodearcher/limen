@@ -7,7 +7,7 @@ import (
 )
 
 func TestRouter(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/users", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -59,7 +59,7 @@ func TestRouter(t *testing.T) {
 }
 
 func TestRouterHEADFallback(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -77,7 +77,7 @@ func TestRouterHEADFallback(t *testing.T) {
 }
 
 func TestRouterPatternMatching(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/api/v1/users/:id", func(w http.ResponseWriter, r *http.Request) {
 		id := GetParam(r, "id")
@@ -115,7 +115,7 @@ func TestRouterPatternMatching(t *testing.T) {
 }
 
 func TestGetParams(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/test/:param1/:param2", func(w http.ResponseWriter, r *http.Request) {
 		params := GetParams(r)
@@ -148,7 +148,7 @@ func TestGetParams(t *testing.T) {
 }
 
 func TestAuthRoutes(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("POST", "/signin", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -210,7 +210,7 @@ func TestAuthRoutes(t *testing.T) {
 }
 
 func TestMultipleParameters(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/oauth/:provider/callback/:token", func(w http.ResponseWriter, r *http.Request) {
 		provider := GetParam(r, "provider")
@@ -260,7 +260,7 @@ func TestMultipleParameters(t *testing.T) {
 }
 
 func TestPerMethodHandlers(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -309,7 +309,7 @@ func TestPerMethodHandlers(t *testing.T) {
 }
 
 func TestExactFastPath(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/static", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -358,7 +358,7 @@ func TestExactFastPath(t *testing.T) {
 }
 
 func TestRouterPerformance(t *testing.T) {
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	for i := range 1000 {
 		path := "/api/v1/users/" + string(rune('a'+i%26)) + string(rune('0'+i%10))
@@ -402,7 +402,7 @@ func TestRouterMiddleware(t *testing.T) {
 		})
 	})
 
-	router := NewRouter(globalMW)
+	router := NewRouter(nil, globalMW)
 
 	router.AddRoute("GET", "/test", func(w http.ResponseWriter, r *http.Request) {
 		executionOrder = append(executionOrder, "handler")
@@ -441,7 +441,7 @@ func TestRouterMiddlewareWithParams(t *testing.T) {
 		})
 	})
 
-	router := NewRouter()
+	router := NewRouter(nil)
 
 	router.AddRoute("GET", "/users/:id", func(w http.ResponseWriter, r *http.Request) {
 		id := GetParam(r, "id")
