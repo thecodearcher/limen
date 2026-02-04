@@ -9,8 +9,8 @@ import (
 
 type contextKeyActiveSession struct{}
 
-func GetCurrentSessionFromCtx(r *http.Request) (*AegisSession, error) {
-	if currentSession, ok := r.Context().Value(contextKeyActiveSession{}).(*AegisSession); ok && currentSession != nil {
+func GetCurrentSessionFromCtx(r *http.Request) (*ValidatedSession, error) {
+	if currentSession, ok := r.Context().Value(contextKeyActiveSession{}).(*ValidatedSession); ok && currentSession != nil {
 		return currentSession, nil
 	}
 	return nil, NewAegisError(ErrSessionNotFound.Error(), http.StatusUnauthorized, nil)
@@ -24,20 +24,17 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, err := httpCore.authInstance.GetSession(r)
 			if err != nil {
-				httpCore.core.SessionManager.RevokeAllCookies(w)
+				httpCore.Responder.ClearSessionCookies(w)
 				httpCore.Responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 				return
 			}
 
-			if session.SessionExtensionResult != nil && session.SessionExtensionResult.Cookie != nil {
-				http.SetCookie(w, session.SessionExtensionResult.Cookie)
+			if session.Refreshed != nil {
+				httpCore.Responder.setSessionCookies(w, session.Refreshed)
+				httpCore.Responder.setSessionHeaders(w, session.Refreshed)
 			}
 
-			if session.SessionExtensionResult != nil && session.SessionExtensionResult.Token != "" {
-				w.Header().Set("Set-Aegis-Token", session.SessionExtensionResult.Token)
-			}
-
-			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &AegisSession{
+			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &ValidatedSession{
 				User:    session.User,
 				Session: session.Session,
 			}))

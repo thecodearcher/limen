@@ -4,7 +4,7 @@ type AegisCore struct {
 	db             DatabaseAdapter
 	DBAction       *DatabaseActionHelper
 	Schema         *SchemaConfig
-	SessionManager *SessionManager
+	SessionManager SessionManager
 	schemaResolver *SchemaResolver
 	features       map[FeatureName]Feature
 }

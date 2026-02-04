@@ -4,23 +4,6 @@ package aegis
 // Authentication & Session Constants
 // ============================================================================
 
-// PendingAction represents a pending action for a user after authentication
-type PendingAction string
-
-// defaults for pending actions
-const (
-	PendingActionEmailVerification     PendingAction = "email_verification"
-	PendingActionTwoFactorVerification PendingAction = "two_factor_verification"
-)
-
-// SessionStrategyType represents the type of session strategy
-type SessionStrategyType string
-
-// Session strategy types
-const (
-	SessionStrategyOpaqueToken SessionStrategyType = "opaque_token"
-)
-
 type EnvelopeMode int
 
 const (

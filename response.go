@@ -8,6 +8,7 @@ import (
 type Responder struct {
 	cfg                *responseEnvelopeConfig
 	sessionTransformer SessionTransformer
+	cookieConfig       *cookieConfig
 }
 
 func newResponder(cfg *httpConfig) *Responder {
@@ -23,7 +24,11 @@ func newResponder(cfg *httpConfig) *Responder {
 		envelopeConfig = cfg.responseEnvelope
 	}
 
-	return &Responder{cfg: envelopeConfig, sessionTransformer: cfg.sessionTransformer}
+	return &Responder{
+		cfg:                envelopeConfig,
+		sessionTransformer: cfg.sessionTransformer,
+		cookieConfig:       cfg.cookieConfig,
+	}
 }
 
 // tryDeferResponse attempts to store response data for deferred writing.
@@ -107,26 +112,20 @@ func (rs Responder) Error(w http.ResponseWriter, r *http.Request, err error) err
 }
 
 func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core *AegisCore, result *AuthenticationResult, sessionResult *SessionResult) error {
-	if sessionResult != nil && sessionResult.TokenDeliveryMethod == TokenDeliveryCookie {
-		rs.setCookies(w, sessionResult)
-	}
-
-	if sessionResult != nil && sessionResult.TokenDeliveryMethod == TokenDeliveryHeader {
-		rs.setHeaders(w, sessionResult)
-	}
+	rs.setSessionCookies(w, sessionResult)
+	rs.setSessionHeaders(w, sessionResult)
 
 	if rs.sessionTransformer != nil {
 		return rs.handleSessionTransformer(w, r, result, sessionResult)
 	}
 
 	return rs.JSON(w, r, http.StatusOK, map[string]any{
-		"pending_actions": result.PendingActions,
-		"user":            core.Schema.User.Serialize(result.User),
+		"user": core.Schema.User.Serialize(result.User),
 	})
 }
 
 func (rs Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Request, result *AuthenticationResult, sessionResult *SessionResult) error {
-	payload, err := rs.sessionTransformer(result.User.Raw(), result.PendingActions, sessionResult)
+	payload, err := rs.sessionTransformer(result.User.Raw(), sessionResult)
 	if err != nil {
 		return rs.Error(w, r, err)
 	}
@@ -160,14 +159,34 @@ func (rs Responder) DeleteCookie(w http.ResponseWriter, name string) {
 	})
 }
 
-func (rs Responder) setCookies(w http.ResponseWriter, sessionResult *SessionResult) {
-	if sessionResult.Cookie != nil {
-		http.SetCookie(w, sessionResult.Cookie)
+// ClearSessionCookies clears the session cookie from the response.
+func (rs Responder) ClearSessionCookies(w http.ResponseWriter) {
+	if rs.cookieConfig == nil {
+		return
 	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     rs.cookieConfig.name,
+		Value:    "",
+		MaxAge:   -1,
+		HttpOnly: rs.cookieConfig.httpOnly,
+		Secure:   rs.cookieConfig.secure,
+		SameSite: rs.cookieConfig.sameSite,
+		Path:     rs.cookieConfig.path,
+	})
 }
 
-func (rs Responder) setHeaders(w http.ResponseWriter, sessionResult *SessionResult) {
-	if sessionResult.Token != "" {
-		w.Header().Set("Set-Aegis-Token", sessionResult.Token)
+// setSessionCookies sets the session cookie in the response if the delivery method is TokenDeliveryCookie.
+func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *SessionResult) {
+	if sessionResult == nil || sessionResult.Cookie == nil || sessionResult.TokenDeliveryMethod != TokenDeliveryCookie {
+		return
 	}
+	http.SetCookie(w, sessionResult.Cookie)
+}
+
+// setSessionHeaders sets the session header in the response if the delivery method is TokenDeliveryHeader.
+func (rs Responder) setSessionHeaders(w http.ResponseWriter, sessionResult *SessionResult) {
+	if sessionResult == nil || sessionResult.TokenDeliveryMethod != TokenDeliveryHeader {
+		return
+	}
+	w.Header().Set("Set-Aegis-Token", sessionResult.Token)
 }

@@ -33,7 +33,6 @@ func (p *credentialPasswordFeature) SignInWithCredentialAndPassword(ctx context.
 	return p.authenticateUser(user, password)
 }
 
-// authenticateUser validates the password and returns the authentication result.
 func (p *credentialPasswordFeature) authenticateUser(user *aegis.User, password string) (*aegis.AuthenticationResult, error) {
 	isValid, err := p.ComparePassword(password, user.Password)
 	if err != nil {
@@ -44,15 +43,7 @@ func (p *credentialPasswordFeature) authenticateUser(user *aegis.User, password 
 		return nil, ErrInvalidPassword
 	}
 
-	pendingActions := []aegis.PendingAction{}
-	if p.config.requireEmailVerification && user.EmailVerifiedAt == nil {
-		pendingActions = append(pendingActions, aegis.PendingActionEmailVerification)
-	}
-
-	return &aegis.AuthenticationResult{
-		User:           user,
-		PendingActions: pendingActions,
-	}, nil
+	return &aegis.AuthenticationResult{User: user}, nil
 }
 
 // FindUserByUsername finds a user by their username.
@@ -110,7 +101,6 @@ func (p *credentialPasswordFeature) SignUpWithCredentialAndPassword(ctx context.
 		return nil, err
 	}
 
-	var pendingActions []aegis.PendingAction
 	var verification *aegis.Verification
 
 	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
@@ -125,7 +115,6 @@ func (p *credentialPasswordFeature) SignUpWithCredentialAndPassword(ctx context.
 			if verification, err = p.CreateEmailVerification(ctx, user); err != nil {
 				return err
 			}
-			pendingActions = append(pendingActions, aegis.PendingActionEmailVerification)
 		}
 		return nil
 	})
@@ -143,10 +132,7 @@ func (p *credentialPasswordFeature) SignUpWithCredentialAndPassword(ctx context.
 		p.SendVerificationEmail(ctx, user, verification)
 	}
 
-	return &aegis.AuthenticationResult{
-		User:           user,
-		PendingActions: pendingActions,
-	}, nil
+	return &aegis.AuthenticationResult{User: user}, nil
 }
 
 func (p *credentialPasswordFeature) checkUsernameExists(ctx context.Context, username string) (bool, error) {

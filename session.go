@@ -37,13 +37,9 @@ func (s *Session) ShouldExtendExpiration(expiresIn, updateAge time.Duration) boo
 
 	lastExtendedAt := s.ExpiresAt.Add(-expiresIn)
 	nextExtensionAt := lastExtendedAt.Add(updateAge)
+	now := time.Now()
 
-	return time.Now().After(nextExtensionAt) || time.Now().Equal(nextExtensionAt)
-}
-
-// Touch updates the last access time
-func (s *Session) Touch() {
-	s.LastAccess = time.Now()
+	return now.After(nextExtensionAt) || now.Equal(nextExtensionAt)
 }
 
 type SessionSchema struct {

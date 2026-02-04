@@ -9,12 +9,8 @@ import (
 type RequestExtractorFn func(request *http.Request) string
 
 type sessionConfig struct {
-	Strategy SessionStrategyType
 	// Duration: the absolute duration of the session
 	Duration time.Duration
-	// TemporaryAuthDuration: the duration of the temporary auth session i.e: for two-factor authentication, email verification etc.
-	// If not set, the duration will be set to 5 minutes
-	TemporaryAuthDuration time.Duration
 	// UpdateAge: the time before expiration when session should be extended on use
 	UpdateAge time.Duration
 	// IdleTimeout: the time after which the session will be considered expired if no activity is detected
@@ -37,12 +33,10 @@ type sessionConfig struct {
 
 func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 	config := &sessionConfig{
-		Strategy:              SessionStrategyOpaqueToken,
-		Duration:              time.Duration(60 * 60 * 24 * 7 * time.Second), // 7 days in seconds
-		TemporaryAuthDuration: time.Duration(5 * time.Minute),                // 5 minutes
-		UpdateAge:             time.Duration(60 * 60 * 24 * time.Second),     // 1 day in seconds
-		IdleTimeout:           0,                                             // no idle timeout
-		ActivityCheckInterval: 0,                                             // no activity check interval
+		Duration:              7 * 24 * time.Hour, // 7 days
+		UpdateAge:             24 * time.Hour,     // 1 day
+		IdleTimeout:           0,                  // no idle timeout
+		ActivityCheckInterval: 0,                  // no activity check interval
 		TokenDeliveryMethod:   TokenDeliveryCookie,
 		StoreType:             SessionStoreTypeDatabase,
 		IPAddressExtractor:    ipExtractorFromRemoteAddr,
@@ -72,16 +66,17 @@ func (c *sessionConfig) validate() error {
 		return fmt.Errorf("activity check interval cannot be greater than duration")
 	}
 
+	if c.IdleTimeout > 0 && c.ActivityCheckInterval > 0 && c.ActivityCheckInterval >= c.IdleTimeout {
+		return fmt.Errorf("activity check interval must be less than idle timeout")
+	}
+	if c.IdleTimeout > 0 && c.UpdateAge > 0 && c.UpdateAge >= c.IdleTimeout {
+		return fmt.Errorf("update age must be less than idle timeout")
+	}
+
 	return nil
 }
 
 type SessionConfigOption func(*sessionConfig)
-
-func WithSessionStrategy(strategy string) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.Strategy = SessionStrategyType(strategy)
-	}
-}
 
 func WithCustomSessionStore(store SessionStore) SessionConfigOption {
 	return func(c *sessionConfig) {
@@ -122,12 +117,6 @@ func WithSessionIPAddressExtractor(ipAddressExtractor func(request *http.Request
 func WithSessionUserAgentExtractor(userAgentExtractor func(request *http.Request) string) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.UserAgentExtractor = userAgentExtractor
-	}
-}
-
-func WithSessionTemporaryAuthDuration(temporaryAuthDuration time.Duration) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.TemporaryAuthDuration = temporaryAuthDuration
 	}
 }
 

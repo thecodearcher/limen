@@ -23,21 +23,33 @@ func (s *DatabaseSessionStore) Create(ctx context.Context, session *Session) err
 	return s.core.DBAction.CreateSession(ctx, session, nil)
 }
 
-// Get retrieves a session by ID
-func (s *DatabaseSessionStore) Get(ctx context.Context, sessionToken string) (*Session, error) {
-	return s.core.DBAction.FindSessionByToken(ctx, sessionToken)
+// GetByToken retrieves a session by token
+func (s *DatabaseSessionStore) GetByToken(ctx context.Context, token string) (*Session, error) {
+	return s.core.DBAction.FindSessionByToken(ctx, token)
 }
 
-// Update updates an existing session
-func (s *DatabaseSessionStore) Update(ctx context.Context, id any, session *Session) error {
+// UpdateByToken updates an existing session by token
+func (s *DatabaseSessionStore) UpdateByToken(ctx context.Context, token string, updates *SessionUpdates) error {
+	// Convert SessionUpdates to Session for the database action
+	session := &Session{}
+	if updates.ExpiresAt != nil {
+		session.ExpiresAt = *updates.ExpiresAt
+	}
+	if updates.LastAccess != nil {
+		session.LastAccess = *updates.LastAccess
+	}
+	if updates.Metadata != nil {
+		session.Metadata = updates.Metadata
+	}
+
 	return s.core.DBAction.UpdateSession(ctx, session, []Where{
-		Eq(s.schema.GetIDField(), id),
+		Eq(s.schema.GetTokenField(), token),
 	})
 }
 
-// Delete removes a session by ID
-func (s *DatabaseSessionStore) Delete(ctx context.Context, sessionToken string) error {
-	return s.core.DBAction.DeleteSessionByToken(ctx, sessionToken)
+// DeleteByToken removes a session by token
+func (s *DatabaseSessionStore) DeleteByToken(ctx context.Context, token string) error {
+	return s.core.DBAction.DeleteSessionByToken(ctx, token)
 }
 
 // DeleteByUserID removes all sessions for a specific user

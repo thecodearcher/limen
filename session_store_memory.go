@@ -9,8 +9,9 @@ import (
 
 // MemorySessionStore implements SessionStore using in-memory storage.
 type MemorySessionStore struct {
-	sessions     map[string]*Session
-	userSessions map[string]map[string]bool
+	sessions     map[string]*Session          // token -> session
+	sessionsByID map[string]*Session          // id -> session (for O(1) ID lookups)
+	userSessions map[string]map[string]bool   // userID -> set of tokens
 	mu           sync.RWMutex
 }
 
@@ -18,6 +19,7 @@ type MemorySessionStore struct {
 func NewMemorySessionStore() *MemorySessionStore {
 	return &MemorySessionStore{
 		sessions:     make(map[string]*Session),
+		sessionsByID: make(map[string]*Session),
 		userSessions: make(map[string]map[string]bool),
 	}
 }
@@ -39,7 +41,14 @@ func (s *MemorySessionStore) Create(ctx context.Context, session *Session) error
 		return nil
 	}
 
-	s.sessions[session.Token] = s.copySession(session)
+	copied := s.copySession(session)
+	s.sessions[session.Token] = copied
+
+	// Maintain ID index if ID is set
+	if session.ID != nil {
+		idStr := s.idToString(session.ID)
+		s.sessionsByID[idStr] = copied
+	}
 
 	userIDStr := s.userIDToString(session.UserID)
 	if s.userSessions[userIDStr] == nil {
@@ -50,17 +59,17 @@ func (s *MemorySessionStore) Create(ctx context.Context, session *Session) error
 	return nil
 }
 
-// Get retrieves a session by token.
+// GetByToken retrieves a session by token.
 // Returns ErrSessionNotFound if the session does not exist.
-func (s *MemorySessionStore) Get(ctx context.Context, sessionToken string) (*Session, error) {
-	if sessionToken == "" {
+func (s *MemorySessionStore) GetByToken(ctx context.Context, token string) (*Session, error) {
+	if token == "" {
 		return nil, ErrSessionNotFound
 	}
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	session, exists := s.sessions[sessionToken]
+	session, exists := s.sessions[token]
 	if !exists {
 		return nil, ErrSessionNotFound
 	}
@@ -68,51 +77,72 @@ func (s *MemorySessionStore) Get(ctx context.Context, sessionToken string) (*Ses
 	return s.copySession(session), nil
 }
 
-// Update updates an existing session.
-func (s *MemorySessionStore) Update(ctx context.Context, id any, session *Session) error {
-	if session == nil {
-		return fmt.Errorf("session cannot be nil")
+// UpdateByToken updates an existing session by token with partial data.
+// Only non-nil fields in the updates parameter are applied.
+func (s *MemorySessionStore) UpdateByToken(ctx context.Context, token string, updates *SessionUpdates) error {
+	if updates == nil {
+		return fmt.Errorf("updates cannot be nil")
 	}
-	if session.Token == "" {
-		return fmt.Errorf("session token cannot be empty")
-	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, exists := s.sessions[session.Token]; !exists {
-		return ErrSessionNotFound
-	}
-
-	s.sessions[session.Token] = s.copySession(session)
-
-	return nil
-}
-
-// Delete removes a session by token.
-// Returns ErrSessionNotFound if the session does not exist.
-func (s *MemorySessionStore) Delete(ctx context.Context, sessionToken string) error {
-	if sessionToken == "" {
+	if token == "" {
 		return ErrSessionNotFound
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	session, exists := s.sessions[sessionToken]
+	existing, exists := s.sessions[token]
 	if !exists {
 		return ErrSessionNotFound
 	}
 
+	// Apply non-nil fields from updates
+	if updates.ExpiresAt != nil {
+		existing.ExpiresAt = *updates.ExpiresAt
+	}
+	if updates.LastAccess != nil {
+		existing.LastAccess = *updates.LastAccess
+	}
+	if updates.Metadata != nil {
+		if existing.Metadata == nil {
+			existing.Metadata = make(map[string]any)
+		}
+		maps.Copy(existing.Metadata, updates.Metadata)
+	}
+
+	return nil
+}
+
+// DeleteByToken removes a session by token.
+// Returns ErrSessionNotFound if the session does not exist.
+func (s *MemorySessionStore) DeleteByToken(ctx context.Context, token string) error {
+	if token == "" {
+		return ErrSessionNotFound
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	session, exists := s.sessions[token]
+	if !exists {
+		return ErrSessionNotFound
+	}
+
+	// Remove from user sessions index
 	userIDStr := s.userIDToString(session.UserID)
 	if sessions, ok := s.userSessions[userIDStr]; ok {
-		delete(sessions, sessionToken)
+		delete(sessions, token)
 		if len(sessions) == 0 {
 			delete(s.userSessions, userIDStr)
 		}
 	}
 
-	delete(s.sessions, sessionToken)
+	// Remove from ID index
+	if session.ID != nil {
+		idStr := s.idToString(session.ID)
+		delete(s.sessionsByID, idStr)
+	}
+
+	delete(s.sessions, token)
 
 	return nil
 }
@@ -130,6 +160,11 @@ func (s *MemorySessionStore) DeleteByUserID(ctx context.Context, userID any) err
 	}
 
 	for token := range sessionTokens {
+		// Remove from ID index before deleting session
+		if session, ok := s.sessions[token]; ok && session.ID != nil {
+			idStr := s.idToString(session.ID)
+			delete(s.sessionsByID, idStr)
+		}
 		delete(s.sessions, token)
 	}
 
@@ -168,4 +203,14 @@ func (s *MemorySessionStore) userIDToString(userID any) string {
 		return str
 	}
 	return fmt.Sprintf("%v", userID)
+}
+
+func (s *MemorySessionStore) idToString(id any) string {
+	if id == nil {
+		return ""
+	}
+	if str, ok := id.(string); ok {
+		return str
+	}
+	return fmt.Sprintf("%v", id)
 }
