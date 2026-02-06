@@ -15,4 +15,7 @@ var (
 	ErrCredentialPasswordFeatureNotAvailable = aegis.NewAegisError("credential password feature not available", http.StatusServiceUnavailable, nil)
 	ErrInvalidBackupCode                     = aegis.NewAegisError("invalid backup code", http.StatusUnauthorized, nil)
 	ErrInvalidOTPCode                        = aegis.NewAegisError("invalid OTP code", http.StatusUnauthorized, nil)
+	ErrInvalidChallenge                      = aegis.NewAegisError("invalid 2FA challenge", http.StatusUnauthorized, nil)
+	ErrChallengeExpired                      = aegis.NewAegisError("2FA challenge has expired", http.StatusUnauthorized, nil)
+	ErrChallengeMissing                      = aegis.NewAegisError("2FA challenge is missing", http.StatusUnauthorized, nil)
 )

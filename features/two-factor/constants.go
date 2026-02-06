@@ -1,6 +1,10 @@
 package twofactor
 
-import "github.com/thecodearcher/aegis"
+import (
+	"time"
+
+	"github.com/thecodearcher/aegis"
+)
 
 const (
 	TwoFactorSchemaTableName aegis.SchemaTableName = "two_factors"
@@ -14,6 +18,12 @@ const (
 
 const (
 	otpAction = "two_factor_otp"
+)
+
+const (
+	defaultChallengeCookieName = "session_2fa"
+	defaultChallengeExpiration = 5 * time.Minute
+	challengeTokenType         = "2fa_challenge"
 )
 
 // TOTPAlgorithm represents the hashing function to use in the HMAC
@@ -35,4 +45,11 @@ type TOTPDigits int
 const (
 	TOTPDigitsSix   TOTPDigits = 6
 	TOTPDigitsEight TOTPDigits = 8
+)
+
+type TwoFactorMethod string
+
+const (
+	TwoFactorMethodOTP  TwoFactorMethod = "otp"
+	TwoFactorMethodTOTP TwoFactorMethod = "totp"
 )

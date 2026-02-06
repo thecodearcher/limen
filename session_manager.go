@@ -32,14 +32,9 @@ func (m *OpaqueSessionManager) CreateSession(ctx context.Context, request *http.
 		return nil, fmt.Errorf("failed to store session: %w", err)
 	}
 
-	deliveryMethod := m.determineDeliveryMethod(request)
 	result := &SessionResult{
-		Token:               token,
-		TokenDeliveryMethod: deliveryMethod,
-	}
-
-	if deliveryMethod == TokenDeliveryCookie {
-		result.Cookie = m.createSessionCookie(token, time.Now().Add(m.config.Duration))
+		Token:  token,
+		Cookie: m.createSessionCookie(token, time.Now().Add(m.config.Duration)),
 	}
 
 	return result, nil
@@ -113,9 +108,8 @@ func (m *OpaqueSessionManager) extendSessionExpiration(ctx context.Context, requ
 	session.LastAccess = now
 
 	return &SessionResult{
-		Token:               session.Token,
-		Cookie:              m.createSessionCookie(session.Token, session.ExpiresAt),
-		TokenDeliveryMethod: m.determineDeliveryMethod(request),
+		Token:  session.Token,
+		Cookie: m.createSessionCookie(session.Token, session.ExpiresAt),
 	}, nil
 }
 
@@ -157,21 +151,6 @@ func (m *OpaqueSessionManager) storeSession(ctx context.Context, request *http.R
 	}
 
 	return m.store.Create(ctx, session)
-}
-
-func (m *OpaqueSessionManager) determineDeliveryMethod(request *http.Request) TokenDeliveryMethod {
-	if delivery := request.Header.Get("X-Token-Transport"); delivery != "" {
-		switch TokenDeliveryMethod(delivery) {
-		case TokenDeliveryCookie, TokenDeliveryHeader:
-			return TokenDeliveryMethod(delivery)
-		}
-	}
-
-	if m.config.TokenDeliveryMethodDetector != nil {
-		return m.config.TokenDeliveryMethodDetector(request)
-	}
-
-	return m.config.TokenDeliveryMethod
 }
 
 func (m *OpaqueSessionManager) extractToken(request *http.Request) (string, error) {

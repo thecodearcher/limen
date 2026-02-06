@@ -78,14 +78,14 @@ func (t *totp) GenerateSetupURI(email string, secret string) (*TwoFactorSetupURI
 }
 
 // VerifyCode validates a TOTP code
-func (t *totp) VerifyCode(ctx context.Context, userID any, code string) bool {
+func (t *totp) VerifyCode(ctx context.Context, userID any, code string) error {
 	twoFactor, err := t.plugin.FindTwoFactorByUserID(ctx, userID)
 	if err != nil {
-		return false
+		return err
 	}
 	decryptedSecret, err := t.plugin.decrypt(twoFactor.Secret)
 	if err != nil {
-		return false
+		return err
 	}
 
 	valid, err := pqtotp.ValidateCustom(code, decryptedSecret, time.Now().UTC(), pqtotp.ValidateOpts{
@@ -96,8 +96,12 @@ func (t *totp) VerifyCode(ctx context.Context, userID any, code string) bool {
 	})
 
 	if err != nil {
-		return false
+		return ErrInvalidCode
 	}
 
-	return valid
+	if !valid {
+		return ErrInvalidCode
+	}
+
+	return nil
 }

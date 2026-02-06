@@ -2,6 +2,7 @@ package twofactor
 
 import (
 	"os"
+	"strings"
 
 	"github.com/thecodearcher/aegis"
 )
@@ -31,4 +32,8 @@ func getTOTPSecret() []byte {
 	}
 
 	return []byte(secret)
+}
+
+func looksLikeBackupCode(code string) bool {
+	return strings.Contains(code, "-")
 }

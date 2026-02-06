@@ -112,8 +112,12 @@ func (rs Responder) Error(w http.ResponseWriter, r *http.Request, err error) err
 }
 
 func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core *AegisCore, result *AuthenticationResult, sessionResult *SessionResult) error {
+	// Store auth result for hooks to access
+	if rw, ok := w.(*responseWriter); ok {
+		rw.authResult = result
+	}
+
 	rs.setSessionCookies(w, sessionResult)
-	rs.setSessionHeaders(w, sessionResult)
 
 	if rs.sessionTransformer != nil {
 		return rs.handleSessionTransformer(w, r, result, sessionResult)
@@ -175,18 +179,10 @@ func (rs Responder) ClearSessionCookies(w http.ResponseWriter) {
 	})
 }
 
-// setSessionCookies sets the session cookie in the response if the delivery method is TokenDeliveryCookie.
+// setSessionCookies sets the session cookie in the response.
 func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *SessionResult) {
-	if sessionResult == nil || sessionResult.Cookie == nil || sessionResult.TokenDeliveryMethod != TokenDeliveryCookie {
+	if sessionResult == nil || sessionResult.Cookie == nil {
 		return
 	}
 	http.SetCookie(w, sessionResult.Cookie)
-}
-
-// setSessionHeaders sets the session header in the response if the delivery method is TokenDeliveryHeader.
-func (rs Responder) setSessionHeaders(w http.ResponseWriter, sessionResult *SessionResult) {
-	if sessionResult == nil || sessionResult.TokenDeliveryMethod != TokenDeliveryHeader {
-		return
-	}
-	w.Header().Set("Set-Aegis-Token", sessionResult.Token)
 }

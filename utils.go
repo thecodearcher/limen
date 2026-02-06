@@ -208,17 +208,6 @@ func originMatcher(request *http.Request, origins []*regexp.Regexp) bool {
 	return false
 }
 
-func sliceToMap[T any](slice []T, fn func(T) string) map[string]T {
-	if len(slice) == 0 {
-		return make(map[string]T)
-	}
-	m := make(map[string]T, len(slice))
-	for _, item := range slice {
-		m[fn(item)] = item
-	}
-	return m
-}
-
 func writeToFile(data []byte, outputPath string) error {
 	file, err := os.Create(outputPath)
 	if err != nil {
@@ -422,4 +411,17 @@ func GetFromMap[T any](m map[string]any, key string) T {
 		result = value
 	}
 	return result
+}
+
+// ExtractCookieValue extracts the value of a cookie from the Set-Cookie headers.
+// Returns empty string if the cookie is not found.
+func ExtractCookieValue(headers http.Header, cookieName string) string {
+	prefix := cookieName + "="
+	for _, cookie := range headers.Values("Set-Cookie") {
+		cookieValue := strings.Split(cookie, ";")[0]
+		if strings.HasPrefix(cookieValue, prefix) {
+			return cookieValue[len(prefix):]
+		}
+	}
+	return ""
 }

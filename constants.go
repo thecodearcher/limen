@@ -25,8 +25,6 @@ type TokenDeliveryMethod string
 const (
 	// TokenDeliveryCookie delivers tokens via HttpOnly cookies
 	TokenDeliveryCookie TokenDeliveryMethod = "cookie"
-	// TokenDeliveryHeader delivers tokens in response headers
-	TokenDeliveryHeader TokenDeliveryMethod = "header"
 )
 
 type RateLimiterStoreType string

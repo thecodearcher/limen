@@ -8,10 +8,12 @@ import (
 type ConfigOption func(*config)
 
 type config struct {
-	secret      []byte
-	totp        *totpConfig
-	otp         *otpConfig
-	backupCodes *backupCodesConfig
+	secret           []byte
+	totp             *totpConfig
+	otp              *otpConfig
+	backupCodes      *backupCodesConfig
+	cookieExpiration time.Duration
+	cookieName       string
 }
 
 func WithSecret(secret []byte) ConfigOption {
@@ -164,5 +166,17 @@ func WithBackupCodesLength(length int) BackupCodesOption {
 func WithBackupCodesCustomGenerator(generator func() []string) BackupCodesOption {
 	return func(c *backupCodesConfig) {
 		c.customGenerator = generator
+	}
+}
+
+func WithCookieExpiration(expiration time.Duration) ConfigOption {
+	return func(c *config) {
+		c.cookieExpiration = expiration
+	}
+}
+
+func WithCookieName(name string) ConfigOption {
+	return func(c *config) {
+		c.cookieName = name
 	}
 }

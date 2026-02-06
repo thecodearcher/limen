@@ -7,21 +7,12 @@ import (
 	"maps"
 	"net/http"
 	"path"
-	"regexp"
 )
 
 type Aegis struct {
 	EmailPassword CredentialPasswordFeature
 	config        *Config
 	core          *AegisCore
-}
-
-type AegisHTTPCore struct {
-	Responder              *Responder
-	core                   *AegisCore
-	authInstance           *Aegis
-	config                 *httpConfig
-	trustedOriginsPatterns []*regexp.Regexp
 }
 
 func New(config *Config) (*Aegis, error) {

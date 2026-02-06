@@ -15,6 +15,9 @@ type responseWriter struct {
 	modified        bool // True if hook modified response
 	modifiedPayload any  // Modified payload from hook
 	modifiedStatus  int  // Modified status from hook
+
+	// Auth result stored for hooks to access
+	authResult *AuthenticationResult
 }
 
 func (rw *responseWriter) WriteHeader(code int) {

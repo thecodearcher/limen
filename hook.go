@@ -71,6 +71,15 @@ func (hc *HookContext) GetResponse() *ResponseData {
 	}
 }
 
+// GetAuthResult returns the AuthenticationResult stored during SessionResponse, if available
+func (hc *HookContext) GetAuthResult() *AuthenticationResult {
+	rw, ok := hc.response.(*responseWriter)
+	if !ok {
+		return nil
+	}
+	return rw.authResult
+}
+
 // ModifyResponse allows hooks to modify the response payload and status code
 func (hc *HookContext) ModifyResponse(status int, payload any) {
 	rw, ok := hc.response.(*responseWriter)
@@ -100,6 +109,8 @@ func (hc *HookContext) DeleteResponseCookie(name string) {
 	http.SetCookie(hc.response, &http.Cookie{
 		Name:   name,
 		MaxAge: -1,
+		Path:   "/",
+		Value:  "",
 	})
 }
 

@@ -2,6 +2,7 @@ package twofactor
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/thecodearcher/aegis"
 )
@@ -50,9 +51,8 @@ func (t *twoFactorFeature) FinalizeTwoFactorSetup(ctx context.Context, user *Use
 		return ErrTwoFactorAlreadyEnabled
 	}
 
-	valid := t.totp.VerifyCode(ctx, user.ID, code)
-	if !valid {
-		return ErrInvalidCode
+	if err := t.totp.VerifyCode(ctx, user.ID, code); err != nil {
+		return err
 	}
 
 	updatedUser := &UserWithTwoFactor{TwoFactorEnabled: true}
@@ -104,4 +104,54 @@ func (t *twoFactorFeature) checkPassword(user *aegis.User, password string) erro
 	}
 
 	return nil
+}
+
+// VerifyLoginWithTwoFactor verifies the 2FA code and completes the login process
+func (t *twoFactorFeature) VerifyLoginWithTwoFactor(r *http.Request, w http.ResponseWriter, code string, method TwoFactorMethod) (*aegis.AuthenticationResult, *aegis.SessionResult, error) {
+	challengeToken, err := t.getChallengeFromCookie(r)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	challenge, err := t.verifyChallengeToken(challengeToken)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := t.verifyLoginCode(r.Context(), challenge.UserID, code, method); err != nil {
+		return nil, nil, err
+	}
+
+	t.clearChallengeCookie(w)
+
+	user, err := t.core.DBAction.FindUserByID(r.Context(), challenge.UserID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authResult := &aegis.AuthenticationResult{User: user}
+	sessionResult, err := t.core.SessionManager.CreateSession(r.Context(), r, authResult)
+	if err != nil {
+		return nil, nil, err
+	}
+	return authResult, sessionResult, nil
+}
+
+// verifyLoginCode verifies the login code and returns an error if the code is invalid
+// It supports TOTP, OTP, and backup codes
+func (t *twoFactorFeature) verifyLoginCode(ctx context.Context, userID any, code string, method TwoFactorMethod) error {
+	if looksLikeBackupCode(code) {
+		return t.backupCodes.VerifyBackupCode(ctx, userID, code)
+	}
+
+	switch method {
+	case TwoFactorMethodTOTP:
+		return t.totp.VerifyCode(ctx, userID, code)
+	case TwoFactorMethodOTP:
+		if t.otp == nil {
+			return ErrInvalidCode
+		}
+		return t.otp.Verify(ctx, userID, code)
+	}
+	return ErrInvalidCode
 }

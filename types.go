@@ -31,9 +31,8 @@ type AuthenticationResult struct {
 
 // SessionResult contains token and delivery information for a session.
 type SessionResult struct {
-	Token               string              `json:"token,omitzero"`
-	Cookie              *http.Cookie        `json:"-"`
-	TokenDeliveryMethod TokenDeliveryMethod `json:"-"`
+	Token  string       `json:"token,omitzero"`
+	Cookie *http.Cookie `json:"-"`
 }
 
 // SessionUpdates contains fields for partial session updates.

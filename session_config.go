@@ -25,10 +25,6 @@ type sessionConfig struct {
 	IPAddressExtractor RequestExtractorFn
 	// UserAgentExtractor: the function to extract the user agent from the request
 	UserAgentExtractor RequestExtractorFn
-	// TokenDeliveryMethod: the method to deliver the tokens
-	TokenDeliveryMethod TokenDeliveryMethod
-	// TokenDeliveryMethodDetector allows custom detection logic for the token delivery method
-	TokenDeliveryMethodDetector func(request *http.Request) TokenDeliveryMethod
 }
 
 func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
@@ -37,7 +33,6 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 		UpdateAge:             24 * time.Hour,     // 1 day
 		IdleTimeout:           0,                  // no idle timeout
 		ActivityCheckInterval: 0,                  // no activity check interval
-		TokenDeliveryMethod:   TokenDeliveryCookie,
 		StoreType:             SessionStoreTypeDatabase,
 		IPAddressExtractor:    ipExtractorFromRemoteAddr,
 		UserAgentExtractor: func(request *http.Request) string {
@@ -123,17 +118,5 @@ func WithSessionUserAgentExtractor(userAgentExtractor func(request *http.Request
 func WithSessionActivityCheckInterval(activityCheckInterval time.Duration) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.ActivityCheckInterval = activityCheckInterval
-	}
-}
-
-func WithSessionTokenDeliveryMethod(tokenDeliveryMethod TokenDeliveryMethod) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.TokenDeliveryMethod = tokenDeliveryMethod
-	}
-}
-
-func WithSessionTokenDeliveryMethodDetector(tokenDeliveryMethodDetector func(request *http.Request) TokenDeliveryMethod) SessionConfigOption {
-	return func(c *sessionConfig) {
-		c.TokenDeliveryMethodDetector = tokenDeliveryMethodDetector
 	}
 }

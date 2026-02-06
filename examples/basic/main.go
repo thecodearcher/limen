@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"maps"
 	"net/http"
 	"time"
 
@@ -67,12 +66,10 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 				credentialpassword.WithRequireUsernameOnSignUp(true),
 			),
 			twofactor.New(
+				twofactor.WithCookieExpiration(1*time.Minute),
 				twofactor.WithTOTP(
 					// twofactor.WithTOTPSecret([]byte("default_secret")),
 					twofactor.WithTOTPIssuer("Aegis"),
-					twofactor.WithTOTPTTL(30*time.Second),
-					twofactor.WithTOTPDigits(twofactor.TOTPDigitsEight),
-					twofactor.WithTOTPAlgorithm(twofactor.TOTPAlgorithmSHA1),
 				),
 				twofactor.WithBackupCodes(
 					twofactor.WithBackupCodesCount(20),
@@ -161,11 +158,11 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 		// 		},
 		// 	},
 		// },
-		// Session: aegis.NewDefaultSessionConfig(
-		// 	// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
-		// 	// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
-		// 	// aegis.WithSessionTokenDeliveryMethod(aegis.TokenDeliveryHeader),
-		// ),
+		Session: aegis.NewDefaultSessionConfig(
+			// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
+			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
+			aegis.WithSessionUpdateAge(10 * time.Second),
+		),
 		HTTP: aegis.NewDefaultHTTPConfig(
 			aegis.WithHTTPBasePath("/api/auth"),
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
@@ -174,20 +171,21 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			aegis.WithHTTPHooks(&aegis.Hooks{
 				Before: &aegis.Hook{
 					PathMatcher: func(ctx *aegis.HookContext) bool {
-						fmt.Printf("Route Pattern: %+v\n", ctx.RoutePattern)
-						return ctx.RouteID == "signin"
+						fmt.Printf("Route Pattern: %+v\n", ctx.RoutePattern())
+						return ctx.RouteID() == "signin"
 					},
 					Run: aegis.HookFunc(func(ctx *aegis.HookContext) bool {
-						fmt.Printf("Before request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+						fmt.Printf("Before request %s %s\n", ctx.Request().Method, ctx.Request().URL.Path)
 
 						return true
 					})},
 				After: &aegis.Hook{
 					Run: aegis.HookFunc(func(ctx *aegis.HookContext) bool {
-						fmt.Printf("After request %s %s\n", ctx.Request.Method, ctx.Request.URL.Path)
+						fmt.Printf("After request %s %s\n", ctx.Request().Method, ctx.Request().URL.Path)
 						return true
 					})},
 			}),
+			aegis.WithHTTPSessionTransformer(sessionTransformer),
 			// aegis.WithHTTPTrustedOrigins([]string{
 			// 	"*.localhost:3000", "https://localhost:3000",
 			// 	"myapp://",                             // Mobile app scheme
@@ -278,13 +276,12 @@ func main() {
 
 }
 
-func sessionTransformer(user map[string]any, pendingActions []aegis.PendingAction, token string, refreshToken string) (map[string]any, *aegis.AegisError) {
+func sessionTransformer(user map[string]any, sessionResult *aegis.SessionResult) (map[string]any, error) {
 	payload := map[string]any{
-		"pending_actions": pendingActions,
-		"token":           token,
-		"refresh_token":   refreshToken,
-		"user":            user,
+		"user": user,
 	}
-	maps.Copy(payload, user)
+	if sessionResult != nil {
+		payload["token"] = sessionResult.Token
+	}
 	return payload, nil
 }

@@ -1,6 +1,7 @@
 package twofactor
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/thecodearcher/aegis"
@@ -20,22 +21,21 @@ func newOTPHandlers(otp *otp, responder *aegis.Responder) *otpHandlers {
 }
 
 func (o *otpHandlers) SendCode(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
-	if err != nil {
-		o.responder.Error(w, r, err)
+	body := validator.ValidateJSON(w, r, o.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+		return v.RequiredString("email", data["email"])
+	})
+
+	if body == nil {
 		return
 	}
 
-	user := o.otp.plugin.userSchema.UserToUserWithTwoFactor(session.User)
-
-	err = o.otp.SendOTPCode(r.Context(), user)
-	if err != nil {
+	if err := o.otp.SendOTPCode(r.Context(), body["email"].(string)); err != nil && !errors.Is(err, aegis.ErrRecordNotFound) {
 		o.responder.Error(w, r, err)
 		return
 	}
 
 	o.responder.JSON(w, r, http.StatusOK, map[string]any{
-		"message": "OTP code sent successfully",
+		"message": "An OTP code will be sent to your email if it is associated with an account",
 	})
 }
 
@@ -54,8 +54,7 @@ func (o *otpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := o.otp.plugin.userSchema.UserToUserWithTwoFactor(session.User)
-	err = o.otp.Verify(r.Context(), user, body["code"].(string))
+	err = o.otp.Verify(r.Context(), session.User.ID, body["code"].(string))
 	if err != nil {
 		o.responder.Error(w, r, err)
 		return

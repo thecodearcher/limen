@@ -48,9 +48,8 @@ func (t *totpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valid := t.totp.VerifyCode(r.Context(), session.User.ID, body["code"].(string))
-	if !valid {
-		t.responder.Error(w, r, aegis.NewAegisError("invalid code", http.StatusUnauthorized, nil))
+	if err := t.totp.VerifyCode(r.Context(), session.User.ID, body["code"].(string)); err != nil {
+		t.responder.Error(w, r, err)
 		return
 	}
 

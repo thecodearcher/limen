@@ -31,7 +31,6 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() Middleware {
 
 			if session.Refreshed != nil {
 				httpCore.Responder.setSessionCookies(w, session.Refreshed)
-				httpCore.Responder.setSessionHeaders(w, session.Refreshed)
 			}
 
 			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &ValidatedSession{
