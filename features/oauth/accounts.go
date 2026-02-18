@@ -21,3 +21,26 @@ func (o *oauthFeature) ListAccountsForUser(ctx context.Context, userID any) ([]*
 	}
 	return accounts, nil
 }
+
+func (o *oauthFeature) UnlinkAccount(ctx context.Context, user *aegis.User, providerName string) error {
+	accountCount, err := o.core.Count(ctx, o.accountSchema, []aegis.Where{
+		aegis.Eq(o.accountSchema.GetUserIDField(), user.ID),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if accountCount == 0 {
+		return ErrAccountNotFound
+	}
+
+	if user.Password == "" && accountCount == 1 {
+		return ErrCannotUnlinkOnlyAccount
+	}
+
+	return o.core.Delete(ctx, o.accountSchema, []aegis.Where{
+		aegis.Eq(o.accountSchema.GetUserIDField(), user.ID),
+		aegis.Eq(o.accountSchema.GetProviderField(), providerName),
+	})
+}

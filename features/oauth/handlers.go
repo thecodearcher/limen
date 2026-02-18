@@ -96,7 +96,6 @@ func (h *oauthHandlers) LinkAccountWithOAuth(w http.ResponseWriter, r *http.Requ
 	h.responder.JSON(w, r, http.StatusOK, map[string]any{"url": url})
 }
 
-// ListAccounts returns OAuth accounts linked to the current user.
 func (h *oauthHandlers) ListAccounts(w http.ResponseWriter, r *http.Request) {
 	session, err := aegis.GetCurrentSessionFromCtx(r)
 	if err != nil {
@@ -111,6 +110,24 @@ func (h *oauthHandlers) ListAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.responder.JSON(w, r, http.StatusOK, aegis.SerializeAll(h.feature.accountSchema, accounts))
+}
+
+func (h *oauthHandlers) UnlinkAccount(w http.ResponseWriter, r *http.Request) {
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	providerName := aegis.GetParam(r, "provider")
+
+	err = h.feature.UnlinkAccount(r.Context(), session.User, providerName)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }
 
 func (h *oauthHandlers) handleLinkAccountResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *aegis.AuthenticationResult, sessionResult *aegis.SessionResult, err error) {
