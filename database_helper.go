@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-// GetDB returns the database adapter to use, checking in this order:
+// getDB returns the database adapter to use, checking in this order:
 //
 //  1. Transaction from context (if in a transaction )
 //  2. Default database adapter
 //
 // if skipTx is true, the default database adapter is returned.
-func (core *AegisCore) GetDB(ctx context.Context, skipTx ...bool) DatabaseAdapter {
+func (core *AegisCore) getDB(ctx context.Context, skipTx ...bool) DatabaseAdapter {
 	if len(skipTx) > 0 && skipTx[0] {
 		return core.db
 	}
@@ -27,7 +27,7 @@ func (core *AegisCore) GetDB(ctx context.Context, skipTx ...bool) DatabaseAdapte
 
 func (core *AegisCore) FindOne(ctx context.Context, schema Schema, conditions []Where, orderBy []OrderBy) (Model, error) {
 	conditions = applySoftDeleteFilter(schema, conditions)
-	db := core.GetDB(ctx)
+	db := core.getDB(ctx)
 	result, err := db.FindOne(ctx, schema.GetTableName(), conditions, orderBy)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (core *AegisCore) Create(ctx context.Context, schema Schema, data Model, ad
 		return err
 	}
 
-	db := core.GetDB(ctx)
+	db := core.getDB(ctx)
 	err := db.Create(ctx, schema.GetTableName(), payload)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (core *AegisCore) Create(ctx context.Context, schema Schema, data Model, ad
 
 func (core *AegisCore) Exists(ctx context.Context, schema Schema, conditions []Where) (bool, error) {
 	conditions = applySoftDeleteFilter(schema, conditions)
-	db := core.GetDB(ctx)
+	db := core.getDB(ctx)
 	return db.Exists(ctx, schema.GetTableName(), conditions)
 }
 
@@ -109,7 +109,7 @@ func (core *AegisCore) UpdateRaw(ctx context.Context, schema Schema, updatedData
 	}
 
 	conditions = applySoftDeleteFilter(schema, conditions)
-	db := core.GetDB(ctx)
+	db := core.getDB(ctx)
 
 	return db.Update(ctx, schema.GetTableName(), conditions, payload)
 }
@@ -145,7 +145,7 @@ func applySoftDeleteFilter(schema Schema, conditions []Where) []Where {
 }
 
 func (core *AegisCore) Delete(ctx context.Context, schema Schema, conditions []Where) error {
-	db := core.GetDB(ctx)
+	db := core.getDB(ctx)
 	// if there are conditions, we update the soft delete field to the current time
 	// otherwise we delete the record directly
 	if schema.GetSoftDeleteField() != "" {
@@ -159,4 +159,17 @@ func (core *AegisCore) Delete(ctx context.Context, schema Schema, conditions []W
 	}
 
 	return db.Delete(ctx, schema.GetTableName(), conditions)
+}
+
+func (core *AegisCore) FindMany(ctx context.Context, schema Schema, conditions []Where) ([]Model, error) {
+	db := core.getDB(ctx)
+	list, err := db.FindMany(ctx, schema.GetTableName(), conditions, nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Model, 0, len(list))
+	for _, m := range list {
+		out = append(out, schema.FromStorage(m))
+	}
+	return out, nil
 }
