@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -37,8 +36,6 @@ func ExchangeCode(ctx context.Context, config *oauth2.Config, code, codeVerifier
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("tok: %+v\n", tok)
 
 	resp := &TokenResponse{
 		AccessToken:  tok.AccessToken,
