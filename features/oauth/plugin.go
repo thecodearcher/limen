@@ -73,6 +73,7 @@ func (o *oauthFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilde
 	routeBuilder.GET("/:provider/authorize", "oauth-authorize", handlers.SignInWithOAuth)
 	routeBuilder.GET("/:provider/callback", "oauth-callback", handlers.Callback)
 	routeBuilder.ProtectedGET("/:provider/link", "oauth-link-authorize", handlers.LinkAccountWithOAuth)
+	routeBuilder.ProtectedGET("/accounts", "oauth-list-accounts", handlers.ListAccounts)
 }
 
 func (o *oauthFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {

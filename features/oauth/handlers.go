@@ -96,6 +96,23 @@ func (h *oauthHandlers) LinkAccountWithOAuth(w http.ResponseWriter, r *http.Requ
 	h.responder.JSON(w, r, http.StatusOK, map[string]any{"url": url})
 }
 
+// ListAccounts returns OAuth accounts linked to the current user.
+func (h *oauthHandlers) ListAccounts(w http.ResponseWriter, r *http.Request) {
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	accounts, err := h.feature.ListAccountsForUser(r.Context(), session.User.ID)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, aegis.SerializeAll(h.feature.accountSchema, accounts))
+}
+
 func (h *oauthHandlers) handleLinkAccountResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *aegis.AuthenticationResult, sessionResult *aegis.SessionResult, err error) {
 	if h.feature.config.disableRedirect && (err != nil || stateData == nil) {
 		h.responder.Error(w, r, err)
