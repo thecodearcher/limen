@@ -177,13 +177,13 @@ func sortRulesBySpecificity(rules []*RateLimitRule) {
 }
 
 func containsWildcard(path string) bool {
-	return strings.Contains(path, "*") || strings.Contains(path, "?")
+	return strings.Contains(path, "*") || strings.Contains(path, "?") || strings.Contains(path, ":")
 }
 
 func countWildcards(path string) int {
 	count := 0
 	for _, char := range path {
-		if char == '*' || char == '?' {
+		if char == '*' || char == '?' || char == ':' {
 			count++
 		}
 	}
