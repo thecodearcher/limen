@@ -173,3 +173,8 @@ func (core *AegisCore) FindMany(ctx context.Context, schema Schema, conditions [
 	}
 	return out, nil
 }
+
+func (core *AegisCore) Count(ctx context.Context, schema Schema, conditions []Where) (int64, error) {
+	db := core.getDB(ctx)
+	return db.Count(ctx, schema.GetTableName(), conditions)
+}

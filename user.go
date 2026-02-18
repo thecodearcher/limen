@@ -62,7 +62,7 @@ func (u *UserSchema) FromStorage(data map[string]any) Model {
 	return &User{
 		ID:              data[u.GetIDField()],
 		Email:           data[u.GetEmailField()].(string),
-		Password:        data[u.GetPasswordField()].(string),
+		Password:        getString(data[u.GetPasswordField()]),
 		EmailVerifiedAt: getNullableValue[time.Time](data[u.GetEmailVerifiedAtField()]),
 		raw:             data,
 	}
