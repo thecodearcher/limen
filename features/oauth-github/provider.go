@@ -1,0 +1,136 @@
+package oauthgithub
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+
+	"golang.org/x/oauth2"
+
+	"github.com/thecodearcher/aegis/features/oauth"
+)
+
+const providerName = "github"
+
+// New creates a GitHub OAuth provider that implements oauth.Provider.
+func New(opts ...ConfigOption) oauth.Provider {
+	cfg := &config{
+		scopes: []string{"read:user", "user:email"},
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return newGitHubProvider(cfg)
+}
+
+var githubEndpoint = oauth2.Endpoint{
+	AuthURL:  "https://github.com/login/oauth/authorize",
+	TokenURL: "https://github.com/login/oauth/access_token",
+}
+
+type githubProvider struct {
+	config *oauth2.Config
+}
+
+func newGitHubProvider(cfg *config) *githubProvider {
+	scopes := cfg.scopes
+	if len(scopes) == 0 {
+		scopes = []string{"read:user", "user:email"}
+	}
+	config := &oauth2.Config{
+		ClientID:     cfg.clientID,
+		ClientSecret: cfg.clientSecret,
+		RedirectURL:  cfg.redirectURL,
+		Scopes:       scopes,
+		Endpoint:     githubEndpoint,
+	}
+	return &githubProvider{config: config}
+}
+
+func (g *githubProvider) Name() string {
+	return providerName
+}
+
+func (g *githubProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOption) {
+	return g.config, nil
+}
+
+func (g *githubProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+	req.Header.Set("Accept", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("user request failed: %s", resp.Status)
+	}
+
+	raw := map[string]any{}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, err
+	}
+	// GitHub may not return email in /user; fetch from /user/emails if needed
+	email := raw["email"]
+	if email == nil || email == "" {
+		email, _ = g.fetchPrimaryEmail(ctx, token.AccessToken)
+	}
+
+	fmt.Print(raw["id"])
+
+	return &oauth.ProviderUserInfo{
+		ID:            fmt.Sprintf("%d", int64(raw["id"].(float64))),
+		Email:         email.(string),
+		EmailVerified: email != "",
+		Name:          raw["name"].(string),
+		AvatarURL:     raw["avatar_url"].(string),
+		Raw:           raw,
+	}, nil
+}
+
+func (g *githubProvider) fetchPrimaryEmail(ctx context.Context, accessToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user/emails", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Accept", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", nil
+	}
+	var emails []struct {
+		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
+		Verified bool   `json:"verified"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
+		return "", err
+	}
+	for _, e := range emails {
+		if e.Primary && e.Verified {
+			return e.Email, nil
+		}
+	}
+	for _, e := range emails {
+		if e.Verified {
+			return e.Email, nil
+		}
+	}
+	if len(emails) > 0 {
+		return emails[0].Email, nil
+	}
+	return "", nil
+}
