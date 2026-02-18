@@ -99,6 +99,15 @@ func globToRegex(pattern string) string {
 			// ? matches any single character except /
 			result.WriteString("[^/]")
 
+		case ':':
+			// Route parameter (:param) - match one path segment. Skip param name until next / or end.
+			result.WriteString("[^/]+")
+			i++
+			for i < len(runes) && runes[i] != '/' {
+				i++
+			}
+			continue
+
 		case '[':
 			// Character class - copy until closing ]
 			result.WriteRune('[')
