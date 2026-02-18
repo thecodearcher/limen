@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
 type otpHandlers struct {
@@ -21,7 +20,7 @@ func newOTPHandlers(otp *otp, responder *aegis.Responder) *otpHandlers {
 }
 
 func (o *otpHandlers) SendCode(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, o.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, o.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("email", data["email"])
 	})
 
@@ -40,7 +39,7 @@ func (o *otpHandlers) SendCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *otpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, o.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, o.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("code", data["code"])
 	})
 

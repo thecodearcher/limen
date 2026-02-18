@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
 type backupCodesHandlers struct {
@@ -46,7 +45,7 @@ func (b *backupCodesHandlers) GetBackupCodes(w http.ResponseWriter, r *http.Requ
 }
 
 func (b *backupCodesHandlers) VerifyBackupCode(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, b.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, b.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("code", data["code"])
 	})
 	if body == nil {

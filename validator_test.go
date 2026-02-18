@@ -1,4 +1,4 @@
-package validator
+package aegis
 
 import (
 	"bytes"
@@ -6,12 +6,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/thecodearcher/aegis"
 )
 
 func TestRequiredString(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.RequiredString("email", "")
 	v.RequiredString("name", "John")
 
@@ -26,7 +24,7 @@ func TestRequiredString(t *testing.T) {
 }
 
 func TestMinLength(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.MinLength("password", "abc", 5)
 	v.MinLength("username", "johndoe", 5)
 
@@ -37,7 +35,7 @@ func TestMinLength(t *testing.T) {
 }
 
 func TestMaxLength(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.MaxLength("username", "thisiswaytoolong", 10)
 	v.MaxLength("name", "John", 10)
 
@@ -48,7 +46,7 @@ func TestMaxLength(t *testing.T) {
 }
 
 func TestEmail(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.Email("email", "invalid-email")
 	v.Email("email2", "valid@example.com")
 
@@ -59,7 +57,7 @@ func TestEmail(t *testing.T) {
 }
 
 func TestChaining(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.RequiredString("email", "").
 		Email("email2", "invalid-email").
 		MinLength("password", "abc", 8).
@@ -77,7 +75,7 @@ func TestChaining(t *testing.T) {
 }
 
 func TestIn(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.In("status", "pending", []string{"active", "inactive"})
 	v.In("role", "admin", []string{"admin", "user", "guest"})
 
@@ -87,7 +85,7 @@ func TestIn(t *testing.T) {
 	}
 
 	// Should not have error for role
-	v2 := New()
+	v2 := NewValidator()
 	v2.In("role", "admin", []string{"admin", "user", "guest"})
 	if err := v2.Validate(); err != nil {
 		t.Error("Expected no error for valid role")
@@ -95,7 +93,7 @@ func TestIn(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.Contains("password", "mypassword123", "!")
 	v.Contains("code", "ABC123", "123")
 
@@ -105,7 +103,7 @@ func TestContains(t *testing.T) {
 	}
 
 	// Should not have error for code
-	v2 := New()
+	v2 := NewValidator()
 	v2.Contains("code", "ABC123", "123")
 	if err := v2.Validate(); err != nil {
 		t.Error("Expected no error for code containing 123")
@@ -113,7 +111,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestContainsAny(t *testing.T) {
-	v := New()
+	v := NewValidator()
 	v.ContainsAny("password", "mypassword", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	v.ContainsAny("password2", "MyPassword", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -123,7 +121,7 @@ func TestContainsAny(t *testing.T) {
 	}
 
 	// Should not have error for password2
-	v2 := New()
+	v2 := NewValidator()
 	v2.ContainsAny("password2", "MyPassword", "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	if err := v2.Validate(); err != nil {
 		t.Error("Expected no error for password containing uppercase")
@@ -136,7 +134,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := aegis.NewResponder(nil)
+		responder := newResponder(nil)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v.RequiredString("email", d["email"].(string)).
@@ -164,7 +162,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := aegis.NewResponder(nil)
+		responder := newResponder(nil)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v.RequiredString("email", d["email"].(string)).
@@ -186,7 +184,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := aegis.NewResponder(nil)
+		responder := newResponder(nil)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v
@@ -205,7 +203,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := aegis.NewResponder(nil)
+		responder := newResponder(nil)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			email, _ := d["email"].(string)

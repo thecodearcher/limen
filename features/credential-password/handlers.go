@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
 type credentialPasswordHandlers struct {
@@ -60,8 +59,8 @@ func routes(e *credentialPasswordHandlers) {
 // SignInWithCredentialAndPassword handles user sign-in with either email or username (if enabled) and password.
 // The credential can be either an email address or a username.
 func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder,
-		func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, p.responder,
+		func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 			return v.RequiredString("credential", data["credential"]).
 				RequiredString("password", data["password"])
 		})
@@ -88,7 +87,7 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 // SignUpWithCredentialAndPassword handles user registration with email and password.
 // If username support is enabled, a username can be provided in the request body.
 func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("email", data["email"]).
 			RequiredString("password", data["password"]).
 			Email("email", data["email"]).
@@ -143,7 +142,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 
 // VerifyEmail handles email verification using a verification token.
 func (p *credentialPasswordHandlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("token", data["token"])
 	})
 
@@ -183,7 +182,7 @@ func (p *credentialPasswordHandlers) RequestEmailVerification(w http.ResponseWri
 // RequestPasswordReset handles password reset requests.
 // To prevent email enumeration, always returns success regardless of whether the email exists.
 func (p *credentialPasswordHandlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.
 			RequiredString("email", data["email"]).
 			Email("email", data["email"])
@@ -211,7 +210,7 @@ func (p *credentialPasswordHandlers) RequestPasswordReset(w http.ResponseWriter,
 
 // ResetPassword handles password reset using a valid reset token.
 func (p *credentialPasswordHandlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.
 			RequiredString("token", data["token"]).
 			RequiredString("new_password", data["new_password"]).
@@ -240,7 +239,7 @@ func (p *credentialPasswordHandlers) ResetPassword(w http.ResponseWriter, r *htt
 // ChangePassword handles password changes for authenticated users.
 // Optionally revokes all other sessions when revoke_other_sessions is true.
 func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.
 			RequiredString("current_password", data["current_password"]).
 			RequiredString("new_password", data["new_password"]).
@@ -293,7 +292,7 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 
 // CheckUsernameAvailability handles username availability checks.
 func (p *credentialPasswordHandlers) CheckUsernameAvailability(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, p.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("username", data["username"]).
 			Custom("username", func() error {
 				username, ok := data["username"].(string)

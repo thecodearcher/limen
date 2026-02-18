@@ -1,4 +1,4 @@
-package validator
+package aegis
 
 import (
 	"fmt"
@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-
-	"github.com/thecodearcher/aegis"
 )
 
 type ValidationError struct {
@@ -61,7 +59,7 @@ type Validator struct {
 	errors *Errors
 }
 
-func New() *Validator {
+func NewValidator() *Validator {
 	return &Validator{
 		errors: &Errors{},
 	}
@@ -184,19 +182,19 @@ func (v *Validator) Matches(field, value, pattern string) *Validator {
 
 // ValidateJSON decodes the JSON body of the request and validates it using the validateFunc.
 // It returns the decoded data if the validation succeeds, otherwise it returns nil and an error is written to the response.
-func ValidateJSON(w http.ResponseWriter, r *http.Request, responder *aegis.Responder, validateFunc func(*Validator, map[string]any) *Validator) map[string]any {
-	body := aegis.GetJSONBody(r)
+func ValidateJSON(w http.ResponseWriter, r *http.Request, responder *Responder, validateFunc func(*Validator, map[string]any) *Validator) map[string]any {
+	body := GetJSONBody(r)
 
 	if len(body) == 0 || body == nil {
-		responder.Error(w, r, aegis.NewAegisError("empty JSON body", http.StatusBadRequest, nil))
+		responder.Error(w, r, NewAegisError("empty JSON body", http.StatusBadRequest, nil))
 		return nil
 	}
 
-	v := New()
+	v := NewValidator()
 	validateFunc(v, body)
 
 	if err := v.Validate(); err != nil {
-		responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnprocessableEntity, nil))
+		responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnprocessableEntity, nil))
 		return nil
 	}
 

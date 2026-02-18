@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/thecodearcher/aegis"
-	"github.com/thecodearcher/aegis/pkg/validator"
 )
 
 type twoFactorHandlers struct {
@@ -25,7 +24,7 @@ func newTwoFactorHandlers(feature *twoFactorFeature, responder *aegis.Responder,
 }
 
 func (a *twoFactorHandlers) InitiateTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, a.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("password", data["password"])
 	})
 
@@ -50,7 +49,7 @@ func (a *twoFactorHandlers) InitiateTwoFactorSetup(w http.ResponseWriter, r *htt
 }
 
 func (a *twoFactorHandlers) FinalizeTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, a.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("code", data["code"])
 	})
 
@@ -78,7 +77,7 @@ func (a *twoFactorHandlers) FinalizeTwoFactorSetup(w http.ResponseWriter, r *htt
 
 // Disable disables 2FA for the current user
 func (a *twoFactorHandlers) Disable(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, a.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("password", data["password"])
 	})
 
@@ -105,7 +104,7 @@ func (a *twoFactorHandlers) Disable(w http.ResponseWriter, r *http.Request) {
 
 // VerifyLoginWithTwoFactor verifies the 2FA code and completes the login process
 func (a *twoFactorHandlers) VerifyLoginWithTwoFactor(w http.ResponseWriter, r *http.Request) {
-	body := validator.ValidateJSON(w, r, a.responder, func(v *validator.Validator, data map[string]any) *validator.Validator {
+	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
 		return v.RequiredString("code", data["code"]).
 			Custom("method", func() error {
 				allowedMethods := []string{string(TwoFactorMethodOTP), string(TwoFactorMethodTOTP)}
