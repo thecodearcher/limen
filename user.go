@@ -28,9 +28,6 @@ type UserSchema struct {
 
 	// If true, the schema will include the created at and updated at fields
 	includeTimestampFields bool
-
-	// A function to serialize the model to a json object for returning to the client
-	Serializer func(data *User) map[string]any
 }
 
 type SchemaConfigUserOption func(*SchemaConfig, *UserSchema)
@@ -80,11 +77,12 @@ func (u *UserSchema) ToStorage(data Model) map[string]any {
 	}
 }
 
-func (u *UserSchema) Serialize(data *User) map[string]any {
-	if u.Serializer != nil {
-		return u.Serializer(data)
+func (u *UserSchema) Serialize(data Model) map[string]any {
+	if u.BaseSchema.Serializer != nil {
+		return u.BaseSchema.Serializer(data)
 	}
 	raw := data.Raw()
+	delete(raw, u.GetIDField())
 	delete(raw, u.GetPasswordField())
 	return raw
 }
@@ -101,9 +99,13 @@ func WithUserAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigUserOption {
 	}
 }
 
+// WithUserSerializer overrides the default user response serializer.
+// When not provided, Aegis serializes from user.Raw() and removes the password field.
 func WithUserSerializer(serializer func(data *User) map[string]any) SchemaConfigUserOption {
 	return func(c *SchemaConfig, u *UserSchema) {
-		u.Serializer = serializer
+		u.BaseSchema.Serializer = func(data Model) map[string]any {
+			return serializer(data.(*User))
+		}
 	}
 }
 

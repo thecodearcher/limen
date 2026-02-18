@@ -6,6 +6,7 @@ type Schema interface {
 	GetTableName() SchemaTableName
 	ToStorage(data Model) map[string]any
 	FromStorage(data map[string]any) Model
+	Serialize(data Model) map[string]any
 	GetSoftDeleteField() string
 	GetAdditionalFields() AdditionalFieldsFunc
 	GetIDField() string
@@ -31,6 +32,9 @@ type BaseSchema struct {
 
 	// schemaInfo contains all resolved schema information including table name, field mappings, and resolver
 	schemaInfo *SchemaInfo
+
+	// A function to serialize the model to a json object for returning to the client
+	Serializer func(data Model) map[string]any
 }
 
 func (b *BaseSchema) GetTableName() SchemaTableName {
@@ -64,6 +68,13 @@ func (b *BaseSchema) GetField(name SchemaField) string {
 		return ""
 	}
 	return b.schemaInfo.GetField(name)
+}
+
+func (b *BaseSchema) Serialize(data Model) map[string]any {
+	if b.Serializer != nil {
+		return b.Serializer(data)
+	}
+	return data.Raw()
 }
 
 func (b *BaseSchema) Initialize(schemaInfo *SchemaInfo) error {

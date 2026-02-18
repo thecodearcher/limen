@@ -137,7 +137,7 @@ func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core
 	}
 
 	return rs.JSON(w, r, http.StatusOK, map[string]any{
-		"user": core.Schema.User.Serialize(result.User),
+		"user": SerializeModel(core.Schema.User, result.User),
 	})
 }
 
@@ -214,4 +214,18 @@ func (rs Responder) Redirect(w http.ResponseWriter, r *http.Request, redirectURL
 func (rs Responder) RedirectWithSession(w http.ResponseWriter, r *http.Request, redirectURL string, sessionResult *SessionResult) {
 	rs.setSessionCookies(w, sessionResult)
 	rs.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+// SerializeModel serializes a model using its schema's Serialize method.
+func SerializeModel(schema Schema, model Model) map[string]any {
+	return schema.Serialize(model)
+}
+
+// SerializeAll serializes a slice of models using the given schema's Serialize method.
+func SerializeAll[T Model](schema Schema, models []T) []map[string]any {
+	result := make([]map[string]any, 0, len(models))
+	for _, model := range models {
+		result = append(result, schema.Serialize(model))
+	}
+	return result
 }

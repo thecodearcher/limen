@@ -1,6 +1,7 @@
 package aegis
 
 import (
+	"strings"
 	"time"
 )
 
@@ -8,6 +9,35 @@ type SchemaConfigAccountOption func(*SchemaConfig, *AccountSchema)
 
 type AccountSchema struct {
 	BaseSchema
+}
+
+func (s *AccountSchema) Serialize(data Model) map[string]any {
+	if s.BaseSchema.Serializer != nil {
+		return s.BaseSchema.Serializer(data)
+	}
+	raw := data.Raw()
+	delete(raw, s.GetIDField())
+	delete(raw, s.GetAccessTokenField())
+	delete(raw, s.GetRefreshTokenField())
+	delete(raw, s.GetIDTokenField())
+	delete(raw, s.GetUserIDField())
+
+	scope := raw[s.GetScopeField()].(string)
+	scope = strings.Join(strings.Split(scope, " "), ",")
+	scopes := strings.Split(scope, ",")
+	delete(raw, s.GetScopeField())
+	raw["scopes"] = scopes
+	return raw
+}
+
+// WithAccountSerializer overrides the default account response serializer.
+// When not provided, Aegis serializes from account.Raw() and removes token fields.
+func WithAccountSerializer(serializer func(data *Account) map[string]any) SchemaConfigAccountOption {
+	return func(c *SchemaConfig, s *AccountSchema) {
+		s.BaseSchema.Serializer = func(data Model) map[string]any {
+			return serializer(data.(*Account))
+		}
+	}
 }
 
 func WithAccountTableName(tableName SchemaTableName) SchemaConfigAccountOption {
