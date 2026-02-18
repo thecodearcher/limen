@@ -1,9 +1,12 @@
 package aegis
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Config is the main configuration struct for the aegis library
 type Config struct {
+	BaseURL  string
 	Database DatabaseAdapter
 	Features []Feature
 	Schema   *SchemaConfig
@@ -19,6 +22,10 @@ type CLIConfig struct {
 }
 
 func (c *Config) validate() error {
+	if c.BaseURL == "" {
+		c.BaseURL = "http://localhost:8080"
+	}
+
 	if c.Database == nil {
 		return ErrDatabaseAdapterRequired
 	}

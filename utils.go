@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 )
 
 type CharSetType int
@@ -265,7 +266,7 @@ func addSoftDeleteField(fields []ColumnDefinition, config *SchemaConfig, schemaN
 // IsValidCoreSchema checks if a string is a valid core schema name
 func IsValidCoreSchema(name string) bool {
 	switch SchemaName(name) {
-	case CoreSchemaUsers, CoreSchemaSessions, CoreSchemaVerifications, CoreSchemaRateLimits:
+	case CoreSchemaUsers, CoreSchemaSessions, CoreSchemaVerifications, CoreSchemaRateLimits, CoreSchemaAccounts:
 		return true
 	default:
 		return false
@@ -280,6 +281,22 @@ func getNullableValue[T any](value any) *T {
 	return &v
 }
 
+func getString(v any) string {
+	if v == nil {
+		return ""
+	}
+	s, _ := v.(string)
+	return s
+}
+
+func getTime(v any) time.Time {
+	if v == nil {
+		return time.Time{}
+	}
+	t, _ := v.(time.Time)
+	return t
+}
+
 func GetAdditionalFieldsFromRequest(response http.ResponseWriter, request *http.Request, schema Schema) (map[string]any, error) {
 	if schema.GetAdditionalFields() != nil {
 		additionalFieldsContext := newAdditionalFieldsContext(request, response)
@@ -289,19 +306,19 @@ func GetAdditionalFieldsFromRequest(response http.ResponseWriter, request *http.
 }
 
 func joinCustomStringSlice[T ~string](fields []T, separator string) string {
-	var joined string
+	var joined strings.Builder
 	for i := range fields {
-		joined += string(fields[i])
+		joined.WriteString(string(fields[i]))
 		if i < len(fields)-1 {
-			joined += separator
+			joined.WriteString(separator)
 		}
 	}
-	return joined
+	return joined.String()
 }
 
-func compileTrustedOrigins(httpConfig *httpConfig) []*regexp.Regexp {
-	patterns := make([]*regexp.Regexp, 0, len(httpConfig.trustedOrigins))
-	for _, pattern := range httpConfig.trustedOrigins {
+func compileTrustedOrigins(origins ...string) []*regexp.Regexp {
+	patterns := make([]*regexp.Regexp, 0, len(origins))
+	for _, pattern := range origins {
 		normalizedPattern := pattern
 		if !strings.Contains(pattern, "://") {
 			normalizedPattern = "*://" + pattern
@@ -362,7 +379,7 @@ func normalizePluginPath(basePath string, pluginBasePath string, override *Plugi
 
 func isCoreSchema(schema Schema) bool {
 	switch schema.(type) {
-	case *UserSchema, *VerificationSchema, *SessionSchema, *RateLimitSchema:
+	case *UserSchema, *VerificationSchema, *SessionSchema, *RateLimitSchema, *AccountSchema:
 		return true
 	}
 
@@ -384,6 +401,7 @@ func embedsCoreSchema(schema Schema) bool {
 		reflect.TypeFor[VerificationSchema](): true,
 		reflect.TypeFor[SessionSchema]():      true,
 		reflect.TypeFor[RateLimitSchema]():    true,
+		reflect.TypeFor[AccountSchema]():      true,
 	}
 
 	for i := 0; i < sType.NumField(); i++ {
@@ -424,4 +442,13 @@ func ExtractCookieValue(headers http.Header, cookieName string) string {
 		}
 	}
 	return ""
+}
+
+// simple wrapper around url.JoinPath that returns an empty string if the join fails
+func joinURL(baseURL string, path ...string) string {
+	url, err := url.JoinPath(baseURL, path...)
+	if err != nil {
+		return ""
+	}
+	return url
 }

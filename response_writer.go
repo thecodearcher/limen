@@ -16,6 +16,9 @@ type responseWriter struct {
 	modifiedPayload any  // Modified payload from hook
 	modifiedStatus  int  // Modified status from hook
 
+	redirectURL    string
+	redirectStatus int
+
 	// Auth result stored for hooks to access
 	authResult *AuthenticationResult
 }

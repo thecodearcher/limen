@@ -260,6 +260,12 @@ func (r *Router) writeFinalResponse(rw *responseWriter, req *http.Request) {
 		return // Handler didn't use Responder, response already sent
 	}
 
+	// Deferred redirect: send it on the real ResponseWriter so the browser follows it
+	if rw.redirectURL != "" {
+		http.Redirect(rw.ResponseWriter, req, rw.redirectURL, rw.redirectStatus)
+		return
+	}
+
 	status := rw.statusCode
 	payload := rw.payload
 	isError := rw.isError

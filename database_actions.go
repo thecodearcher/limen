@@ -59,7 +59,7 @@ func (h *DatabaseActionHelper) UpdateUser(ctx context.Context, updatedUser *User
 	return nil
 }
 
-func (h *DatabaseActionHelper) CreateVerification(ctx context.Context, action string, identifier string, token string, expiresAt time.Duration) (*Verification, error) {
+func (h *DatabaseActionHelper) CreateVerification(ctx context.Context, action string, identifier string, token string, expiresIn time.Duration) (*Verification, error) {
 	if identifier == "" {
 		return nil, errors.New("identifier is required")
 	}
@@ -69,7 +69,7 @@ func (h *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 	if err := h.core.Create(ctx, verificationSchema, &Verification{
 		Subject:   actionValue,
 		Value:     token,
-		ExpiresAt: time.Now().Add(expiresAt),
+		ExpiresAt: time.Now().Add(expiresIn),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}, nil); err != nil {
@@ -142,6 +142,13 @@ func (h *DatabaseActionHelper) DeleteVerificationToken(ctx context.Context, toke
 	})
 }
 
+func (h *DatabaseActionHelper) DeleteVerification(ctx context.Context, id any) error {
+	verificationSchema := h.core.Schema.Verification
+	return h.core.Delete(ctx, verificationSchema, []Where{
+		Eq(verificationSchema.GetIDField(), id),
+	})
+}
+
 func (h *DatabaseActionHelper) CreateSession(ctx context.Context, data *Session, additionalFields map[string]any) error {
 	if err := h.core.Create(ctx, h.core.Schema.Session, data, additionalFields); err != nil {
 		return err
@@ -179,4 +186,15 @@ func (h *DatabaseActionHelper) DeleteSessionByUserID(ctx context.Context, userID
 	return h.core.Delete(ctx, sessionSchema, []Where{
 		Eq(sessionSchema.GetUserIDField(), userID),
 	})
+}
+
+func (h *DatabaseActionHelper) FindAccountByProviderAndProviderID(ctx context.Context, provider string, providerAccountID any) (*Account, error) {
+	raw, err := h.core.FindOne(ctx, h.core.Schema.Account, []Where{
+		Eq(h.core.Schema.Account.GetProviderField(), provider),
+		Eq(h.core.Schema.Account.GetProviderAccountIDField(), providerAccountID),
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	return raw.(*Account), nil
 }

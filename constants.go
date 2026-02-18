@@ -45,6 +45,7 @@ type FeatureName string
 const (
 	FeatureCredentialPassword FeatureName = "credential-password"
 	FeatureTwoFactor          FeatureName = "two-factor"
+	FeatureOAuth              FeatureName = "oauth"
 )
 
 // ============================================================================
@@ -70,6 +71,8 @@ const (
 	CoreSchemaVerifications SchemaName = "verifications"
 	// CoreSchemaRateLimits is the name of the rate_limits core schema
 	CoreSchemaRateLimits SchemaName = "rate_limits"
+	// CoreSchemaAccounts is the name of the accounts core schema (OAuth linked accounts)
+	CoreSchemaAccounts SchemaName = "accounts"
 )
 
 // Schema Table Names
@@ -78,6 +81,7 @@ const (
 	VerificationSchemaTableName SchemaTableName = "verifications"
 	SessionSchemaTableName      SchemaTableName = "sessions"
 	RateLimitSchemaTableName    SchemaTableName = "rate_limits"
+	AccountSchemaTableName      SchemaTableName = "accounts"
 )
 
 // Schema Field Names
@@ -112,6 +116,16 @@ const (
 	RateLimitSchemaKeyField           SchemaField = "key"
 	RateLimitSchemaCountField         SchemaField = "count"
 	RateLimitSchemaLastRequestAtField SchemaField = "last_request_at"
+
+	// Account schema fields (OAuth)
+	AccountSchemaUserIDField               SchemaField = "user_id"
+	AccountSchemaProviderField             SchemaField = "provider"
+	AccountSchemaProviderAccountIDField    SchemaField = "provider_account_id"
+	AccountSchemaAccessTokenField          SchemaField = "access_token"
+	AccountSchemaRefreshTokenField         SchemaField = "refresh_token"
+	AccountSchemaAccessTokenExpiresAtField SchemaField = "access_token_expires_at"
+	AccountSchemaScopeField                SchemaField = "scope"
+	AccountSchemaIDTokenField              SchemaField = "id_token"
 )
 
 // ============================================================================

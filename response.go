@@ -45,6 +45,19 @@ func tryDeferResponse(w http.ResponseWriter, status int, payload any, isError bo
 	return true
 }
 
+// tryDeferRedirect stores a redirect for deferred writing when after-hooks are in use.
+// Returns true if the redirect was deferred (caller should return early).
+func tryDeferRedirect(w http.ResponseWriter, redirectURL string, status int) bool {
+	rw, ok := w.(*responseWriter)
+	if !ok || !rw.deferWrite {
+		return false
+	}
+	rw.redirectURL = redirectURL
+	rw.redirectStatus = status
+	rw.written = true
+	return true
+}
+
 func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, payload any) error {
 	if tryDeferResponse(w, status, payload, false) {
 		return nil
@@ -185,4 +198,20 @@ func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *Sess
 		return
 	}
 	http.SetCookie(w, sessionResult.Cookie)
+}
+
+// Redirect sends a redirect response. When the response is deferred (after-hooks in use),
+// the redirect is stored and sent after hooks run so the browser receives a proper 3xx.
+func (rs Responder) Redirect(w http.ResponseWriter, r *http.Request, redirectURL string, status int) {
+	if tryDeferRedirect(w, redirectURL, status) {
+		return
+	}
+	http.Redirect(w, r, redirectURL, status)
+}
+
+// RedirectWithSession sets the session cookie and redirects the client to redirectURL.
+// Used by OAuth callbacks when redirect_uri is provided in the authorize request.
+func (rs Responder) RedirectWithSession(w http.ResponseWriter, r *http.Request, redirectURL string, sessionResult *SessionResult) {
+	rs.setSessionCookies(w, sessionResult)
+	rs.Redirect(w, r, redirectURL, http.StatusFound)
 }

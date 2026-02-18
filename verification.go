@@ -3,6 +3,7 @@ package aegis
 import "time"
 
 type Verification struct {
+	ID        any
 	Subject   string
 	Value     string
 	ExpiresAt time.Time
@@ -55,6 +56,7 @@ func (v *VerificationSchema) GetUpdatedAtField() string {
 
 func (v *VerificationSchema) FromStorage(data map[string]any) Model {
 	return &Verification{
+		ID:        data[v.GetIDField()],
 		Subject:   data[v.GetSubjectField()].(string),
 		Value:     data[v.GetValueField()].(string),
 		ExpiresAt: data[v.GetExpiresAtField()].(time.Time),

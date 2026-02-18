@@ -1,6 +1,8 @@
 package aegis
 
-import "regexp"
+import (
+	"regexp"
+)
 
 type AegisHTTPCore struct {
 	Responder              *Responder
@@ -15,4 +17,13 @@ func (httpCore *AegisHTTPCore) SessionCookieName() string {
 		return ""
 	}
 	return httpCore.config.cookieConfig.name
+}
+
+func (httpCore *AegisHTTPCore) IsTrustedOrigin(url string) bool {
+	for _, pattern := range httpCore.trustedOriginsPatterns {
+		if pattern.MatchString(url) {
+			return true
+		}
+	}
+	return false
 }

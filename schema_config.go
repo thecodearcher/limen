@@ -22,6 +22,8 @@ type SchemaConfig struct {
 	AdditionalFields AdditionalFieldsFunc
 	// IDGenerator generates IDs for all schemas
 	IDGenerator IDGenerator
+	// Account schema configuration
+	Account *AccountSchema
 	// User schema configuration
 	User *UserSchema
 	// Verification schema configuration
@@ -47,6 +49,7 @@ func NewDefaultSchemaConfig(opts ...SchemaConfigOption) *SchemaConfig {
 		Verification:             newDefaultVerificationSchema(nil),
 		Session:                  newDefaultSessionSchema(nil),
 		RateLimit:                newDefaultRateLimitSchema(nil),
+		Account:                  newDefaultAccountSchema(nil),
 	}
 
 	for _, opt := range opts {
@@ -114,6 +117,13 @@ func WithSchemaAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigOption {
 func WithSchemaIDGenerator(generator IDGenerator) SchemaConfigOption {
 	return func(c *SchemaConfig) {
 		c.IDGenerator = generator
+	}
+}
+
+// WithSchemaAccount sets the account schema configuration
+func WithSchemaAccount(opts ...SchemaConfigAccountOption) SchemaConfigOption {
+	return func(c *SchemaConfig) {
+		c.Account = newDefaultAccountSchema(c, opts...)
 	}
 }
 

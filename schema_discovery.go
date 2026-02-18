@@ -40,12 +40,14 @@ func collectCoreSchemas(schemaConfig *SchemaConfig) map[SchemaName]SchemaDefinit
 	verificationDef := schemaConfig.Verification.Introspect(schemaConfig).(*SchemaDefinition)
 	sessionDef := schemaConfig.Session.Introspect(schemaConfig).(*SchemaDefinition)
 	rateLimitDef := schemaConfig.RateLimit.Introspect(schemaConfig).(*SchemaDefinition)
+	accountDef := schemaConfig.Account.Introspect(schemaConfig).(*SchemaDefinition)
 
 	return map[SchemaName]SchemaDefinition{
 		CoreSchemaUsers:         *userDef,
 		CoreSchemaVerifications: *verificationDef,
 		CoreSchemaSessions:      *sessionDef,
 		CoreSchemaRateLimits:    *rateLimitDef,
+		CoreSchemaAccounts:      *accountDef,
 	}
 }
 

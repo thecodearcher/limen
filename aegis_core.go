@@ -1,6 +1,9 @@
 package aegis
 
 type AegisCore struct {
+	config         *Config
+	baseURL        string
+	fullBaseURL    string // baseURL + HTTP.basePath
 	db             DatabaseAdapter
 	DBAction       *DatabaseActionHelper
 	Schema         *SchemaConfig
@@ -24,4 +27,23 @@ func (c *AegisCore) GetCredentialPasswordFeature() CredentialPasswordFeature {
 		return nil
 	}
 	return feature.(CredentialPasswordFeature)
+}
+
+func (c *AegisCore) GetBaseURL() string {
+	return c.baseURL
+}
+
+func (c *AegisCore) GetFullBaseURL() string {
+	return c.fullBaseURL
+}
+
+func (c *AegisCore) GetBaseURLWithPluginPath(pluginName FeatureName, pathToJoin string) string {
+	feature, ok := c.GetFeature(pluginName)
+	if !ok {
+		return ""
+	}
+
+	featureConfig := feature.PluginHTTPConfig()
+	normalizedBasePath := normalizePluginPath(c.config.HTTP.basePath, featureConfig.BasePath, c.config.HTTP.overrides[string(pluginName)])
+	return joinURL(c.baseURL, normalizedBasePath, pathToJoin)
 }

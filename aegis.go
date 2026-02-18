@@ -31,11 +31,13 @@ func New(config *Config) (*Aegis, error) {
 	aegis := &Aegis{
 		config: config,
 	}
-
 	core := &AegisCore{
-		db:       config.Database,
-		Schema:   config.Schema,
-		features: make(map[FeatureName]Feature),
+		config:      config,
+		baseURL:     config.BaseURL,
+		fullBaseURL: joinURL(config.BaseURL, config.HTTP.basePath),
+		db:          config.Database,
+		Schema:      config.Schema,
+		features:    make(map[FeatureName]Feature),
 	}
 
 	sessionManager := newOpaqueSessionManager(core, config.Session, config.HTTP.cookieConfig)
@@ -83,13 +85,15 @@ func (a *Aegis) Handler() http.Handler {
 	config := a.config.HTTP
 
 	config.basePath = NormalizePath(config.basePath)
+	allUrls := []string{a.core.GetBaseURL()}
+	allUrls = append(allUrls, config.trustedOrigins...)
 
 	httpCore := &AegisHTTPCore{
 		Responder:              newResponder(config),
 		authInstance:           a,
 		config:                 config,
 		core:                   a.core,
-		trustedOriginsPatterns: compileTrustedOrigins(config),
+		trustedOriginsPatterns: compileTrustedOrigins(allUrls...),
 	}
 
 	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Features)

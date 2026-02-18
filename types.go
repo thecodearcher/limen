@@ -9,6 +9,22 @@ import (
 // this file contains the types for the aegis library
 // NO FEATURES SHOULD BE ADDED TO THIS FILE those go in the feature.go file
 
+// OAuthAccountProfile holds the data returned by the provider after a successful OAuth authentication.
+type OAuthAccountProfile struct {
+	Provider             string
+	ProviderAccountID    string
+	AccessToken          string
+	RefreshToken         string
+	AccessTokenExpiresAt *time.Time
+	Scope                string
+	IDToken              string
+	Email                string
+	EmailVerified        bool
+	Name                 string
+	AvatarURL            string
+	Raw                  map[string]any
+}
+
 // SessionManager defines the interface for session lifecycle management.
 type SessionManager interface {
 	CreateSession(ctx context.Context, r *http.Request, auth *AuthenticationResult) (*SessionResult, error)
