@@ -3,9 +3,11 @@ package oauthgoogle
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
+	"strings"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -51,49 +53,60 @@ func (g *googleProvider) Name() string {
 }
 
 func (g *googleProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOption) {
-	authOpts := []oauth2.AuthCodeOption{
-		oauth2.SetAuthURLParam("response_type", "code"),
-	}
+	var authOpts []oauth2.AuthCodeOption
 
-	if g.config.prompt != "" {
-		authOpts = append(authOpts, oauth2.SetAuthURLParam("prompt", g.config.prompt))
-	}
-	if g.config.accessType != "" {
-		authOpts = append(authOpts, oauth2.SetAuthURLParam("access_type", g.config.accessType))
-	}
-	if g.config.includeGrantedScopes {
-		authOpts = append(authOpts, oauth2.SetAuthURLParam("include_granted_scopes", "true"))
+	for key, value := range g.config.options {
+		authOpts = append(authOpts, oauth2.SetAuthURLParam(key, value))
 	}
 	return g.oauthConfig, authOpts
 }
 
-func (g *googleProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.googleapis.com/oauth2/v2/userinfo", nil)
+func (g *googleProvider) GetUserInfo(_ context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
+	if token.IDToken == "" {
+		return nil, errors.New("google: id_token required; include openid scope")
+	}
+	claims, err := decodeIDTokenClaims(token.IDToken)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("google: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("userinfo request failed: %s", resp.Status)
-	}
-	raw := map[string]any{}
 
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, err
+	sub, _ := claims["sub"].(string)
+	if sub == "" {
+		return nil, errors.New("google: id token missing sub claim")
 	}
+	email, _ := claims["email"].(string)
+	if email == "" {
+		return nil, errors.New("google: id token missing email claim")
+	}
+	emailVerified, _ := claims["email_verified"].(bool)
+	name, _ := claims["name"].(string)
+	picture, _ := claims["picture"].(string)
 
 	return &oauth.ProviderUserInfo{
-		ID:            raw["id"].(string),
-		Email:         raw["email"].(string),
-		EmailVerified: raw["verified_email"].(bool),
-		Name:          raw["name"].(string),
-		AvatarURL:     raw["picture"].(string),
-		Raw:           raw,
+		ID:            sub,
+		Email:         email,
+		EmailVerified: emailVerified,
+		Name:          name,
+		AvatarURL:     picture,
+		Raw:           claims,
 	}, nil
+}
+
+// decodeIDTokenClaims decodes the payload segment of a JWT without verification.
+// Safe here because the token was obtained directly from Google's token endpoint over TLS.
+func decodeIDTokenClaims(idToken string) (map[string]any, error) {
+	parts := strings.SplitN(idToken, ".", 3)
+	if len(parts) != 3 {
+		return nil, errors.New("id token has invalid JWT format")
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("id token payload decode: %w", err)
+	}
+	var claims map[string]any
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, fmt.Errorf("id token payload unmarshal: %w", err)
+	}
+
+	return claims, nil
 }

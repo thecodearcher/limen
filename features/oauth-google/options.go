@@ -4,13 +4,11 @@ package oauthgoogle
 type ConfigOption func(*config)
 
 type config struct {
-	clientID             string
-	clientSecret         string
-	redirectURL          string
-	scopes               []string
-	prompt               string
-	accessType           string
-	includeGrantedScopes bool
+	clientID     string
+	clientSecret string
+	redirectURL  string
+	scopes       []string
+	options      map[string]string
 }
 
 // WithClientID sets the Google OAuth2 client ID.
@@ -41,23 +39,12 @@ func WithScopes(scopes ...string) ConfigOption {
 	}
 }
 
-// WithPrompt sets the OAuth2 prompt (e.g. "consent", "select_account").
-func WithPrompt(prompt Prompt) ConfigOption {
+// WithOption sets any additional OAuth2 options such as "prompt", "access_type", etc.
+func WithOption(key, value string) ConfigOption {
 	return func(c *config) {
-		c.prompt = string(prompt)
-	}
-}
-
-// WithAccessType sets the OAuth2 access type (e.g. "offline", "online").
-func WithAccessType(accessType AccessType) ConfigOption {
-	return func(c *config) {
-		c.accessType = string(accessType)
-	}
-}
-
-// WithIncludeGrantedScopes sets the OAuth2 include granted scopes (e.g. "true", "false").
-func WithIncludeGrantedScopes(includeGrantedScopes bool) ConfigOption {
-	return func(c *config) {
-		c.includeGrantedScopes = includeGrantedScopes
+		if c.options == nil {
+			c.options = make(map[string]string)
+		}
+		c.options[key] = value
 	}
 }
