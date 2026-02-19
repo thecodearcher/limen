@@ -73,13 +73,13 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 
 	result, err := p.feature.SignInWithCredentialAndPassword(r.Context(), body["credential"].(string), body["password"].(string))
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(ErrInvalidCredential.Error(), errorStatus(ErrInvalidCredential), nil))
+		p.responder.Error(w, r, aegis.NewAegisError(ErrInvalidCredential.Error(), ErrInvalidCredential.Status(), nil))
 		return
 	}
 
 	sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, result)
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -125,7 +125,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 	}, additionalFields)
 
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), errorStatus(err), nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -136,7 +136,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 
 	sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, result)
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -155,7 +155,7 @@ func (p *credentialPasswordHandlers) VerifyEmail(w http.ResponseWriter, r *http.
 
 	err := p.feature.VerifyEmail(r.Context(), body["token"].(string))
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -166,7 +166,7 @@ func (p *credentialPasswordHandlers) VerifyEmail(w http.ResponseWriter, r *http.
 func (p *credentialPasswordHandlers) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
 	session, err := aegis.GetCurrentSessionFromCtx(r)
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnauthorized, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -175,7 +175,7 @@ func (p *credentialPasswordHandlers) RequestEmailVerification(w http.ResponseWri
 	}, true)
 
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -204,7 +204,7 @@ func (p *credentialPasswordHandlers) RequestPasswordReset(w http.ResponseWriter,
 			return
 		}
 
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -232,7 +232,7 @@ func (p *credentialPasswordHandlers) ResetPassword(w http.ResponseWriter, r *htt
 
 	err := p.feature.ResetPassword(r.Context(), body["token"].(string), body["new_password"].(string))
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), errorStatus(err), nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -266,13 +266,13 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 
 	session, err := aegis.GetCurrentSessionFromCtx(r)
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusUnauthorized, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
 	err = p.feature.UpdatePassword(r.Context(), session.User, body["current_password"].(string), body["new_password"].(string), revokeOtherSessions)
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusBadRequest, nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
@@ -283,7 +283,7 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 	if revokeOtherSessions {
 		sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, authResult)
 		if err != nil {
-			p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
+			p.responder.Error(w, r, err)
 			return
 		}
 		p.responder.SessionResponse(w, r, p.feature.core, authResult, sessionResult)
@@ -363,7 +363,7 @@ func (p *credentialPasswordHandlers) CheckUsernameAvailability(w http.ResponseWr
 
 	available, err := p.feature.CheckUsernameAvailability(r.Context(), body["username"].(string))
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(err.Error(), errorStatus(err), nil))
+		p.responder.Error(w, r, err)
 		return
 	}
 
