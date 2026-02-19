@@ -3,6 +3,7 @@ package oauth
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/thecodearcher/aegis"
 )
@@ -148,7 +149,7 @@ func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Re
 	}
 
 	if err != nil {
-		redirectURI = fmt.Sprintf("%s?error=%s", redirectURI, err.Error())
+		redirectURI = fmt.Sprintf("%s?error=%s", redirectURI, url.QueryEscape(err.Error()))
 	}
 
 	h.responder.RedirectWithSession(w, r, redirectURI, sessionResult)
