@@ -20,6 +20,11 @@ func (p *credentialPasswordFeature) HashPassword(password string) (string, error
 // ComparePassword compares a plain text password with a hashed password.
 // Returns true if they match, false otherwise, or an error if comparison fails.
 func (p *credentialPasswordFeature) ComparePassword(password string, hash string) (bool, error) {
+	if hash == "" {
+		// this is only possible when user signs in with oauth
+		return false, ErrPasswordNotSet
+	}
+
 	if p.config.compareFn != nil {
 		return p.config.compareFn(password, hash)
 	}

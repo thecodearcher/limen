@@ -29,6 +29,7 @@ var (
 	ErrUsernameTooLong               = errors.New("username is too long")
 	ErrUsernameInvalidFormat         = errors.New("username contains invalid characters")
 	ErrPasswordReuseNotAllowed       = errors.New("new password must be different from current password")
+	ErrPasswordNotSet                = errors.New("password is not set")
 )
 
 func errorStatus(err error) int {

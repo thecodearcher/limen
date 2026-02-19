@@ -8,7 +8,6 @@ import (
 
 var (
 	ErrOAuthStateInvalid                     = aegis.NewAegisError("invalid or expired OAuth state", http.StatusBadRequest, nil)
-	ErrOAuthStateDataTooLarge                = aegis.NewAegisError("OAuth state data exceeds maximum size; use less data or the database state store", http.StatusBadRequest, nil)
 	ErrMissingStateCookie                    = aegis.NewAegisError("missing OAuth state cookie; ensure cookies are enabled", http.StatusBadRequest, nil)
 	ErrAccountNotFound                       = aegis.NewAegisError("account not found", http.StatusNotFound, nil)
 	ErrProviderRequired                      = aegis.NewAegisError("provider is required", http.StatusUnprocessableEntity, nil)
