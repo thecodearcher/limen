@@ -64,12 +64,12 @@ func (t *twoFactorFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 		BasePath:   "/two-factor",
 		Middleware: []aegis.Middleware{},
 		Hooks: &aegis.Hooks{
-			After: &aegis.Hook{
-				PathMatcher: func(ctx *aegis.HookContext) bool {
-					return ctx.RouteID() == "signin"
-				},
-				Run: func(ctx *aegis.HookContext) bool {
-					return t.handleSigninHook(ctx)
+			After: []*aegis.Hook{
+				{
+					PathMatcher: func(ctx *aegis.HookContext) bool {
+						return ctx.RouteID() == "signin"
+					},
+					Run: t.handleSigninHook,
 				},
 			},
 		},

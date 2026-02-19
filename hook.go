@@ -17,9 +17,11 @@ type Hook struct {
 }
 
 // Hooks is a container for optional before and after hooks to add to the router.
+// Hooks in Before run in order before the request handler; hooks in After run in order after.
+// Any before-hook returning false stops the chain and the request does not continue.
 type Hooks struct {
-	Before *Hook
-	After  *Hook
+	Before []*Hook
+	After  []*Hook
 }
 
 // ResponseData represents the response data that hooks can read and modify

@@ -111,16 +111,20 @@ func NewRouter(responder *Responder, globalMiddleware ...Middleware) *Router {
 	}
 }
 
-// AddHooks appends the hook set's Before and After to the router.
+// AddHooks appends the hook set's Before and After hooks to the router.
 func (r *Router) AddHooks(h *Hooks) {
 	if h == nil {
 		return
 	}
-	if h.Before != nil {
-		r.beforeHooks = append(r.beforeHooks, *h.Before)
+	for _, hook := range h.Before {
+		if hook != nil {
+			r.beforeHooks = append(r.beforeHooks, *hook)
+		}
 	}
-	if h.After != nil {
-		r.afterHooks = append(r.afterHooks, *h.After)
+	for _, hook := range h.After {
+		if hook != nil {
+			r.afterHooks = append(r.afterHooks, *hook)
+		}
 	}
 }
 
