@@ -23,7 +23,6 @@ func (h *oauthHandlers) SignInWithOAuth(w http.ResponseWriter, r *http.Request) 
 	providerName := aegis.GetParam(r, "provider")
 
 	request := &OAuthAuthorizeURLData{
-		AdditionalData:   h.queryToMap(r),
 		RedirectURI:      r.URL.Query().Get("redirect_uri"),
 		ErrorRedirectURI: r.URL.Query().Get("error_redirect_uri"),
 	}
@@ -78,8 +77,9 @@ func (h *oauthHandlers) LinkAccountWithOAuth(w http.ResponseWriter, r *http.Requ
 	}
 
 	providerName := aegis.GetParam(r, "provider")
-	data := h.queryToMap(r)
-	data[linkUserIdKey] = session.User.ID
+	data := map[string]any{
+		linkUserIdKey: session.User.ID,
+	}
 	request := &OAuthAuthorizeURLData{
 		AdditionalData:   data,
 		RedirectURI:      r.URL.Query().Get("redirect_uri"),
@@ -152,17 +152,6 @@ func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Re
 	}
 
 	h.responder.RedirectWithSession(w, r, redirectURI, sessionResult)
-}
-
-func (h *oauthHandlers) queryToMap(r *http.Request) map[string]any {
-	data := make(map[string]any)
-	for key, value := range r.URL.Query() {
-		if key == "redirect_uri" || key == "error_redirect_uri" {
-			continue
-		}
-		data[key] = value[0]
-	}
-	return data
 }
 
 func (h *oauthHandlers) setStateCookie(w http.ResponseWriter, value string) {
