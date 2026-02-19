@@ -7,7 +7,7 @@ import (
 type User struct {
 	ID              any        `json:"id"`
 	Email           string     `json:"email"`
-	Password        string     `json:"-"`
+	Password        *string    `json:"-"`
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 	raw             map[string]any
 }
@@ -62,7 +62,7 @@ func (u *UserSchema) FromStorage(data map[string]any) Model {
 	return &User{
 		ID:              data[u.GetIDField()],
 		Email:           data[u.GetEmailField()].(string),
-		Password:        getString(data[u.GetPasswordField()]),
+		Password:        getNullableValue[string](data[u.GetPasswordField()]),
 		EmailVerifiedAt: getNullableValue[time.Time](data[u.GetEmailVerifiedAtField()]),
 		raw:             data,
 	}

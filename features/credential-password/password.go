@@ -19,17 +19,17 @@ func (p *credentialPasswordFeature) HashPassword(password string) (string, error
 
 // ComparePassword compares a plain text password with a hashed password.
 // Returns true if they match, false otherwise, or an error if comparison fails.
-func (p *credentialPasswordFeature) ComparePassword(password string, hash string) (bool, error) {
-	if hash == "" {
+func (p *credentialPasswordFeature) ComparePassword(password string, hash *string) (bool, error) {
+	if hash == nil {
 		// this is only possible when user signs in with oauth
 		return false, ErrPasswordNotSet
 	}
 
 	if p.config.compareFn != nil {
-		return p.config.compareFn(password, hash)
+		return p.config.compareFn(password, *hash)
 	}
 
-	return newPasswordHasher(p.config.passwordHasherConfig).verifyPassword([]byte(password), hash)
+	return newPasswordHasher(p.config.passwordHasherConfig).verifyPassword([]byte(password), *hash)
 }
 
 // RequestPasswordReset generates a password reset token for the given email address.
@@ -79,7 +79,7 @@ func (p *credentialPasswordFeature) ResetPassword(ctx context.Context, token str
 	}
 
 	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
-		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
+		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: &hashedPassword}, []aegis.Where{
 			aegis.Eq(p.userSchema.GetEmailField(), identifier),
 		}); err != nil {
 			return fmt.Errorf("failed to update user password: %w", err)
@@ -101,6 +101,36 @@ func (p *credentialPasswordFeature) ResetPassword(ctx context.Context, token str
 	}
 
 	return nil
+}
+
+// SetPassword sets a password for a user who doesn't have one (e.g., signed up via OAuth).
+//
+// Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
+func (p *credentialPasswordFeature) SetPassword(ctx context.Context, user *aegis.User, newPassword string, revokeOtherSessions bool) error {
+	if user.Password != nil {
+		return ErrPasswordAlreadySet
+	}
+
+	if err := p.validatePassword(newPassword); err != nil {
+		return err
+	}
+
+	hashedPassword, err := p.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	return p.core.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: &hashedPassword}, []aegis.Where{
+			aegis.Eq(p.userSchema.GetIDField(), user.ID),
+		}); err != nil {
+			return err
+		}
+		if revokeOtherSessions {
+			return p.dbAction.DeleteSessionByUserID(ctx, user.ID)
+		}
+		return nil
+	})
 }
 
 // UpdatePassword updates the password for the given user and revokes other sessions if requested.
@@ -126,7 +156,7 @@ func (p *credentialPasswordFeature) UpdatePassword(ctx context.Context, user *ae
 	}
 
 	return p.core.WithTransaction(ctx, func(ctx context.Context) error {
-		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: hashedPassword}, []aegis.Where{
+		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: &hashedPassword}, []aegis.Where{
 			aegis.Eq(p.userSchema.GetIDField(), user.ID),
 		}); err != nil {
 			return err

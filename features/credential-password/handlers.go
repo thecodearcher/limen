@@ -35,6 +35,7 @@ func (p *credentialPasswordFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 			aegis.NewRateLimitRule("/verify-email", 5, 10*time.Minute),
 			aegis.NewRateLimitRule("/passwords/reset", 5, 10*time.Minute),
 			aegis.NewRateLimitRule("/passwords/change", 5, 10*time.Minute),
+			aegis.NewRateLimitRule("/passwords", 5, 10*time.Minute),
 			aegis.NewRateLimitRule("/usernames/check", 10, 1*time.Minute),
 		},
 	}
@@ -53,6 +54,7 @@ func routes(e *credentialPasswordHandlers) {
 	e.builder.POST("/passwords/reset", "passwords-reset", e.ResetPassword)
 	e.builder.ProtectedPOST("/email-verifications", "email-verifications", e.RequestEmailVerification)
 	e.builder.ProtectedPOST("/passwords/change", "passwords-change", e.ChangePassword)
+	e.builder.ProtectedPUT("/passwords", "passwords-set", e.SetPassword)
 	e.builder.POST("/usernames/check", "usernames-check", e.CheckUsernameAvailability)
 }
 
@@ -116,9 +118,10 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 		additionalFields["username"] = strings.TrimSpace(body["username"].(string))
 	}
 
+	password := body["password"].(string)
 	result, err := p.feature.SignUpWithCredentialAndPassword(r.Context(), &aegis.User{
 		Email:    body["email"].(string),
-		Password: body["password"].(string),
+		Password: &password,
 	}, additionalFields)
 
 	if err != nil {
@@ -281,6 +284,57 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 		sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, authResult)
 		if err != nil {
 			p.responder.Error(w, r, aegis.NewAegisError(err.Error(), http.StatusInternalServerError, nil))
+			return
+		}
+		p.responder.SessionResponse(w, r, p.feature.core, authResult, sessionResult)
+		return
+	}
+
+	p.responder.SessionResponse(w, r, p.feature.core, authResult, nil)
+}
+
+func (p *credentialPasswordHandlers) SetPassword(w http.ResponseWriter, r *http.Request) {
+	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+		return v.
+			RequiredString("new_password", data["new_password"]).
+			Custom("new_password", func() error {
+				newPassword, ok := data["new_password"].(string)
+				if !ok {
+					newPassword = ""
+				}
+				return p.feature.validatePassword(newPassword)
+			}, false)
+	})
+
+	if body == nil {
+		return
+	}
+
+	revokeOtherSessions := true
+	if value, ok := body["revoke_other_sessions"].(bool); ok {
+		revokeOtherSessions = value
+	}
+
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		p.responder.Error(w, r, err)
+		return
+	}
+
+	err = p.feature.SetPassword(r.Context(), session.User, body["new_password"].(string), revokeOtherSessions)
+	if err != nil {
+		p.responder.Error(w, r, err)
+		return
+	}
+
+	authResult := &aegis.AuthenticationResult{
+		User: session.User,
+	}
+
+	if revokeOtherSessions {
+		sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, authResult)
+		if err != nil {
+			p.responder.Error(w, r, err)
 			return
 		}
 		p.responder.SessionResponse(w, r, p.feature.core, authResult, sessionResult)

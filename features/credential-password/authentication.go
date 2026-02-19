@@ -96,7 +96,7 @@ func (p *credentialPasswordFeature) SignUpWithCredentialAndPassword(ctx context.
 		return nil, ErrEmailAlreadyExists
 	}
 
-	hashedPassword, err := p.HashPassword(user.Password)
+	hashedPassword, err := p.HashPassword(*user.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (p *credentialPasswordFeature) SignUpWithCredentialAndPassword(ctx context.
 	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
 		if err := p.dbAction.CreateUser(ctx, &aegis.User{
 			Email:    user.Email,
-			Password: hashedPassword,
+			Password: &hashedPassword,
 		}, additionalFields); err != nil {
 			return err
 		}

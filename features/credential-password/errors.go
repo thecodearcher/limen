@@ -3,6 +3,8 @@ package credentialpassword
 import (
 	"errors"
 	"net/http"
+
+	"github.com/thecodearcher/aegis"
 )
 
 // Plugin Errors - These errors are more granular and only used within the plugin not the API
@@ -29,14 +31,15 @@ var (
 	ErrUsernameTooLong               = errors.New("username is too long")
 	ErrUsernameInvalidFormat         = errors.New("username contains invalid characters")
 	ErrPasswordReuseNotAllowed       = errors.New("new password must be different from current password")
-	ErrPasswordNotSet                = errors.New("password is not set")
+	ErrPasswordNotSet                = aegis.NewAegisError("password is not set", http.StatusForbidden, nil)
+	ErrPasswordAlreadySet            = aegis.NewAegisError("password is already set", http.StatusForbidden, nil)
 )
 
 func errorStatus(err error) int {
 	switch err {
 	case ErrInvalidCredential:
 		return http.StatusUnauthorized
-	case ErrEmailAlreadyExists, ErrUsernameAlreadyExists:
+	case ErrEmailAlreadyExists, ErrUsernameAlreadyExists, ErrPasswordAlreadySet:
 		return http.StatusConflict
 	case ErrPasswordTooShort,
 		ErrPasswordRequiresUppercase,

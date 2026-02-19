@@ -57,10 +57,10 @@ func (p *credentialPasswordFeature) validateUser(user *aegis.User, additionalFie
 	if user.Email == "" {
 		return ErrEmailRequired
 	}
-	if user.Password == "" {
+	if user.Password == nil {
 		return ErrPasswordRequired
 	}
-	if err := p.validatePassword(user.Password); err != nil {
+	if err := p.validatePassword(*user.Password); err != nil {
 		return err
 	}
 

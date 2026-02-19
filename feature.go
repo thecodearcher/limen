@@ -58,7 +58,7 @@ type CredentialPasswordFeature interface {
 	HashPassword(password string) (string, error)
 
 	// ComparePassword compares the given password with the given hash and returns true if they match, false otherwise.
-	ComparePassword(password string, hash string) (bool, error)
+	ComparePassword(password string, hash *string) (bool, error)
 
 	// RequestPasswordReset requests a password reset for the given email.
 	// Returns the verification object if the request is successful.
@@ -71,6 +71,11 @@ type CredentialPasswordFeature interface {
 	//
 	// Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
 	UpdatePassword(ctx context.Context, user *User, currentPassword string, newPassword string, revokeOtherSessions bool) error
+
+	// SetPassword sets a password for a user who doesn't have one (e.g., signed up via OAuth).
+	//
+	// Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
+	SetPassword(ctx context.Context, user *User, newPassword string, revokeOtherSessions bool) error
 
 	// RequestEmailVerification requests an email verification for the given user.
 	RequestEmailVerification(ctx context.Context, user *User, shouldSendEmail bool) (*Verification, error)

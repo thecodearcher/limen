@@ -35,7 +35,7 @@ func (o *oauthFeature) UnlinkAccount(ctx context.Context, user *aegis.User, prov
 		return ErrAccountNotFound
 	}
 
-	if user.Password == "" && accountCount == 1 {
+	if user.Password == nil && accountCount == 1 {
 		return ErrCannotUnlinkOnlyAccount
 	}
 
