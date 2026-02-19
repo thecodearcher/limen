@@ -30,17 +30,17 @@ type httpConfig struct {
 	csrfProtection bool
 	// OriginCheck: enable origin check.
 	originCheck bool
-	// CookieConfig: configuration for session cookies
+	// CookieConfig: configuration for cookies
 	cookieConfig *cookieConfig
 }
 
 type cookieConfig struct {
-	name        string
-	path        string
-	secure      bool
-	httpOnly    bool
-	sameSite    http.SameSite
-	partitioned bool // optional: set true for browsers supporting CHIPS/partitioned cookies
+	sessionCookieName string
+	path              string
+	secure            bool
+	httpOnly          bool
+	sameSite          http.SameSite
+	partitioned       bool // optional: set true for browsers supporting CHIPS/partitioned cookies
 	// crossSubdomain: share cookies across subdomains while keeping SameSite=Lax.
 	// Set Cookie.Domain to ".example.com" (your eTLD+1) when true.
 	crossSubdomain *crossDomainConfig
@@ -96,12 +96,12 @@ func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *httpConfig {
 		csrfProtection: true,
 		originCheck:    true,
 		cookieConfig: &cookieConfig{
-			name:        "aegis_session",
-			path:        "/",
-			secure:      true,
-			httpOnly:    true,
-			sameSite:    http.SameSiteLaxMode,
-			partitioned: false,
+			sessionCookieName: "aegis_session",
+			path:              "/",
+			secure:            true,
+			httpOnly:          true,
+			sameSite:          http.SameSiteLaxMode,
+			partitioned:       false,
 			crossSubdomain: &crossDomainConfig{
 				enabled: false,
 			},
@@ -193,9 +193,10 @@ func WithHTTPOriginCheck(originCheck bool) HTTPConfigOption {
 	}
 }
 
-func WithHTTPCookieName(name string) HTTPConfigOption {
+// WithHTTPSessionCookieName sets the name of the session cookie
+func WithHTTPSessionCookieName(name string) HTTPConfigOption {
 	return func(c *httpConfig) {
-		c.cookieConfig.name = name
+		c.cookieConfig.sessionCookieName = name
 	}
 }
 

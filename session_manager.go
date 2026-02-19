@@ -10,18 +10,24 @@ import (
 
 // OpaqueSessionManager implements SessionManager using opaque tokens.
 type OpaqueSessionManager struct {
-	store        SessionStore
-	config       *sessionConfig
-	core         *AegisCore
-	cookieConfig *cookieConfig
+	store      SessionStore
+	config     *sessionConfig
+	core       *AegisCore
+	cookies    *CookieManager
+	cookieName string
 }
 
-func newOpaqueSessionManager(core *AegisCore, config *sessionConfig, cookieConfig *cookieConfig) *OpaqueSessionManager {
+func newOpaqueSessionManager(core *AegisCore, config *sessionConfig) *OpaqueSessionManager {
+	var cookieName string
+	if core.cookies != nil && core.config.HTTP.cookieConfig != nil {
+		cookieName = core.config.HTTP.cookieConfig.sessionCookieName
+	}
 	return &OpaqueSessionManager{
-		store:        determineStore(config, core),
-		config:       config,
-		core:         core,
-		cookieConfig: cookieConfig,
+		store:      determineStore(config, core),
+		config:     config,
+		core:       core,
+		cookies:    core.cookies,
+		cookieName: cookieName,
 	}
 }
 
@@ -114,26 +120,10 @@ func (m *OpaqueSessionManager) extendSessionExpiration(ctx context.Context, requ
 }
 
 func (m *OpaqueSessionManager) createSessionCookie(token string, expiresAt time.Time) *http.Cookie {
-	if m.cookieConfig == nil {
+	if m.cookies == nil {
 		return nil
 	}
-	cookieOptions := m.cookieConfig
-	cookie := &http.Cookie{
-		Name:        cookieOptions.name,
-		Value:       token,
-		Path:        cookieOptions.path,
-		MaxAge:      int(time.Until(expiresAt).Seconds()),
-		HttpOnly:    cookieOptions.httpOnly,
-		Secure:      cookieOptions.secure,
-		SameSite:    cookieOptions.sameSite,
-		Partitioned: cookieOptions.partitioned,
-	}
-
-	if cookieOptions.crossSubdomain != nil && cookieOptions.crossSubdomain.enabled {
-		cookie.Domain = cookieOptions.crossSubdomain.domain
-	}
-
-	return cookie
+	return m.cookies.NewCookie(m.cookieName, token, int(time.Until(expiresAt).Seconds()))
 }
 
 func (m *OpaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string) error {
@@ -154,9 +144,9 @@ func (m *OpaqueSessionManager) storeSession(ctx context.Context, request *http.R
 }
 
 func (m *OpaqueSessionManager) extractToken(request *http.Request) (string, error) {
-	if m.cookieConfig != nil {
-		if cookie, err := request.Cookie(m.cookieConfig.name); err == nil {
-			token := strings.TrimSpace(cookie.Value)
+	if m.cookies != nil {
+		if val, err := m.cookies.Get(request, m.cookieName); err == nil {
+			token := strings.TrimSpace(val)
 			if token != "" {
 				return token, nil
 			}

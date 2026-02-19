@@ -12,11 +12,16 @@ type AegisHTTPCore struct {
 	trustedOriginsPatterns []*regexp.Regexp
 }
 
+// Cookies returns the shared CookieManager for cookie operations.
+func (httpCore *AegisHTTPCore) Cookies() *CookieManager {
+	return httpCore.core.Cookies()
+}
+
 func (httpCore *AegisHTTPCore) SessionCookieName() string {
 	if httpCore.config.cookieConfig == nil {
 		return ""
 	}
-	return httpCore.config.cookieConfig.name
+	return httpCore.config.cookieConfig.sessionCookieName
 }
 
 func (httpCore *AegisHTTPCore) IsTrustedOrigin(url string) bool {

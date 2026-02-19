@@ -18,6 +18,7 @@ type challengePayload struct {
 type twoFactorFeature struct {
 	core            *aegis.AegisCore
 	httpCore        *aegis.AegisHTTPCore
+	cookies         *aegis.CookieManager
 	twoFactorSchema *twoFactorSchema
 	userSchema      *userWithTwoFactorSchema
 	config          *config
@@ -49,6 +50,7 @@ func New(opts ...ConfigOption) *twoFactorFeature {
 
 func (t *twoFactorFeature) Initialize(core *aegis.AegisCore) error {
 	t.core = core
+	t.cookies = core.Cookies()
 	t.totp = newDefaultTOTP(t, t.config.totp)
 	t.backupCodes = newBackupCodes(t, t.config.backupCodes)
 	if t.config.otp.enabled {
@@ -121,7 +123,7 @@ func (t *twoFactorFeature) revokeSessionFromResponse(ctx *aegis.HookContext) {
 		_ = t.core.SessionManager.RevokeSession(ctx.Request().Context(), sessionToken)
 	}
 	ctx.RemoveResponseCookie(sessionCookieName)
-	t.httpCore.Responder.ClearSessionCookies(ctx.Response())
+	t.httpCore.Cookies().ClearSessionCookie(ctx.Response())
 }
 
 func (t *twoFactorFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
@@ -250,34 +252,17 @@ func (t *twoFactorFeature) verifyChallengeToken(token string) (*challengePayload
 }
 
 func (t *twoFactorFeature) setChallengeCookie(ctx *aegis.HookContext, token string) {
-	cookie := &http.Cookie{
-		Name:     t.config.cookieName,
-		Value:    token,
-		Path:     "/",
-		MaxAge:   int(t.config.cookieExpiration.Seconds()),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	}
-	ctx.SetResponseCookie(cookie)
+	t.cookies.SetOnHookCtx(ctx, t.config.cookieName, token, int(t.config.cookieExpiration.Seconds()))
 }
 
 func (t *twoFactorFeature) clearChallengeCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     t.config.cookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-	})
+	t.cookies.Delete(w, t.config.cookieName)
 }
 
 func (t *twoFactorFeature) getChallengeFromCookie(r *http.Request) (string, error) {
-	cookie, err := r.Cookie(t.config.cookieName)
+	val, err := t.cookies.Get(r, t.config.cookieName)
 	if err != nil {
 		return "", ErrChallengeMissing
 	}
-	return cookie.Value, nil
+	return val, nil
 }

@@ -40,7 +40,8 @@ func New(config *Config) (*Aegis, error) {
 		features:    make(map[FeatureName]Feature),
 	}
 
-	sessionManager := newOpaqueSessionManager(core, config.Session, config.HTTP.cookieConfig)
+	core.cookies = newCookieManager(config.HTTP.cookieConfig)
+	sessionManager := newOpaqueSessionManager(core, config.Session)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
 
@@ -89,7 +90,7 @@ func (a *Aegis) Handler() http.Handler {
 	allUrls = append(allUrls, config.trustedOrigins...)
 
 	httpCore := &AegisHTTPCore{
-		Responder:              newResponder(config),
+		Responder:              newResponder(config, a.core.cookies),
 		authInstance:           a,
 		config:                 config,
 		core:                   a.core,

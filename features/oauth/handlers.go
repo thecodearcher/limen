@@ -43,17 +43,17 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 
-	cookie, err := r.Cookie(h.feature.config.cookieName)
+	cookieValue, err := h.feature.cookies.Get(r, h.feature.config.cookieName)
 	if err != nil {
-		h.handleLinkAccountResponse(w, r, nil, nil, nil, ErrMissingStateCookie)
+		h.handleCallbackResponse(w, r, nil, nil, nil, ErrMissingStateCookie)
 		return
 	}
 
 	h.clearStateCookie(w)
 
-	result, stateData, err := h.feature.AuthenticateWithProvider(r.Context(), providerName, code, state, cookie.Value)
+	result, stateData, err := h.feature.AuthenticateWithProvider(r.Context(), providerName, code, state, cookieValue)
 	if err != nil {
-		h.handleLinkAccountResponse(w, r, stateData, nil, nil, err)
+		h.handleCallbackResponse(w, r, stateData, nil, nil, err)
 		return
 	}
 
@@ -61,12 +61,12 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 	if stateData[linkUserIdKey] == nil {
 		sessionResult, err = h.feature.core.SessionManager.CreateSession(r.Context(), r, result)
 		if err != nil {
-			h.handleLinkAccountResponse(w, r, stateData, nil, nil, err)
+			h.handleCallbackResponse(w, r, stateData, nil, nil, err)
 			return
 		}
 	}
 
-	h.handleLinkAccountResponse(w, r, stateData, result, sessionResult, err)
+	h.handleCallbackResponse(w, r, stateData, result, sessionResult, err)
 }
 
 // LinkAccountWithOAuth initiates the OAuth flow for linking a provider to the current user's account.
@@ -130,7 +130,7 @@ func (h *oauthHandlers) UnlinkAccount(w http.ResponseWriter, r *http.Request) {
 	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }
 
-func (h *oauthHandlers) handleLinkAccountResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *aegis.AuthenticationResult, sessionResult *aegis.SessionResult, err error) {
+func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *aegis.AuthenticationResult, sessionResult *aegis.SessionResult, err error) {
 	if h.feature.config.disableRedirect && (err != nil || stateData == nil) {
 		h.responder.Error(w, r, err)
 		return
@@ -166,25 +166,9 @@ func (h *oauthHandlers) queryToMap(r *http.Request) map[string]any {
 }
 
 func (h *oauthHandlers) setStateCookie(w http.ResponseWriter, value string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     h.feature.config.cookieName,
-		Value:    value,
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(h.feature.config.cookieTTL.Seconds()),
-		Path:     "/",
-	})
+	h.feature.cookies.Set(w, h.feature.config.cookieName, value, int(h.feature.config.cookieTTL.Seconds()))
 }
 
 func (h *oauthHandlers) clearStateCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     h.feature.config.cookieName,
-		Value:    "",
-		HttpOnly: true,
-		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   -1,
-		Path:     "/",
-	})
+	h.feature.cookies.Delete(w, h.feature.config.cookieName)
 }

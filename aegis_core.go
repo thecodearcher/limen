@@ -8,6 +8,7 @@ type AegisCore struct {
 	DBAction       *DatabaseActionHelper
 	Schema         *SchemaConfig
 	SessionManager SessionManager
+	cookies        *CookieManager
 	schemaResolver *SchemaResolver
 	features       map[FeatureName]Feature
 }
@@ -27,6 +28,13 @@ func (c *AegisCore) GetCredentialPasswordFeature() CredentialPasswordFeature {
 		return nil
 	}
 	return feature.(CredentialPasswordFeature)
+}
+
+// Cookies returns the shared CookieManager that plugins should use for
+// all cookie operations. The returned manager inherits security attributes
+// from the central cookie configuration.
+func (c *AegisCore) Cookies() *CookieManager {
+	return c.cookies
 }
 
 func (c *AegisCore) GetBaseURL() string {

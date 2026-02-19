@@ -8,10 +8,10 @@ import (
 type Responder struct {
 	cfg                *responseEnvelopeConfig
 	sessionTransformer SessionTransformer
-	cookieConfig       *cookieConfig
+	cookies            *CookieManager
 }
 
-func newResponder(cfg *httpConfig) *Responder {
+func newResponder(cfg *httpConfig, cookies *CookieManager) *Responder {
 	if cfg == nil {
 		cfg = &httpConfig{}
 	}
@@ -27,7 +27,7 @@ func newResponder(cfg *httpConfig) *Responder {
 	return &Responder{
 		cfg:                envelopeConfig,
 		sessionTransformer: cfg.sessionTransformer,
-		cookieConfig:       cfg.cookieConfig,
+		cookies:            cookies,
 	}
 }
 
@@ -159,45 +159,12 @@ func (rs Responder) AddHeader(w http.ResponseWriter, key, value string) {
 	w.Header().Add(key, value)
 }
 
-// SetCookie sets a cookie on the response
-func (rs Responder) SetCookie(w http.ResponseWriter, cookie *http.Cookie) {
-	if cookie == nil {
-		return
-	}
-	http.SetCookie(w, cookie)
-}
-
-// DeleteCookie removes a cookie by setting MaxAge to -1
-func (rs Responder) DeleteCookie(w http.ResponseWriter, name string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:   name,
-		Value:  "",
-		MaxAge: -1,
-	})
-}
-
-// ClearSessionCookies clears the session cookie from the response.
-func (rs Responder) ClearSessionCookies(w http.ResponseWriter) {
-	if rs.cookieConfig == nil {
-		return
-	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     rs.cookieConfig.name,
-		Value:    "",
-		MaxAge:   -1,
-		HttpOnly: rs.cookieConfig.httpOnly,
-		Secure:   rs.cookieConfig.secure,
-		SameSite: rs.cookieConfig.sameSite,
-		Path:     rs.cookieConfig.path,
-	})
-}
-
 // setSessionCookies sets the session cookie in the response.
 func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *SessionResult) {
 	if sessionResult == nil || sessionResult.Cookie == nil {
 		return
 	}
-	http.SetCookie(w, sessionResult.Cookie)
+	rs.cookies.WriteCookie(w, sessionResult.Cookie)
 }
 
 // Redirect sends a redirect response. When the response is deferred (after-hooks in use),

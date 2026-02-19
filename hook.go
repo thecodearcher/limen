@@ -104,16 +104,6 @@ func (hc *HookContext) SetResponseCookie(cookie *http.Cookie) {
 	http.SetCookie(hc.response, cookie)
 }
 
-// DeleteResponseCookie removes a cookie by setting it with MaxAge -1 (tells browser to delete it)
-func (hc *HookContext) DeleteResponseCookie(name string) {
-	http.SetCookie(hc.response, &http.Cookie{
-		Name:   name,
-		MaxAge: -1,
-		Path:   "/",
-		Value:  "",
-	})
-}
-
 // DeleteResponseHeader removes a header from the response entirely
 func (hc *HookContext) DeleteResponseHeader(key string) {
 	hc.response.Header().Del(key)

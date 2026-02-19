@@ -24,13 +24,13 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, err := httpCore.authInstance.GetSession(r)
 			if err != nil {
-				httpCore.Responder.ClearSessionCookies(w)
+				httpCore.Cookies().ClearSessionCookie(w)
 				httpCore.Responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 				return
 			}
 
 			if session.Refreshed != nil {
-				httpCore.Responder.setSessionCookies(w, session.Refreshed)
+				httpCore.Cookies().WriteCookie(w, session.Refreshed.Cookie)
 			}
 
 			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &ValidatedSession{

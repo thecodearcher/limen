@@ -35,7 +35,7 @@ func (h *aegisHandlers) RegisterRoutes(routeBuilder *RouteBuilder) {
 func (h *aegisHandlers) GetSession(w http.ResponseWriter, r *http.Request) {
 	session, err := GetCurrentSessionFromCtx(r)
 	if err != nil {
-		h.responder.ClearSessionCookies(w)
+		h.core.Cookies().ClearSessionCookie(w)
 		h.responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
 		return
 	}
@@ -56,7 +56,7 @@ func (h *aegisHandlers) SignOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.ClearSessionCookies(w)
+	h.core.Cookies().ClearSessionCookie(w)
 
 	h.responder.JSON(w, r, http.StatusOK, "OK")
 }

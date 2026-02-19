@@ -14,6 +14,7 @@ type oauthFeature struct {
 	providers     map[string]Provider
 	stateStore    StateStore
 	httpCore      *aegis.AegisHTTPCore
+	cookies       *aegis.CookieManager
 }
 
 func New(opts ...ConfigOption) *oauthFeature {
@@ -35,6 +36,7 @@ func (o *oauthFeature) Name() aegis.FeatureName {
 
 func (o *oauthFeature) Initialize(core *aegis.AegisCore) error {
 	o.core = core
+	o.cookies = core.Cookies()
 	o.accountSchema = core.Schema.Account
 	if len(o.config.secret) != 32 {
 		return fmt.Errorf("oauth: secret must be 32 bytes, got %d", len(o.config.secret))
