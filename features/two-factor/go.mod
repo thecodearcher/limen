@@ -1,6 +1,6 @@
 module github.com/thecodearcher/aegis/features/two-factor
 
-go 1.23
+go 1.24.0
 
 require (
 	github.com/pquerna/otp v1.4.0

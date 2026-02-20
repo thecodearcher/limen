@@ -1,6 +1,6 @@
 module github.com/thecodearcher/aegis/adapters/gorm
 
-go 1.23
+go 1.24.0
 
 require (
 	github.com/thecodearcher/aegis v0.0.0
