@@ -8,6 +8,7 @@ type config struct {
 	clientSecret string
 	redirectURL  string
 	scopes       []string
+	options      map[string]string
 }
 
 // WithClientID sets the GitHub OAuth2 client ID.
@@ -35,5 +36,15 @@ func WithRedirectURL(url string) ConfigOption {
 func WithScopes(scopes ...string) ConfigOption {
 	return func(c *config) {
 		c.scopes = scopes
+	}
+}
+
+// WithOption sets any additional OAuth2 options.
+func WithOption(key, value string) ConfigOption {
+	return func(c *config) {
+		if c.options == nil {
+			c.options = make(map[string]string)
+		}
+		c.options[key] = value
 	}
 }

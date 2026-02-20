@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"golang.org/x/oauth2"
 
@@ -13,7 +14,6 @@ import (
 
 const providerName = "github"
 
-// New creates a GitHub OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
 		scopes: []string{"read:user", "user:email"},
@@ -30,7 +30,9 @@ var githubEndpoint = oauth2.Endpoint{
 }
 
 type githubProvider struct {
-	config *oauth2.Config
+	oauthConfig *oauth2.Config
+	config      *config
+	httpClient  *http.Client
 }
 
 func newGitHubProvider(cfg *config) *githubProvider {
@@ -45,7 +47,7 @@ func newGitHubProvider(cfg *config) *githubProvider {
 		Scopes:       scopes,
 		Endpoint:     githubEndpoint,
 	}
-	return &githubProvider{config: config}
+	return &githubProvider{oauthConfig: config, config: cfg, httpClient: &http.Client{Timeout: 10 * time.Second}}
 }
 
 func (g *githubProvider) Name() string {
@@ -53,7 +55,11 @@ func (g *githubProvider) Name() string {
 }
 
 func (g *githubProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOption) {
-	return g.config, nil
+	authOpts := []oauth2.AuthCodeOption{}
+	for key, value := range g.config.options {
+		authOpts = append(authOpts, oauth2.SetAuthURLParam(key, value))
+	}
+	return g.oauthConfig, authOpts
 }
 
 func (g *githubProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
@@ -63,8 +69,7 @@ func (g *githubProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResp
 	}
 	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
 	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := g.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -83,14 +88,15 @@ func (g *githubProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResp
 		email, _ = g.fetchPrimaryEmail(ctx, token.AccessToken)
 	}
 
-	fmt.Print(raw["id"])
-
+	id, _ := raw["id"].(float64)
+	name, _ := raw["name"].(string)
+	avatarURL, _ := raw["avatar_url"].(string)
 	return &oauth.ProviderUserInfo{
-		ID:            fmt.Sprintf("%d", int64(raw["id"].(float64))),
+		ID:            fmt.Sprintf("%d", int64(id)),
 		Email:         email.(string),
 		EmailVerified: email != "",
-		Name:          raw["name"].(string),
-		AvatarURL:     raw["avatar_url"].(string),
+		Name:          name,
+		AvatarURL:     avatarURL,
 		Raw:           raw,
 	}, nil
 }
@@ -102,8 +108,7 @@ func (g *githubProvider) fetchPrimaryEmail(ctx context.Context, accessToken stri
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := g.httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
