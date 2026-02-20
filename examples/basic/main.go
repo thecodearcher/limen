@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,10 +14,15 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/joho/godotenv"
+
 	"github.com/thecodearcher/aegis"
 	adapter "github.com/thecodearcher/aegis/adapters/gorm"
 	"github.com/thecodearcher/aegis/examples/basic/pkg"
 	credentialpassword "github.com/thecodearcher/aegis/features/credential-password"
+	"github.com/thecodearcher/aegis/features/oauth"
+	oauthgithub "github.com/thecodearcher/aegis/features/oauth-github"
+	oauthgoogle "github.com/thecodearcher/aegis/features/oauth-google"
 	twofactor "github.com/thecodearcher/aegis/features/two-factor"
 )
 
@@ -45,8 +51,19 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 	if db != nil {
 		dbAdapter = adapter.New(db)
 	}
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Failed to load .env file: %v", err)
+	}
+	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
+	githubClientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
+
+	fmt.Printf("Google Client ID: %s\n", googleClientID)
 
 	return &aegis.Config{
+		BaseURL:  "http://localhost:8080",
 		Database: dbAdapter,
 		Features: []aegis.Feature{
 
@@ -64,6 +81,37 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 				}),
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(true),
+			),
+			oauth.New(
+				oauth.WithSecret("0123456789abcdef0123456789abcdef"), // 32 bytes for OAuth encryption
+				// oauth.WithDatabaseState(),x
+				oauth.WithProvider(oauthgoogle.New(
+					oauthgoogle.WithClientID(googleClientID),
+					oauthgoogle.WithClientSecret(googleClientSecret),
+					// oauthgoogle.WithRedirectURL("http://localhost:8080/api/auth/oauth/google/callback"),
+					// oauthgoogle.WithScopes("openid", "email", "profile"),
+					// oauthgoogle.WithOption("prompt", "consent"),
+					// oauthgoogle.WithAccessType(oauthgoogle.AccessTypeOffline),
+				)),
+				oauth.WithProvider(oauthgithub.New(
+					oauthgithub.WithClientID(githubClientID),
+					oauthgithub.WithClientSecret(githubClientSecret),
+				)),
+				oauth.WithMapProfileToUser(func(info *aegis.OAuthAccountProfile) map[string]any {
+					fmt.Printf("Mapping OAuth profile to user additional fields: %+v\n", info)
+					if info.Provider == "google" {
+						firstName := info.Raw["given_name"].(string)
+						lastName := info.Raw["family_name"].(string)
+						return map[string]any{
+							"first_name": firstName,
+							"last_name":  lastName,
+						}
+					}
+					return map[string]any{
+						"first_name": info.Raw["name"].(string),
+						"last_name":  "",
+					}
+				}),
 			),
 			twofactor.New(
 				twofactor.WithCookieExpiration(1*time.Minute),
@@ -97,12 +145,12 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
 				// aegis.WithUserFieldEmail("email_from_personal"),
 				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, error) {
-					if ctx.IsEmpty("firstname") {
-						return nil, aegis.NewAegisError("firstname is required", http.StatusBadRequest, nil)
-					}
-					if ctx.IsEmpty("lastname") {
-						return nil, aegis.NewAegisError("lastname is required", http.StatusBadRequest, nil)
-					}
+					// if ctx.IsEmpty("firstname") {
+					// 	return nil, aegis.NewAegisError("firstname is required", http.StatusBadRequest, nil)
+					// }
+					// if ctx.IsEmpty("lastname") {
+					// 	return nil, aegis.NewAegisError("lastname is required", http.StatusBadRequest, nil)
+					// }
 					return map[string]any{
 						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
 						"first_name": ctx.GetBodyValue("firstname"),
@@ -166,36 +214,36 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 		HTTP: aegis.NewDefaultHTTPConfig(
 			aegis.WithHTTPBasePath("/api/auth"),
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterMaxRequests(3)),
-			aegis.WithHTTPCookieName("default_session"),
+			aegis.WithHTTPSessionCookieName("session"),
+			aegis.WithHTTPCookieSecure(false),
 			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterDisableForPaths("/me", "/signin/email")),
-			aegis.WithHTTPHooks(&aegis.Hooks{
-				Before: &aegis.Hook{
-					PathMatcher: func(ctx *aegis.HookContext) bool {
-						fmt.Printf("Route Pattern: %+v\n", ctx.RoutePattern())
-						return ctx.RouteID() == "signin"
-					},
-					Run: aegis.HookFunc(func(ctx *aegis.HookContext) bool {
-						fmt.Printf("Before request %s %s\n", ctx.Request().Method, ctx.Request().URL.Path)
 
-						return true
-					})},
-				After: &aegis.Hook{
-					Run: aegis.HookFunc(func(ctx *aegis.HookContext) bool {
-						fmt.Printf("After request %s %s\n", ctx.Request().Method, ctx.Request().URL.Path)
-						return true
-					})},
-			}),
 			aegis.WithHTTPSessionTransformer(sessionTransformer),
-			// aegis.WithHTTPTrustedOrigins([]string{
-			// 	"*.localhost:3000", "https://localhost:3000",
-			// 	"myapp://",                             // Mobile app scheme
-			// 	"chrome-extension://YOUR_EXTENSION_ID", // Browser extension
-			// 	"exp://*/*",                            // Trust all Expo development URLs
-			// 	"exp://10.0.0.*:*/*",                   // Trust 10.0.0.x IP range with any port,
-			// 	// "*.example.com",
-			// 	"https://*.example.com",
-			// 	"http://*.dev.example.com",
-			// }),
+			aegis.WithHTTPTrustedOrigins([]string{
+				"*",
+				"*.localhost:3000", "http://localhost:3000",
+				"myapp://",                             // Mobile app scheme
+				"chrome-extension://YOUR_EXTENSION_ID", // Browser extension
+				"exp://*/*",                            // Trust all Expo development URLs
+				"exp://10.0.0.*:*/*",                   // Trust 10.0.0.x IP range with any port,
+				// "*.example.com",
+				"https://*.example.com",
+				"http://*.dev.example.com",
+			}),
+			aegis.WithHTTPHooks(&aegis.Hooks{
+				Before: []*aegis.Hook{
+					{
+						PathMatcher: func(ctx *aegis.HookContext) bool {
+							return true
+						},
+						Run: func(ctx *aegis.HookContext) bool {
+							fmt.Printf("Before request %s %s\n", ctx.Method(), ctx.Path())
+							fmt.Printf("Before request route pattern: %+v\n", ctx.RoutePattern())
+							return true
+						},
+					},
+				},
+			}),
 		),
 		// 	aegis.WithRateLimiterWindow(time.Minute),
 
@@ -227,6 +275,7 @@ func main() {
 	}
 
 	handler := auth.Handler()
+
 	// schemas, err := aegis.DiscoverAllSchemasFromConfig(config)
 	// if err != nil {
 	// 	log.Fatalf("Failed to discover all schemas: %v", err)
@@ -265,7 +314,7 @@ func main() {
 		// 	return
 		// }
 		// fmt.Printf("Session: %+v\n", session)
-		c.JSON(200, gin.H{"message": "Hello, World!"})
+		http.Redirect(c.Writer, c.Request, "http://localhost:3000", 302)
 	})
 
 	r.Any("/api/auth/*path", func(c *gin.Context) {
