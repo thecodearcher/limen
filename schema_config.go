@@ -68,6 +68,7 @@ func (c *SchemaConfig) GetIDColumnType() ColumnType {
 	return ColumnTypeInt64
 }
 
+// getCoreSchemaCustomizationField returns the customized column name for a core schema field if set
 func (c *SchemaConfig) getCoreSchemaCustomizationField(schemaName SchemaName, field SchemaField) string {
 	exists, ok := c.coreSchemaCustomizations[schemaName]
 	if !ok || exists.Fields == nil {
@@ -103,87 +104,5 @@ func (c *SchemaConfig) setCoreSchemaTableName(schemaName SchemaName, tableName S
 	c.coreSchemaCustomizations[schemaName] = PluginSchemaConfig{
 		TableName: tableName,
 		Fields:    make(map[SchemaField]string),
-	}
-}
-
-// WithSchemaAdditionalFields sets the global additional fields function
-func WithSchemaAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		c.AdditionalFields = fn
-	}
-}
-
-// WithSchemaIDGenerator sets the global ID generator
-func WithSchemaIDGenerator(generator IDGenerator) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		c.IDGenerator = generator
-	}
-}
-
-// WithSchemaAccount sets the account schema configuration
-func WithSchemaAccount(opts ...SchemaConfigAccountOption) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		c.Account = newDefaultAccountSchema(c, opts...)
-	}
-}
-
-// WithSchemaUser sets the user schema configuration
-func WithSchemaUser(opts ...SchemaConfigUserOption) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		c.User = newDefaultUserSchema(c, opts...)
-	}
-}
-
-// WithSchemaVerification sets the verification schema configuration
-func WithSchemaVerification(opts ...SchemaConfigVerificationOption) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		c.Verification = newDefaultVerificationSchema(c, opts...)
-	}
-}
-
-// WithSchemaSession sets the session schema configuration
-func WithSchemaSession(opts ...SchemaConfigSessionOption) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		c.Session = newDefaultSessionSchema(c, opts...)
-	}
-}
-
-// WithSchemaRateLimit sets the rate limit schema configuration
-func WithSchemaRateLimit(opts ...SchemaConfigRateLimitOption) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		c.RateLimit = newDefaultRateLimitSchema(c, opts...)
-	}
-}
-
-// WithPluginTableName sets the table name for a plugin schema
-func WithPluginTableName(tableName SchemaTableName) PluginSchemaConfigOption {
-	return func(c *PluginSchemaConfig) {
-		c.TableName = tableName
-	}
-}
-
-// WithPluginFieldName sets a field name mapping for a plugin schema
-func WithPluginFieldName(logicalField SchemaField, columnName string) PluginSchemaConfigOption {
-	return func(c *PluginSchemaConfig) {
-		if c.Fields == nil {
-			c.Fields = make(map[SchemaField]string)
-		}
-		c.Fields[logicalField] = columnName
-	}
-}
-
-// WithPluginSchema sets the configuration for a plugin schema
-func WithPluginSchema(featureName FeatureName, schemaName SchemaName, opts ...PluginSchemaConfigOption) SchemaConfigOption {
-	return func(c *SchemaConfig) {
-		if c.pluginSchemas[featureName] == nil {
-			c.pluginSchemas[featureName] = make(map[SchemaName]PluginSchemaConfig)
-		}
-		config := PluginSchemaConfig{
-			Fields: make(map[SchemaField]string),
-		}
-		for _, opt := range opts {
-			opt(&config)
-		}
-		c.pluginSchemas[featureName][schemaName] = config
 	}
 }
