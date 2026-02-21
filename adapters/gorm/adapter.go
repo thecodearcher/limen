@@ -137,16 +137,35 @@ func (a *Adapter) Count(ctx context.Context, tableName aegis.SchemaTableName, co
 }
 
 func (a *Adapter) applyConditions(query *gorm.DB, conditions []aegis.Where) *gorm.DB {
-	for i, condition := range conditions {
-		whereClause, args := a.buildWhereClause(condition)
+	if len(conditions) == 0 {
+		return query
+	}
 
-		if i == 0 || condition.Connector == aegis.ConnectorAnd {
-			query = query.Where(whereClause, args...)
-		} else {
-			query = query.Or(whereClause, args...)
+	if len(conditions) == 1 {
+		clause, args := a.buildWhereClause(conditions[0])
+		if clause == "" {
+			return query
 		}
+		return query.Where(clause, args...)
+	}
+
+	groups := aegis.GroupConditionsByConnector(conditions)
+	for _, group := range groups {
+		query = a.applyGroup(query, group)
 	}
 	return query
+}
+
+// applyGroup applies one group (single condition or OR of several) as one Where.
+func (a *Adapter) applyGroup(query *gorm.DB, group []aegis.Where) *gorm.DB {
+	if len(group) == 0 {
+		return query
+	}
+	clause, args := aegis.BuildGroupClause(group, a.buildWhereClause)
+	if clause == "" {
+		return query
+	}
+	return query.Where(clause, args...)
 }
 
 func (a *Adapter) buildWhereClause(condition aegis.Where) (string, []any) {
