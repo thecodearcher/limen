@@ -123,6 +123,8 @@ func (p *credentialPasswordFeature) SetPassword(ctx context.Context, user *aegis
 	return p.core.WithTransaction(ctx, func(ctx context.Context) error {
 		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: &hashedPassword}, []aegis.Where{
 			aegis.Eq(p.userSchema.GetIDField(), user.ID),
+			aegis.IsNull(p.userSchema.GetPasswordField()),
+			aegis.Eq(p.userSchema.GetPasswordField(), "").Or(),
 		}); err != nil {
 			return err
 		}
