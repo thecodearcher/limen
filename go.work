@@ -3,6 +3,7 @@ go 1.24.0
 use (
 	.
 	./adapters/gorm
+	./adapters/sql
 	./cmd/aegis
 	./examples/basic
 	./features/credential-password
@@ -15,6 +16,8 @@ use (
 replace github.com/thecodearcher/aegis v0.0.0 => ./
 
 replace github.com/thecodearcher/aegis/adapters/gorm v0.0.0 => ./adapters/gorm
+
+replace github.com/thecodearcher/aegis/adapters/sql v0.0.0 => ./adapters/sql
 
 replace github.com/thecodearcher/aegis/features/credential-password v0.0.0 => ./features/credential-password
 

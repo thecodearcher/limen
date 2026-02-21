@@ -2,6 +2,7 @@ package aegis
 
 import (
 	"context"
+	"strings"
 )
 
 type DatabaseAdapter interface {
@@ -61,6 +62,74 @@ const (
 	ConnectorOr  Connector = "OR"
 )
 
+// GroupConditionsByConnector splits conditions into groups: each group is either a single
+// condition (AND) or a run of conditions connected by a connector (AND or OR). Groups are AND'd in order.
+// E.g. [A, B.Or(), C, D] → [[A], [B,C], [D]] meaning (A) AND (B OR C) AND (D).
+// Adapters can use this to build WHERE clauses with consistent OR precedence.
+func GroupConditionsByConnector(conditions []Where) [][]Where {
+	if len(conditions) == 0 {
+		return nil
+	}
+	var groups [][]Where
+	var current []Where
+	for i, c := range conditions {
+		if i == 0 {
+			current = []Where{c}
+			continue
+		}
+
+		if c.Connector == ConnectorOr {
+			current = append(current, c)
+			continue
+		}
+
+		groups = append(groups, current)
+		current = []Where{c}
+	}
+
+	if len(current) > 0 {
+		groups = append(groups, current)
+	}
+	return groups
+}
+
+// BuildGroupClause builds a single connector clause from a group of conditions.
+// buildCondition is adapter-specific (e.g. column quoting, placeholder style). Returns combined
+// clause and args; caller may wrap in parens when len(group) > 1 (e.g. for SQL).
+func BuildGroupClause(group []Where, buildCondition func(Where) (string, []any)) (clause string, args []any) {
+	var clauses []string
+	for _, c := range group {
+		part, partArgs := buildCondition(c)
+		if part == "" {
+			continue
+		}
+		clauses = append(clauses, part)
+		args = append(args, partArgs...)
+	}
+	if len(clauses) == 0 {
+		return "", nil
+	}
+	if len(clauses) == 1 {
+		return clauses[0], args
+	}
+	return strings.Join(clauses, " OR "), args
+}
+
+// BuildWhereFromGroups builds a full WHERE expression by joining group clauses with AND.
+// buildGroup turns each group into (clause, args); empty clauses are skipped.
+func BuildWhereFromGroups(groups [][]Where, buildGroup func([]Where) (string, []any)) (clause string, args []any) {
+	var parts []string
+	for _, group := range groups {
+		c, groupArgs := buildGroup(group)
+		if c == "" {
+			continue
+		}
+		parts = append(parts, c)
+		args = append(args, groupArgs...)
+	}
+	return strings.Join(parts, " AND "), args
+}
+
 type OrderByDirection string
 
 const (
@@ -113,12 +182,12 @@ func Gte(column string, value any) Where {
 }
 
 // In creates an IN condition
-func In(column string, values any) Where {
+func In(column string, values []any) Where {
 	return Where{Column: column, Operator: OpIn, Value: values, Connector: ConnectorAnd}
 }
 
 // NotIn creates a NOT IN condition
-func NotIn(column string, values any) Where {
+func NotIn(column string, values []any) Where {
 	return Where{Column: column, Operator: OpNotIn, Value: values, Connector: ConnectorAnd}
 }
 

@@ -45,7 +45,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 			Name:         string(UserSchemaPasswordField),
 			LogicalField: UserSchemaPasswordField,
 			Type:         ColumnTypeString,
-			IsNullable:   false,
+			IsNullable:   true,
 			IsPrimaryKey: false,
 			Tags: map[string]string{
 				"json": "-",
