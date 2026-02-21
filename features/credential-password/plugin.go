@@ -95,7 +95,7 @@ func (p *credentialPasswordFeature) GetSchemas(schema *aegis.SchemaConfig) []aeg
 	extension := aegis.NewSchemaDefinitionForExtension(
 		aegis.CoreSchemaUsers,
 		userWithUsername,
-		aegis.WithSchemaField("username", aegis.ColumnTypeString),
+		aegis.WithSchemaField("username", aegis.ColumnTypeString, aegis.WithNullable(true)),
 		aegis.WithSchemaIndex("idx_users_username", []aegis.SchemaField{CredentialPasswordUserSchemaUsernameField}),
 	)
 
