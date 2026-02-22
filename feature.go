@@ -1,13 +1,6 @@
 package aegis
 
-import (
-	"context"
-)
-
-// This file contains the interfaces for the features of the aegis library.
-// and serves as a contract for the features of the library.
-// Ensures that the features are implemented correctly in their respective modules.
-
+// Feature is the interface that all features must implement.
 type Feature interface {
 	// Unique identifier for the feature.
 	Name() FeatureName
@@ -37,64 +30,4 @@ type PluginHTTPConfig struct {
 	// Specific rate limit rules to be applied to the plugin's routes.
 	// These rules can be overridden by the end user.
 	RateLimitRules []*RateLimitRule
-}
-
-type CredentialPasswordFeature interface {
-	// SignInWithEmailAndPassword signs in a user with the given email and password
-	// and returns the authentication result.
-	SignInWithCredentialAndPassword(ctx context.Context, credential string, password string) (*AuthenticationResult, error)
-
-	// SignUpWithCredentialAndPassword creates a new user with the given credential and password
-	// and returns the authentication result.
-	// additionalFields are additional fields to be added to the user.
-	//
-	// Note: When a key in additionalFields is already present in User, the value in additionalFields will be overwritten by the value associated with the key in User.
-	SignUpWithCredentialAndPassword(ctx context.Context, user *User, additionalFields map[string]any) (*AuthenticationResult, error)
-
-	// HashPassword hashes the given password and returns the hash.
-	// This is used to hash the password before storing it in the database.
-	//
-	// You only call this if you are not using the SignUpWithEmailAndPassword method.
-	HashPassword(password string) (string, error)
-
-	// ComparePassword compares the given password with the given hash and returns true if they match, false otherwise.
-	ComparePassword(password string, hash *string) (bool, error)
-
-	// RequestPasswordReset requests a password reset for the given email.
-	// Returns the verification object if the request is successful.
-	RequestPasswordReset(ctx context.Context, email string) (*Verification, error)
-
-	// ResetPassword resets the password using the given token and new password.
-	ResetPassword(ctx context.Context, token string, newPassword string) error
-
-	// UpdatePassword updates the password for the given user.
-	//
-	// Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
-	UpdatePassword(ctx context.Context, user *User, currentPassword string, newPassword string, revokeOtherSessions bool) error
-
-	// SetPassword sets a password for a user who doesn't have one (e.g., signed up via OAuth).
-	//
-	// Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
-	SetPassword(ctx context.Context, user *User, newPassword string, revokeOtherSessions bool) error
-
-	// RequestEmailVerification requests an email verification for the given user.
-	RequestEmailVerification(ctx context.Context, user *User, shouldSendEmail bool) (*Verification, error)
-
-	// VerifyEmail verifies the email using the given token.
-	VerifyEmail(ctx context.Context, token string) error
-}
-
-type UsernamePasswordFeature interface {
-	// SignInWithUsernameAndPassword signs in a user with the given username and password
-	// and returns the authentication result.
-	SignInWithUsernameAndPassword(ctx context.Context, username string, password string) (*AuthenticationResult, error)
-
-	// SignUpWithUsernameAndPassword creates a new user with the given username, email, and password
-	// and returns the authentication result.
-	// username is the username to use for signup.
-	// additionalFields are additional fields to be added to the user (username should be included here).
-	//
-	// Note: Email is required for password reset functionality (via email-password plugin).
-	// Note: When a key in additionalFields is already present in User, the value in additionalFields will be overwritten by the value associated with the key in User.
-	SignUpWithUsernameAndPassword(ctx context.Context, user *User, username string, additionalFields map[string]any) (*AuthenticationResult, error)
 }

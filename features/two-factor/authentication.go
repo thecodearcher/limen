@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/thecodearcher/aegis"
+	credentialpassword "github.com/thecodearcher/aegis/features/credential-password"
 )
 
 // InitiateTwoFactorSetup initiates the 2FA setup process
@@ -91,12 +92,13 @@ func (t *twoFactorFeature) DisableTwoFactor(ctx context.Context, userID any, pas
 }
 
 func (t *twoFactorFeature) checkPassword(user *aegis.User, password string) error {
-	credentialPassword := t.core.GetCredentialPasswordFeature()
-	if credentialPassword == nil {
+	feature, ok := t.core.GetFeature(aegis.FeatureCredentialPassword)
+	if !ok {
 		return ErrCredentialPasswordFeatureNotAvailable
 	}
+	credentialPasswordAPI := feature.(credentialpassword.API)
 
-	isValid, err := credentialPassword.ComparePassword(password, user.Password)
+	isValid, err := credentialPasswordAPI.ComparePassword(password, user.Password)
 	if err != nil {
 		return err
 	}

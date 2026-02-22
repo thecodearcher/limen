@@ -264,17 +264,3 @@ func findColumnByLogicalField(columns []ColumnDefinition, logicalField SchemaFie
 	}
 	return nil
 }
-
-func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDefinition) error {
-	if a.schemaResolver == nil {
-		return fmt.Errorf("schema resolver must be instantiated before initializing schemas")
-	}
-
-	for schemaName, schema := range discoveredSchemas {
-		schemaInfo := newSchemaInfo(schemaName, schema.TableName, a.schemaResolver)
-		if err := schema.Schema.Initialize(schemaInfo); err != nil {
-			return fmt.Errorf("failed to initialize schema instance for %s: %w", schemaName, err)
-		}
-	}
-	return nil
-}

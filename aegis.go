@@ -10,9 +10,8 @@ import (
 )
 
 type Aegis struct {
-	EmailPassword CredentialPasswordFeature
-	config        *Config
-	core          *AegisCore
+	config *Config
+	core   *AegisCore
 }
 
 func New(config *Config) (*Aegis, error) {
@@ -51,8 +50,6 @@ func New(config *Config) (*Aegis, error) {
 	}
 	core.schemaResolver = newFieldResolver(discoveredSchemas)
 
-	aegis.core = core
-
 	// Serialize schemas for CLI if enabled
 	if config.CLI != nil && config.CLI.Enabled {
 		if err := config.prepareCLIConfig(discoveredSchemas); err != nil {
@@ -69,15 +66,10 @@ func New(config *Config) (*Aegis, error) {
 		if err := feature.Initialize(core); err != nil {
 			return nil, fmt.Errorf("failed to initialize feature %s: %w", feature.Name(), err)
 		}
-
-		// Register feature in the plugin registry
 		core.features[feature.Name()] = feature
-
-		switch feature.Name() {
-		case FeatureCredentialPassword:
-			aegis.EmailPassword = feature.(CredentialPasswordFeature)
-		}
 	}
+
+	aegis.core = core
 
 	return aegis, nil
 }
@@ -112,6 +104,50 @@ func (a *Aegis) Handler() http.Handler {
 
 func (a *Aegis) GetSession(req *http.Request) (*ValidatedSession, error) {
 	return a.core.SessionManager.ValidateSession(req.Context(), req)
+}
+
+// Use retrieves a registered feature by name and returns it as type T.
+// It panics if the feature is not registered or does not implement T.
+//
+// T should be gotten from the feature's API interface.
+// For example, if you want to use the credential-password feature, you can get the API interface like this:
+//
+//	credentialpasswordAPI := credentialpassword.Use(aegis)
+//	credentialpasswordAPI.SignInWithCredentialAndPassword(ctx, "user@example.com", "password")
+func Use[T any](a *Aegis, name FeatureName) T {
+	feature, ok := a.core.GetFeature(name)
+	if !ok {
+		panic(fmt.Sprintf("aegis: feature %q not registered; add it to Config.Features", name))
+	}
+	typed, ok := feature.(T)
+	if !ok {
+		panic(fmt.Sprintf("aegis: feature %q does not implement the requested interface", name))
+	}
+	return typed
+}
+
+// TryUse retrieves a registered feature by name and returns it as type T.
+// Returns the zero value of T and false if the feature is not registered or
+// does not implement T.
+//
+// Use this when you want to handle missing features gracefully instead of panicking.
+// If you want to ensure that the feature is registered, use the Use() function instead.
+//
+// For example, if you want to use the credential-password feature, you can get the API interface like this:
+//
+//	credentialpasswordAPI, ok := aegis.TryUse[credentialpassword.API](aegis, aegis.FeatureCredentialPassword)
+//	if !ok {
+//		return nil, fmt.Errorf("credential password feature is not registered")
+//	}
+//	credentialpasswordAPI.SignInWithCredentialAndPassword(ctx, "user@example.com", "password")
+func TryUse[T any](a *Aegis, name FeatureName) (T, bool) {
+	feature, ok := a.core.GetFeature(name)
+	if !ok {
+		var zero T
+		return zero, false
+	}
+	typed, ok := feature.(T)
+	return typed, ok
 }
 
 func registerPluginRoutes(router *Router, features []Feature, httpCore *AegisHTTPCore, config *httpConfig) {

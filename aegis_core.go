@@ -1,5 +1,7 @@
 package aegis
 
+import "fmt"
+
 type AegisCore struct {
 	config         *Config
 	baseURL        string
@@ -13,21 +15,25 @@ type AegisCore struct {
 	features       map[FeatureName]Feature
 }
 
+func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDefinition) error {
+	if a.schemaResolver == nil {
+		return fmt.Errorf("schema resolver must be instantiated before initializing schemas")
+	}
+
+	for schemaName, schema := range discoveredSchemas {
+		schemaInfo := newSchemaInfo(schemaName, schema.TableName, a.schemaResolver)
+		if err := schema.Schema.Initialize(schemaInfo); err != nil {
+			return fmt.Errorf("failed to initialize schema instance for %s: %w", schemaName, err)
+		}
+	}
+	return nil
+}
+
 // GetFeature retrieves a feature by its name from the plugin registry.
 // Returns the feature and true if found, or nil and false if not found.
 func (c *AegisCore) GetFeature(name FeatureName) (Feature, bool) {
 	feature, ok := c.features[name]
 	return feature, ok
-}
-
-// GetCredentialPasswordFeature retrieves the credential-password feature if available.
-// Returns the CredentialPasswordFeature and true if found, or nil and false if not found.
-func (c *AegisCore) GetCredentialPasswordFeature() CredentialPasswordFeature {
-	feature, ok := c.GetFeature(FeatureCredentialPassword)
-	if !ok {
-		return nil
-	}
-	return feature.(CredentialPasswordFeature)
 }
 
 // Cookies returns the shared CookieManager that plugins should use for
