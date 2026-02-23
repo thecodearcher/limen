@@ -5,6 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -51,6 +54,26 @@ func ExchangeCode(ctx context.Context, config *oauth2.Config, code, codeVerifier
 		resp.Scope = scope
 	}
 	return resp, nil
+}
+
+// DecodeIDTokenClaims decodes the payload segment of a JWT without verification.
+//
+// NOTE: This does not verify the token, so it is not safe to use for any purpose other than to get the claims
+// from the id_token returned by the provider.
+func DecodeIDTokenClaims(idToken string) (map[string]any, error) {
+	parts := strings.SplitN(idToken, ".", 3)
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("id_token has invalid JWT format")
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("id_token payload decode: %w", err)
+	}
+	var claims map[string]any
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, fmt.Errorf("id_token payload unmarshal: %w", err)
+	}
+	return claims, nil
 }
 
 // generateCodeVerifier creates a cryptographically random PKCE code_verifier

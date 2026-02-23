@@ -29,6 +29,22 @@ func (o *oauthFeature) constructProviderRedirectURL(provider Provider, config *o
 	return o.core.GetBaseURLWithPluginPath(aegis.FeatureOAuth, fmt.Sprintf("%s/callback", provider.Name()))
 }
 
+func (o *oauthFeature) buildAuthorizationURL(ctx context.Context, provider Provider, stateToken, verifier string) (string, error) {
+	config, authOpts := o.getProviderConfig(provider)
+	if builder, ok := provider.(AuthorizationURLBuilder); ok {
+		return builder.BuildAuthorizationURL(ctx, stateToken, verifier, config.RedirectURL)
+	}
+	return BuildAuthCodeURL(config, stateToken, verifier, authOpts...), nil
+}
+
+func (o *oauthFeature) exchangeCodeForTokens(ctx context.Context, provider Provider, code, codeVerifier string) (*TokenResponse, error) {
+	config, _ := o.getProviderConfig(provider)
+	if exchanger, ok := provider.(TokenExchanger); ok {
+		return exchanger.ExchangeAuthorizationCode(ctx, code, codeVerifier, config.RedirectURL)
+	}
+	return ExchangeCode(ctx, config, code, codeVerifier)
+}
+
 func (o *oauthFeature) validateRedirectURLs(request *OAuthAuthorizeURLData) (string, string, error) {
 	redirectURI := request.RedirectURI
 	if redirectURI == "" {
@@ -72,8 +88,10 @@ func (o *oauthFeature) GetAuthorizationURL(ctx context.Context, providerName str
 		return "", "", err
 	}
 
-	config, authOpts := o.getProviderConfig(provider)
-	url := BuildAuthCodeURL(config, stateToken, verifier, authOpts...)
+	url, err := o.buildAuthorizationURL(ctx, provider, stateToken, verifier)
+	if err != nil {
+		return "", "", err
+	}
 	return url, cookieValue, nil
 }
 
@@ -89,12 +107,10 @@ func (o *oauthFeature) ExchangeAuthorizationCodeForTokens(ctx context.Context, p
 		return nil, nil, ErrPKCEVerifierNotFound
 	}
 
-	config, _ := o.getProviderConfig(provider)
-	token, err := ExchangeCode(ctx, config, code, codeVerifier)
+	token, err := o.exchangeCodeForTokens(ctx, provider, code, codeVerifier)
 	if err != nil {
 		return nil, nil, aegis.NewAegisError(err.Error(), http.StatusBadRequest, err)
 	}
-
 	return token, data, nil
 }
 

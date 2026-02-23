@@ -10,6 +10,7 @@ use (
 	./features/oauth
 	./features/oauth-github
 	./features/oauth-google
+	./features/oauth-generic
 	./features/two-factor
 )
 
@@ -26,5 +27,7 @@ replace github.com/thecodearcher/aegis/features/oauth v0.0.0 => ./features/oauth
 replace github.com/thecodearcher/aegis/features/oauth-google v0.0.0 => ./features/oauth-google
 
 replace github.com/thecodearcher/aegis/features/oauth-github v0.0.0 => ./features/oauth-github
+
+replace github.com/thecodearcher/aegis/features/oauth-generic v0.0.0 => ./features/oauth-generic
 
 replace github.com/thecodearcher/aegis/features/two-factor v0.0.0 => ./features/two-factor

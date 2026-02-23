@@ -19,3 +19,15 @@ type Provider interface {
 	// GetUserInfo fetches the user's profile from the provider using the access token.
 	GetUserInfo(ctx context.Context, token *TokenResponse) (*ProviderUserInfo, error)
 }
+
+// AuthorizationURLBuilder is optional. If a Provider also implements it,
+// the base module uses it to build the authorization URL instead of BuildAuthCodeURL.
+type AuthorizationURLBuilder interface {
+	BuildAuthorizationURL(ctx context.Context, state, codeVerifier, callbackRedirectURI string) (string, error)
+}
+
+// TokenExchanger is optional. If a Provider also implements TokenExchanger,
+// the base module uses it for code-for-token exchange instead of ExchangeCode.
+type TokenExchanger interface {
+	ExchangeAuthorizationCode(ctx context.Context, code, codeVerifier, redirectURI string) (*TokenResponse, error)
+}
