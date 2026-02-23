@@ -1,6 +1,10 @@
 package aegis
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"net/http"
+)
 
 type AegisCore struct {
 	config         *Config
@@ -13,6 +17,7 @@ type AegisCore struct {
 	cookies        *CookieManager
 	schemaResolver *SchemaResolver
 	features       map[FeatureName]Feature
+	signingSecret  []byte
 }
 
 func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDefinition) error {
@@ -43,6 +48,12 @@ func (c *AegisCore) Cookies() *CookieManager {
 	return c.cookies
 }
 
+// SigningSecret returns the base signing secret.
+// Plugins that do not configure their own secret can use this for encryption/signing.
+func (c *AegisCore) SigningSecret() []byte {
+	return c.signingSecret
+}
+
 func (c *AegisCore) GetBaseURL() string {
 	return c.baseURL
 }
@@ -60,4 +71,18 @@ func (c *AegisCore) GetBaseURLWithPluginPath(pluginName FeatureName, pathToJoin 
 	featureConfig := feature.PluginHTTPConfig()
 	normalizedBasePath := normalizePluginPath(c.config.HTTP.basePath, featureConfig.BasePath, c.config.HTTP.overrides[string(pluginName)])
 	return joinURL(c.baseURL, normalizedBasePath, pathToJoin)
+}
+
+// CreateSession creates a session for the auth result.
+// This should be called instead of SessionManager.CreateSession so that plugins
+// can pass options (e.g. remember_me) via SessionCreateOption.
+func (c *AegisCore) CreateSession(ctx context.Context, r *http.Request, w http.ResponseWriter, auth *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error) {
+	createOpts := &SessionCreateOptions{ShortSession: false}
+	if c.cookies.checkIsShortSession(r) {
+		createOpts.ShortSession = true
+	}
+	for _, opt := range opts {
+		opt(createOpts)
+	}
+	return c.SessionManager.CreateSession(ctx, r, auth, createOpts.ShortSession)
 }

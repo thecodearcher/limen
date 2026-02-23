@@ -2,6 +2,12 @@ package aegis
 
 import (
 	"net/http"
+	"time"
+)
+
+const (
+	shortSessionCookieName = "aegis_short_session"
+	shortSessionMaxAgeSec  = 1 * time.Hour // 1 hour
 )
 
 type HTTPConfigOption func(*httpConfig)

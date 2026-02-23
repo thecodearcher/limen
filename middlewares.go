@@ -30,7 +30,10 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() Middleware {
 			}
 
 			if session.Refreshed != nil {
-				httpCore.Cookies().WriteCookie(w, session.Refreshed.Cookie)
+				if err := httpCore.Cookies().SetSessionCookie(w, session.Refreshed); err != nil {
+					httpCore.Responder.Error(w, r, err)
+					return
+				}
 			}
 
 			r = r.WithContext(context.WithValue(r.Context(), contextKeyActiveSession{}, &ValidatedSession{

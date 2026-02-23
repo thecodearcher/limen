@@ -16,9 +16,12 @@ type config struct {
 	cookieName       string
 }
 
-func WithSecret(secret []byte) ConfigOption {
+// WithSecret sets the 32-byte secret used for encrypting TOTP secrets and backup codes at rest.
+// The key must be exactly 32 bytes (e.g. 32 ASCII characters).
+// If not set, the plugin uses Config.SigningSecret when available.
+func WithSecret(secret string) ConfigOption {
 	return func(c *config) {
-		c.secret = secret
+		c.secret = []byte(secret)
 	}
 }
 

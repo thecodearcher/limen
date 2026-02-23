@@ -85,7 +85,7 @@ func (t *totp) VerifyCode(ctx context.Context, userID any, code string) error {
 	}
 	decryptedSecret, err := t.plugin.decrypt(twoFactor.Secret)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decrypt TOTP secret: %w", err)
 	}
 
 	valid, err := pqtotp.ValidateCustom(code, decryptedSecret, time.Now().UTC(), pqtotp.ValidateOpts{

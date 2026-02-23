@@ -36,7 +36,8 @@ func WithProvider(p Provider) ConfigOption {
 }
 
 // WithSecret sets the 32-byte secret used for encrypting OAuth tokens at rest and
-// stateless state tokens. The key must be exactly 32 bytes (e.g. 32 ASCII characters);
+// stateless state tokens. The key must be exactly 32 bytes (e.g. 32 ASCII characters).
+// If not set, the plugin uses Config.SigningSecret when available.
 func WithSecret(key string) ConfigOption {
 	return func(c *config) {
 		c.secret = []byte(key)

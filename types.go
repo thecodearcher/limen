@@ -25,9 +25,22 @@ type OAuthAccountProfile struct {
 	Raw                  map[string]any
 }
 
+type SessionCreateOptions struct {
+	ShortSession bool
+}
+
+type SessionCreateOption func(*SessionCreateOptions)
+
+// WithShortSession sets the short session flag for the session.
+func WithShortSession(shortSession bool) SessionCreateOption {
+	return func(o *SessionCreateOptions) {
+		o.ShortSession = shortSession
+	}
+}
+
 // SessionManager defines the interface for session lifecycle management.
 type SessionManager interface {
-	CreateSession(ctx context.Context, r *http.Request, auth *AuthenticationResult) (*SessionResult, error)
+	CreateSession(ctx context.Context, r *http.Request, auth *AuthenticationResult, shortSession bool) (*SessionResult, error)
 	ValidateSession(ctx context.Context, r *http.Request) (*ValidatedSession, error)
 	RevokeSession(ctx context.Context, token string) error
 	RevokeAllSessions(ctx context.Context, userID any) error
@@ -49,6 +62,9 @@ type AuthenticationResult struct {
 type SessionResult struct {
 	Token  string       `json:"token,omitzero"`
 	Cookie *http.Cookie `json:"-"`
+	// ShortSession indicates if the session is a short session i.e expires in less than the global session duration
+	// This is typically when "remember me" is not checked.
+	ShortSession *bool
 }
 
 // SessionUpdates contains fields for partial session updates.

@@ -133,7 +133,7 @@ func (t *twoFactorFeature) VerifyLoginWithTwoFactor(r *http.Request, w http.Resp
 	}
 
 	authResult := &aegis.AuthenticationResult{User: user}
-	sessionResult, err := t.core.SessionManager.CreateSession(r.Context(), r, authResult)
+	sessionResult, err := t.core.CreateSession(r.Context(), r, w, authResult)
 	if err != nil {
 		return nil, nil, err
 	}

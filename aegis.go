@@ -30,16 +30,18 @@ func New(config *Config) (*Aegis, error) {
 	aegis := &Aegis{
 		config: config,
 	}
+
 	core := &AegisCore{
-		config:      config,
-		baseURL:     config.BaseURL,
-		fullBaseURL: joinURL(config.BaseURL, config.HTTP.basePath),
-		db:          config.Database,
-		Schema:      config.Schema,
-		features:    make(map[FeatureName]Feature),
+		config:        config,
+		baseURL:       config.BaseURL,
+		fullBaseURL:   joinURL(config.BaseURL, config.HTTP.basePath),
+		db:            config.Database,
+		Schema:        config.Schema,
+		features:      make(map[FeatureName]Feature),
+		signingSecret: config.SigningSecret,
 	}
 
-	core.cookies = newCookieManager(config.HTTP.cookieConfig)
+	core.cookies = newCookieManager(config.HTTP.cookieConfig, config.SigningSecret)
 	sessionManager := newOpaqueSessionManager(core, config.Session)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager

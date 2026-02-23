@@ -38,8 +38,14 @@ func (o *oauthFeature) Initialize(core *aegis.AegisCore) error {
 	o.core = core
 	o.cookies = core.Cookies()
 	o.accountSchema = core.Schema.Account
+	if len(o.config.secret) == 0 {
+		if base := core.SigningSecret(); len(base) == 32 {
+			o.config.secret = base
+		}
+	}
+
 	if len(o.config.secret) != 32 {
-		return fmt.Errorf("oauth: secret must be 32 bytes, got %d", len(o.config.secret))
+		return fmt.Errorf("oauth: secret must be 32 bytes, got %d (set oauth.WithSecret or Config.SigningSecret)", len(o.config.secret))
 	}
 
 	if len(o.config.providers) == 0 {

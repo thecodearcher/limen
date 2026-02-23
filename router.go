@@ -226,6 +226,8 @@ func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middlew
 	hasAfterHooks := len(r.afterHooks) > 0
 
 	return func(w http.ResponseWriter, req *http.Request) {
+		req, _ = parseAndStoreBody(req)
+
 		hookCtx := r.prepareHookContext(req, w, route)
 		if !r.runBeforeHooks(hookCtx) {
 			return
@@ -235,9 +237,8 @@ func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middlew
 			bodyBytes, _ := json.Marshal(hookCtx.modifiedData)
 			req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 			req = req.WithContext(context.WithValue(req.Context(), bodyContextKey{}, hookCtx.modifiedData))
+			hookCtx.request = req
 		}
-
-		req, _ = parseAndStoreBody(req)
 
 		rw := &responseWriter{
 			ResponseWriter: w,
@@ -277,13 +278,11 @@ func (r *Router) writeFinalResponse(rw *responseWriter, req *http.Request) {
 	if rw.modified {
 		status = rw.modifiedStatus
 		payload = rw.modifiedPayload
-		isError = false // Modified responses are treated as success
+		isError = false // Modified responses are treated as success and rely on error type payload
 	}
 
-	if isError {
-		if ae, ok := payload.(*AegisError); ok {
-			r.responder.Error(rw.ResponseWriter, req, ae)
-		}
+	if err, ok := payload.(error); ok || isError {
+		r.responder.Error(rw.ResponseWriter, req, err)
 		return
 	}
 

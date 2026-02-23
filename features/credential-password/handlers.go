@@ -77,7 +77,11 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 		return
 	}
 
-	sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, result)
+	shortSession := false
+	if val, ok := body["remember_me"].(bool); ok {
+		shortSession = !val
+	}
+	sessionResult, err := p.feature.core.CreateSession(r.Context(), r, w, result, aegis.WithShortSession(shortSession))
 	if err != nil {
 		p.responder.Error(w, r, err)
 		return
@@ -134,7 +138,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 		return
 	}
 
-	sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, result)
+	sessionResult, err := p.feature.core.CreateSession(r.Context(), r, w, result)
 	if err != nil {
 		p.responder.Error(w, r, err)
 		return
@@ -281,7 +285,7 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 	}
 
 	if revokeOtherSessions {
-		sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, authResult)
+		sessionResult, err := p.feature.core.CreateSession(r.Context(), r, w, authResult)
 		if err != nil {
 			p.responder.Error(w, r, err)
 			return
@@ -332,7 +336,7 @@ func (p *credentialPasswordHandlers) SetPassword(w http.ResponseWriter, r *http.
 	}
 
 	if revokeOtherSessions {
-		sessionResult, err := p.feature.core.SessionManager.CreateSession(r.Context(), r, authResult)
+		sessionResult, err := p.feature.core.CreateSession(r.Context(), r, w, authResult)
 		if err != nil {
 			p.responder.Error(w, r, err)
 			return

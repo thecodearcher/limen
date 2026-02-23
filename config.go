@@ -2,17 +2,19 @@ package aegis
 
 import (
 	"fmt"
+	"os"
 )
 
 // Config is the main configuration struct for the aegis library
 type Config struct {
-	BaseURL  string
-	Database DatabaseAdapter
-	Features []Feature
-	Schema   *SchemaConfig
-	Session  *sessionConfig
-	HTTP     *httpConfig
-	CLI      *CLIConfig
+	BaseURL       string
+	Database      DatabaseAdapter
+	Features      []Feature
+	Schema        *SchemaConfig
+	Session       *sessionConfig
+	HTTP          *httpConfig
+	CLI           *CLIConfig
+	SigningSecret []byte
 }
 
 // CLIConfig contains configuration for CLI tool support
@@ -28,6 +30,19 @@ func (c *Config) validate() error {
 
 	if c.Database == nil {
 		return ErrDatabaseAdapterRequired
+	}
+
+	secret := c.SigningSecret
+	if len(secret) == 0 {
+		secret = []byte(os.Getenv("AEGIS_SECRET"))
+		c.SigningSecret = secret
+	}
+	if len(secret) == 0 {
+		return fmt.Errorf("signing secret is required: set Config.SigningSecret, or AEGIS_SECRET environment variable")
+	}
+
+	if len(secret) != 32 {
+		return fmt.Errorf("signing secret must be 32 bytes, got %d", len(secret))
 	}
 
 	if c.Schema == nil {

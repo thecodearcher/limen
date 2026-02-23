@@ -25,6 +25,8 @@ type sessionConfig struct {
 	IPAddressExtractor RequestExtractorFn
 	// UserAgentExtractor: the function to extract the user agent from the request
 	UserAgentExtractor RequestExtractorFn
+	// ShortSessionDuration: when > 0, sign-in with remember_me=false uses this shorter TTL instead of Duration. The session is not extended. 0 = remember-me feature disabled.
+	ShortSessionDuration time.Duration
 }
 
 func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
@@ -35,6 +37,7 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 		ActivityCheckInterval: 0,                  // no activity check interval
 		StoreType:             SessionStoreTypeDatabase,
 		IPAddressExtractor:    ipExtractorFromRemoteAddr,
+		ShortSessionDuration:  24 * time.Hour,
 		UserAgentExtractor: func(request *http.Request) string {
 			return request.UserAgent()
 		},
@@ -66,6 +69,10 @@ func (c *sessionConfig) validate() error {
 	}
 	if c.IdleTimeout > 0 && c.UpdateAge > 0 && c.UpdateAge >= c.IdleTimeout {
 		return fmt.Errorf("update age must be less than idle timeout")
+	}
+
+	if c.ShortSessionDuration > 0 && c.ShortSessionDuration >= c.Duration {
+		return fmt.Errorf("short session duration must be less than session duration")
 	}
 
 	return nil
@@ -118,5 +125,13 @@ func WithSessionUserAgentExtractor(userAgentExtractor func(request *http.Request
 func WithSessionActivityCheckInterval(activityCheckInterval time.Duration) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.ActivityCheckInterval = activityCheckInterval
+	}
+}
+
+// WithSessionShortDuration sets the short TTL for non-remembered sessions.
+// Must be less than global session Duration. 0 = remember-me feature disabled.
+func WithSessionShortDuration(d time.Duration) SessionConfigOption {
+	return func(c *sessionConfig) {
+		c.ShortSessionDuration = d
 	}
 }

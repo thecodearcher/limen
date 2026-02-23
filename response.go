@@ -130,10 +130,14 @@ func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core
 		rw.authResult = result
 	}
 
-	rs.setSessionCookies(w, sessionResult)
+	if err := rs.setSessionCookies(w, sessionResult); err != nil {
+		return rs.Error(w, r, err)
+	}
 
 	if rs.sessionTransformer != nil {
-		return rs.handleSessionTransformer(w, r, result, sessionResult)
+		if err := rs.handleSessionTransformer(w, r, result, sessionResult); err != nil {
+			return rs.Error(w, r, err)
+		}
 	}
 
 	return rs.JSON(w, r, http.StatusOK, map[string]any{
@@ -160,11 +164,12 @@ func (rs Responder) AddHeader(w http.ResponseWriter, key, value string) {
 }
 
 // setSessionCookies sets the session cookie in the response.
-func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *SessionResult) {
+func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *SessionResult) error {
 	if sessionResult == nil || sessionResult.Cookie == nil {
-		return
+		return nil
 	}
-	rs.cookies.WriteCookie(w, sessionResult.Cookie)
+
+	return rs.cookies.SetSessionCookie(w, sessionResult)
 }
 
 // Redirect sends a redirect response. When the response is deferred (after-hooks in use),
@@ -179,7 +184,10 @@ func (rs Responder) Redirect(w http.ResponseWriter, r *http.Request, redirectURL
 // RedirectWithSession sets the session cookie and redirects the client to redirectURL.
 // Used by OAuth callbacks when redirect_uri is provided in the authorize request.
 func (rs Responder) RedirectWithSession(w http.ResponseWriter, r *http.Request, redirectURL string, sessionResult *SessionResult) {
-	rs.setSessionCookies(w, sessionResult)
+	if err := rs.setSessionCookies(w, sessionResult); err != nil {
+		rs.Error(w, r, err)
+		return
+	}
 	rs.Redirect(w, r, redirectURL, http.StatusFound)
 }
 

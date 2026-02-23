@@ -24,13 +24,11 @@ func getTOTPSecret() []byte {
 	totpSecret := os.Getenv("AEGIS_TOTP_SECRET")
 	secret := os.Getenv("AEGIS_SECRET")
 	if totpSecret == "" && secret == "" {
-		return []byte("aegis_2fa_totp_secret_1234567890")
+		return nil
 	}
-
 	if totpSecret != "" {
 		return []byte(totpSecret)
 	}
-
 	return []byte(secret)
 }
 

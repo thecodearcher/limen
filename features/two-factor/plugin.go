@@ -3,6 +3,7 @@ package twofactor
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -51,6 +52,14 @@ func New(opts ...ConfigOption) *twoFactorFeature {
 func (t *twoFactorFeature) Initialize(core *aegis.AegisCore) error {
 	t.core = core
 	t.cookies = core.Cookies()
+	if len(t.config.secret) == 0 {
+		if base := core.SigningSecret(); len(base) > 0 {
+			t.config.secret = base
+		}
+	}
+	if len(t.config.secret) == 0 {
+		return fmt.Errorf("two-factor requires a secret: set twofactor.WithSecret, Config.SigningSecret, or AEGIS_TOTP_SECRET / AEGIS_SECRET")
+	}
 	t.totp = newDefaultTOTP(t, t.config.totp)
 	t.backupCodes = newBackupCodes(t, t.config.backupCodes)
 	if t.config.otp.enabled {
@@ -93,12 +102,13 @@ func (t *twoFactorFeature) handleSigninHook(ctx *aegis.HookContext) bool {
 		return true
 	}
 
+	t.revokeSessionFromResponse(ctx)
 	challengeToken, err := t.generateChallengeToken(authResult.User.ID)
 	if err != nil {
-		return true
+		ctx.ModifyResponse(http.StatusInternalServerError, err)
+		return false
 	}
 
-	t.revokeSessionFromResponse(ctx)
 	t.setChallengeCookie(ctx, challengeToken)
 
 	ctx.ModifyResponse(http.StatusOK, map[string]any{
@@ -206,8 +216,8 @@ func (t *twoFactorFeature) DeleteTwoFactor(ctx context.Context, userID any) erro
 	})
 }
 
-func (t *twoFactorFeature) encrypt(secret string) (string, error) {
-	return aegis.EncryptXChaCha(secret, t.config.secret, nil)
+func (t *twoFactorFeature) encrypt(value string) (string, error) {
+	return aegis.EncryptXChaCha(value, t.config.secret, nil)
 }
 
 func (t *twoFactorFeature) decrypt(secret string) (string, error) {

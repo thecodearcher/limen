@@ -59,7 +59,7 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 
 	var sessionResult *aegis.SessionResult
 	if stateData[linkUserIdKey] == nil {
-		sessionResult, err = h.feature.core.SessionManager.CreateSession(r.Context(), r, result)
+		sessionResult, err = h.feature.core.CreateSession(r.Context(), r, w, result)
 		if err != nil {
 			h.handleCallbackResponse(w, r, stateData, nil, nil, err)
 			return
