@@ -24,6 +24,7 @@ type config struct {
 	getUserInfo           func(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error)
 	buildAuthorizationURL func(ctx context.Context, state, codeVerifier, callbackRedirectURI string) (string, error)
 	exchangeTokens        func(ctx context.Context, code, codeVerifier, redirectURI string) (*oauth.TokenResponse, error)
+	refreshTokens         func(ctx context.Context, refreshToken string) (*oauth.TokenResponse, error)
 }
 
 func (c *config) resolveDiscovery() {
@@ -183,5 +184,14 @@ func WithBuildAuthorizationURL(fn func(ctx context.Context, state, codeVerifier,
 func WithExchangeTokens(fn func(ctx context.Context, code, codeVerifier, redirectURI string) (*oauth.TokenResponse, error)) ConfigOption {
 	return func(c *config) {
 		c.exchangeTokens = fn
+	}
+}
+
+// WithRefreshTokens sets a custom function to refresh an access token using a refresh token.
+// When set, the base OAuth module will call this instead of the standard oauth2 token refresh.
+// Use this when the provider's refresh endpoint expects a different format or parameters.
+func WithRefreshTokens(fn func(ctx context.Context, refreshToken string) (*oauth.TokenResponse, error)) ConfigOption {
+	return func(c *config) {
+		c.refreshTokens = fn
 	}
 }

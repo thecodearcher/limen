@@ -135,3 +135,13 @@ func (g *genericProvider) ExchangeAuthorizationCode(ctx context.Context, code, c
 	cfg.RedirectURL = redirectURI
 	return oauth.ExchangeCode(ctx, cfg, code, codeVerifier)
 }
+
+// RefreshToken implements oauth.TokenRefresher. When WithRefreshTokens is set, the custom
+// function is used; otherwise the standard oauth2 token refresh flow is used.
+func (g *genericProvider) RefreshToken(ctx context.Context, refreshToken string) (*oauth.TokenResponse, error) {
+	if g.config.refreshTokens != nil {
+		return g.config.refreshTokens(ctx, refreshToken)
+	}
+	cfg, _ := g.OAuth2Config()
+	return oauth.RefreshToken(ctx, cfg, refreshToken)
+}

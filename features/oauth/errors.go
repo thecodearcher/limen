@@ -16,4 +16,5 @@ var (
 	ErrPKCEVerifierNotFound                  = aegis.NewAegisError("PKCE verifier not found", http.StatusBadRequest, nil)
 	ErrAccountAlreadyLinkedToAnotherUser     = aegis.NewAegisError("this provider account is already linked to another user", http.StatusConflict, nil)
 	ErrAccountCannotBeLinkedToDifferentEmail = aegis.NewAegisError("user cannot be linked to this provider account because the email does not match", http.StatusConflict, nil)
+	ErrNoRefreshToken                        = aegis.NewAegisError("no refresh token available for this account", http.StatusBadRequest, nil)
 )

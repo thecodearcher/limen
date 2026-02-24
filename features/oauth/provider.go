@@ -31,3 +31,10 @@ type AuthorizationURLBuilder interface {
 type TokenExchanger interface {
 	ExchangeAuthorizationCode(ctx context.Context, code, codeVerifier, redirectURI string) (*TokenResponse, error)
 }
+
+// TokenRefresher is optional. If a Provider also implements TokenRefresher,
+// the base module uses it to refresh an access token instead of the standard
+// oauth2 refresh flow.
+type TokenRefresher interface {
+	RefreshToken(ctx context.Context, refreshToken string) (*TokenResponse, error)
+}

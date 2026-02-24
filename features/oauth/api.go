@@ -26,6 +26,10 @@ type API interface {
 	ListAccountsForUser(ctx context.Context, userID any) ([]*aegis.Account, error)
 
 	UnlinkAccount(ctx context.Context, user *aegis.User, providerName string) error
+
+	GetAccessToken(ctx context.Context, userID any, providerName string) (*ActiveTokens, error)
+
+	RefreshAccessToken(ctx context.Context, userID any, providerName string) (*ActiveTokens, error)
 }
 
 // Use returns a type-safe API for the OAuth feature.

@@ -36,3 +36,12 @@ type OAuthAuthorizeURLData struct {
 	RedirectURI      string
 	ErrorRedirectURI string
 }
+
+// ActiveTokens holds the decrypted OAuth tokens for a user's provider account.
+type ActiveTokens struct {
+	AccessToken          string     `json:"access_token"`
+	RefreshToken         string     `json:"refresh_token,omitempty"`
+	IDToken              string     `json:"id_token,omitempty"`
+	AccessTokenExpiresAt *time.Time `json:"access_token_expires_at,omitempty"`
+	Scope                string     `json:"scope,omitempty"`
+}

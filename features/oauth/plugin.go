@@ -72,6 +72,8 @@ func (o *oauthFeature) PluginHTTPConfig() aegis.PluginHTTPConfig {
 			aegis.NewRateLimitRule("/:provider/callback", 10, time.Minute),
 			aegis.NewRateLimitRule("/:provider/link", 10, time.Minute),
 			aegis.NewRateLimitRule("/:provider/unlink", 10, time.Minute),
+			aegis.NewRateLimitRule("/:provider/token", 20, time.Minute),
+			aegis.NewRateLimitRule("/:provider/token/refresh", 10, time.Minute),
 		},
 	}
 }
@@ -84,6 +86,8 @@ func (o *oauthFeature) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilde
 	routeBuilder.ProtectedGET("/:provider/link", "oauth-link-authorize", handlers.LinkAccountWithOAuth)
 	routeBuilder.ProtectedGET("/accounts", "oauth-list-accounts", handlers.ListAccounts)
 	routeBuilder.ProtectedDELETE("/:provider/unlink", "oauth-unlink-account", handlers.UnlinkAccount)
+	routeBuilder.ProtectedGET("/:provider/tokens", "oauth-get-tokens", handlers.GetTokens)
+	routeBuilder.ProtectedPOST("/:provider/tokens/refresh", "oauth-refresh-tokens", handlers.RefreshAccessToken)
 }
 
 func (o *oauthFeature) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {

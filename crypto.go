@@ -10,6 +10,9 @@ import (
 
 // Encrypt encrypts the plaintext using XChaCha20-Poly1305 with the provided key (32 bytes).
 func EncryptXChaCha(plaintext string, secret []byte, additionalData []byte) (string, error) {
+	if plaintext == "" {
+		return "", ErrEmptyText
+	}
 	if len(secret) < chacha20poly1305.KeySize {
 		return "", fmt.Errorf("secret key must be %d bytes", chacha20poly1305.KeySize)
 	}
@@ -30,6 +33,9 @@ func EncryptXChaCha(plaintext string, secret []byte, additionalData []byte) (str
 
 // Decrypt decrypts the base64-encoded ciphertext using XChaCha20-Poly1305 with the provided key.
 func DecryptXChaCha(encoded string, secret []byte, additionalData []byte) (string, error) {
+	if encoded == "" {
+		return "", ErrEmptyText
+	}
 	if len(secret) != chacha20poly1305.KeySize {
 		return "", fmt.Errorf("secret key must be %d bytes", chacha20poly1305.KeySize)
 	}

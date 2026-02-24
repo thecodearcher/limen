@@ -17,6 +17,7 @@ var (
 	ErrPluginAlreadyRegistered = errors.New("plugin already registered")
 	ErrInvalidConfiguration    = errors.New("invalid configuration")
 	ErrRecordNotFound          = errors.New("record not found")
+	ErrEmptyText               = errors.New("text is empty and cannot be encrypted or decrypted")
 )
 
 // Session-specific errors

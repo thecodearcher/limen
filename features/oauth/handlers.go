@@ -131,6 +131,42 @@ func (h *oauthHandlers) UnlinkAccount(w http.ResponseWriter, r *http.Request) {
 	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }
 
+func (h *oauthHandlers) GetTokens(w http.ResponseWriter, r *http.Request) {
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	providerName := aegis.GetParam(r, "provider")
+
+	tokens, err := h.feature.GetAccessToken(r.Context(), session.User.ID, providerName)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, tokens)
+}
+
+func (h *oauthHandlers) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
+	session, err := aegis.GetCurrentSessionFromCtx(r)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	providerName := aegis.GetParam(r, "provider")
+
+	tokens, err := h.feature.RefreshAccessToken(r.Context(), session.User.ID, providerName)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, tokens)
+}
+
 func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *aegis.AuthenticationResult, sessionResult *aegis.SessionResult, err error) {
 	if h.feature.config.disableRedirect && (err != nil || stateData == nil) {
 		h.responder.Error(w, r, err)

@@ -3,6 +3,7 @@ package oauth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -167,8 +168,38 @@ func (o *oauthFeature) findUserByEmail(ctx context.Context, email string) (*aegi
 	return user, nil
 }
 
+func (o *oauthFeature) findAccountByUserIDAndProvider(ctx context.Context, userID any, providerName string) (*aegis.Account, error) {
+	raw, err := o.core.FindOne(ctx, o.accountSchema, []aegis.Where{
+		aegis.Eq(o.accountSchema.GetUserIDField(), userID),
+		aegis.Eq(o.accountSchema.GetProviderField(), providerName),
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	return raw.(*aegis.Account), nil
+}
+
 func (o *oauthFeature) encryptToken(plain string) (string, error) {
-	return aegis.EncryptXChaCha(plain, o.config.secret, nil)
+	if plain == "" {
+		return "", nil
+	}
+	cipher, err := aegis.EncryptXChaCha(plain, o.config.secret, nil)
+	if err != nil {
+		return "", fmt.Errorf("oauth: failed to encrypt token: %w", err)
+	}
+	return cipher, nil
+}
+
+func (o *oauthFeature) decryptToken(cipher string) (string, error) {
+	if cipher == "" {
+		return "", nil
+	}
+	plain, err := aegis.DecryptXChaCha(cipher, o.config.secret, nil)
+	if err != nil {
+		return "", fmt.Errorf("oauth: failed to decrypt token: %w", err)
+	}
+	fmt.Printf("decryptToken plain: %s\n", plain)
+	return plain, nil
 }
 
 func (o *oauthFeature) encryptTokens(info *aegis.OAuthAccountProfile) (*OAuthTokens, error) {
@@ -199,5 +230,40 @@ func (o *oauthFeature) encryptTokens(info *aegis.OAuthAccountProfile) (*OAuthTok
 	if err != nil {
 		return nil, err
 	}
+	return &OAuthTokens{AccessToken: access, RefreshToken: refresh, IDToken: idToken}, nil
+}
+
+func (o *oauthFeature) decryptTokens(account *aegis.Account) (*OAuthTokens, error) {
+	if o.config.disableTokensEncryption {
+		return &OAuthTokens{
+			AccessToken:  account.AccessToken,
+			RefreshToken: account.RefreshToken,
+			IDToken:      account.IDToken,
+		}, nil
+	}
+
+	if o.config.decryptTokens != nil {
+		return o.config.decryptTokens(o.config.secret, &OAuthTokens{
+			AccessToken:  account.AccessToken,
+			RefreshToken: account.RefreshToken,
+			IDToken:      account.IDToken,
+		})
+	}
+
+	access, err := o.decryptToken(account.AccessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	refresh, err := o.decryptToken(account.RefreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	idToken, err := o.decryptToken(account.IDToken)
+	if err != nil {
+		return nil, err
+	}
+
 	return &OAuthTokens{AccessToken: access, RefreshToken: refresh, IDToken: idToken}, nil
 }

@@ -56,6 +56,31 @@ func ExchangeCode(ctx context.Context, config *oauth2.Config, code, codeVerifier
 	return resp, nil
 }
 
+// RefreshToken uses the standard oauth2.TokenSource to exchange a refresh token
+// for a new access token via the provider's token endpoint.
+func RefreshToken(ctx context.Context, config *oauth2.Config, refreshToken string) (*TokenResponse, error) {
+	src := config.TokenSource(ctx, &oauth2.Token{RefreshToken: refreshToken})
+	tok, err := src.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &TokenResponse{
+		AccessToken:  tok.AccessToken,
+		RefreshToken: tok.RefreshToken,
+		TokenType:    tok.TokenType,
+		ExpiresAt:    tok.Expiry,
+	}
+
+	if extra, ok := tok.Extra("id_token").(string); ok {
+		resp.IDToken = extra
+	}
+	if scope, ok := tok.Extra("scope").(string); ok && scope != "" {
+		resp.Scope = scope
+	}
+	return resp, nil
+}
+
 // DecodeIDTokenClaims decodes the payload segment of a JWT without verification.
 //
 // NOTE: This does not verify the token, so it is not safe to use for any purpose other than to get the claims
