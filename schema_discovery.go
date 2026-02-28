@@ -4,16 +4,16 @@ import (
 	"fmt"
 )
 
-// DiscoverAllSchemas discovers all schemas from core and all registered features.
+// DiscoverAllSchemas discovers all schemas from core and all registered plugins.
 // It merges plugin-extended fields into core schemas and returns a complete schema map.
 //
 // The returned map is the resolved schemas with all customizations applied.
-func discoverSchemas(schemaConfig *SchemaConfig, features []Feature) (map[SchemaName]SchemaDefinition, error) {
+func discoverSchemas(schemaConfig *SchemaConfig, plugins []Plugin) (map[SchemaName]SchemaDefinition, error) {
 	schemas := collectCoreSchemas(schemaConfig)
 	applyCoreSchemaCustomizations(schemas, schemaConfig)
 
-	for _, feature := range features {
-		if err := processFeatureSchemas(feature, schemaConfig, schemas); err != nil {
+	for _, plugin := range plugins {
+		if err := processPluginSchemas(plugin, schemaConfig, schemas); err != nil {
 			return nil, err
 		}
 	}
@@ -75,7 +75,7 @@ func applyCoreSchemaCustomizations(schemas map[SchemaName]SchemaDefinition, conf
 	}
 }
 
-func applyPluginCustomizations(def *SchemaDefinition, featureName FeatureName, schemaName SchemaName, config *SchemaConfig) {
+func applyPluginCustomizations(def *SchemaDefinition, featureName PluginName, schemaName SchemaName, config *SchemaConfig) {
 	schemaConfigs, exists := config.pluginSchemas[featureName]
 	if !exists {
 		return
@@ -88,22 +88,22 @@ func applyPluginCustomizations(def *SchemaDefinition, featureName FeatureName, s
 	applySchemaCustomizations(def, &schemaConfig)
 }
 
-func processFeatureSchemas(feature Feature, schemaConfig *SchemaConfig, schemas map[SchemaName]SchemaDefinition) error {
-	featureSchemas := feature.GetSchemas(schemaConfig)
+func processPluginSchemas(plugin Plugin, schemaConfig *SchemaConfig, schemas map[SchemaName]SchemaDefinition) error {
+	featureSchemas := plugin.GetSchemas(schemaConfig)
 	for _, introspector := range featureSchemas {
 		def := introspector.(*SchemaDefinition)
-		def.PluginName = string(feature.Name())
+		def.PluginName = string(plugin.Name())
 
-		applyPluginCustomizations(def, feature.Name(), def.SchemaName, schemaConfig)
+		applyPluginCustomizations(def, plugin.Name(), def.SchemaName, schemaConfig)
 
 		if def.Extends != "" {
-			if err := mergeSchemaExtension(feature, def, schemas); err != nil {
+			if err := mergeSchemaExtension(plugin, def, schemas); err != nil {
 				return err
 			}
 			continue
 		}
 
-		if err := mergeSchemaTable(feature, def, def.SchemaName, schemas); err != nil {
+		if err := mergeSchemaTable(plugin, def, def.SchemaName, schemas); err != nil {
 			return err
 		}
 	}
@@ -111,9 +111,9 @@ func processFeatureSchemas(feature Feature, schemaConfig *SchemaConfig, schemas 
 	return nil
 }
 
-func mergeSchemaTable(feature Feature, def *SchemaDefinition, schemaName SchemaName, schemas map[SchemaName]SchemaDefinition) error {
+func mergeSchemaTable(plugin Plugin, def *SchemaDefinition, schemaName SchemaName, schemas map[SchemaName]SchemaDefinition) error {
 	if _, exists := schemas[schemaName]; exists {
-		return fmt.Errorf("plugin %s defines schema %s which already exists", feature.Name(), schemaName)
+		return fmt.Errorf("plugin %s defines schema %s which already exists", plugin.Name(), schemaName)
 	}
 
 	for _, schema := range schemas {
@@ -128,23 +128,23 @@ func mergeSchemaTable(feature Feature, def *SchemaDefinition, schemaName SchemaN
 			pluginName = "core"
 		}
 		return fmt.Errorf("plugin (%s) defines schema %s which conflicts with schema (%s) which has table \"%s\"",
-			feature.Name(), schemaName, pluginName, string(schemaTableName),
+			plugin.Name(), schemaName, pluginName, string(schemaTableName),
 		)
 	}
 	schemas[schemaName] = *def
 	return nil
 }
 
-func mergeSchemaExtension(feature Feature, def *SchemaDefinition, schemas map[SchemaName]SchemaDefinition) error {
+func mergeSchemaExtension(plugin Plugin, def *SchemaDefinition, schemas map[SchemaName]SchemaDefinition) error {
 	extendsName := def.Extends
 
 	if !IsValidCoreSchema(string(extendsName)) {
-		return fmt.Errorf("plugin %s extends invalid core schema: %s", feature.Name(), extendsName)
+		return fmt.Errorf("plugin %s extends invalid core schema: %s", plugin.Name(), extendsName)
 	}
 
 	coreSchema, exists := schemas[extendsName]
 	if !exists {
-		return fmt.Errorf("plugin %s extends unknown schema: %s", feature.Name(), extendsName)
+		return fmt.Errorf("plugin %s extends unknown schema: %s", plugin.Name(), extendsName)
 	}
 
 	coreSchema.Columns = append(coreSchema.Columns, def.Columns...)

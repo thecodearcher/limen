@@ -23,8 +23,8 @@ func New(config *Config) (*Aegis, error) {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	if config.Features == nil {
-		config.Features = []Feature{}
+	if config.Plugins == nil {
+		config.Plugins = []Plugin{}
 	}
 
 	aegis := &Aegis{
@@ -37,7 +37,7 @@ func New(config *Config) (*Aegis, error) {
 		fullBaseURL:   joinURL(config.BaseURL, config.HTTP.basePath),
 		db:            config.Database,
 		Schema:        config.Schema,
-		features:      make(map[FeatureName]Feature),
+		plugins:       make(map[PluginName]Plugin),
 		signingSecret: config.SigningSecret,
 	}
 
@@ -46,7 +46,7 @@ func New(config *Config) (*Aegis, error) {
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager
 
-	discoveredSchemas, err := discoverSchemas(config.Schema, config.Features)
+	discoveredSchemas, err := discoverSchemas(config.Schema, config.Plugins)
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover schemas: %w", err)
 	}
@@ -63,12 +63,12 @@ func New(config *Config) (*Aegis, error) {
 		return nil, fmt.Errorf("failed to initialize core schemas: %w", err)
 	}
 
-	// Initialize features
-	for _, feature := range config.Features {
-		if err := feature.Initialize(core); err != nil {
-			return nil, fmt.Errorf("failed to initialize feature %s: %w", feature.Name(), err)
+	// Initialize plugins
+	for _, plugin := range config.Plugins {
+		if err := plugin.Initialize(core); err != nil {
+			return nil, fmt.Errorf("failed to initialize plugin %s: %w", plugin.Name(), err)
 		}
-		core.features[feature.Name()] = feature
+		core.plugins[plugin.Name()] = plugin
 	}
 
 	aegis.core = core
@@ -91,7 +91,7 @@ func (a *Aegis) Handler() http.Handler {
 		trustedOriginsPatterns: compileTrustedOrigins(allUrls...),
 	}
 
-	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Features)
+	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Plugins)
 
 	router := NewRouter(httpCore.Responder, globalMiddlewares...)
 	if config.hooks != nil {
@@ -99,7 +99,7 @@ func (a *Aegis) Handler() http.Handler {
 	}
 
 	registerBaseRoutes(router, httpCore, a.core, config.basePath)
-	registerPluginRoutes(router, a.config.Features, httpCore, config)
+	registerPluginRoutes(router, a.config.Plugins, httpCore, config)
 
 	return router
 }
@@ -108,62 +108,62 @@ func (a *Aegis) GetSession(req *http.Request) (*ValidatedSession, error) {
 	return a.core.SessionManager.ValidateSession(req.Context(), req)
 }
 
-// Use retrieves a registered feature by name and returns it as type T.
-// It panics if the feature is not registered or does not implement T.
+// Use retrieves a registered plugin by name and returns it as type T.
+// It panics if the plugin is not registered or does not implement T.
 //
-// T should be gotten from the feature's API interface.
-// For example, if you want to use the credential-password feature, you can get the API interface like this:
+// T should be gotten from the plugin's API interface.
+// For example, if you want to use the credential-password plugin, you can get the API interface like this:
 //
 //	credentialpasswordAPI := credentialpassword.Use(aegis)
 //	credentialpasswordAPI.SignInWithCredentialAndPassword(ctx, "user@example.com", "password")
-func Use[T any](a *Aegis, name FeatureName) T {
-	feature, ok := a.core.GetFeature(name)
+func Use[T any](a *Aegis, name PluginName) T {
+	plugin, ok := a.core.GetPlugin(name)
 	if !ok {
-		panic(fmt.Sprintf("aegis: feature %q not registered; add it to Config.Features", name))
+		panic(fmt.Sprintf("aegis: plugin %q not registered; add it to Config.Plugins", name))
 	}
-	typed, ok := feature.(T)
+	typed, ok := plugin.(T)
 	if !ok {
-		panic(fmt.Sprintf("aegis: feature %q does not implement the requested interface", name))
+		panic(fmt.Sprintf("aegis: plugin %q does not implement the requested interface", name))
 	}
 	return typed
 }
 
-// TryUse retrieves a registered feature by name and returns it as type T.
-// Returns the zero value of T and false if the feature is not registered or
+// TryUse retrieves a registered plugin by name and returns it as type T.
+// Returns the zero value of T and false if the plugin is not registered or
 // does not implement T.
 //
-// Use this when you want to handle missing features gracefully instead of panicking.
-// If you want to ensure that the feature is registered, use the Use() function instead.
+// Use this when you want to handle missing plugins gracefully instead of panicking.
+// If you want to ensure that the plugin is registered, use the Use() function instead.
 //
-// For example, if you want to use the credential-password feature, you can get the API interface like this:
+// For example, if you want to use the credential-password plugin, you can get the API interface like this:
 //
-//	credentialpasswordAPI, ok := aegis.TryUse[credentialpassword.API](aegis, aegis.FeatureCredentialPassword)
+//	credentialpasswordAPI, ok := aegis.TryUse[credentialpassword.API](aegis, aegis.PluginCredentialPassword)
 //	if !ok {
-//		return nil, fmt.Errorf("credential password feature is not registered")
+//		return nil, fmt.Errorf("credential password plugin is not registered")
 //	}
 //	credentialpasswordAPI.SignInWithCredentialAndPassword(ctx, "user@example.com", "password")
-func TryUse[T any](a *Aegis, name FeatureName) (T, bool) {
-	feature, ok := a.core.GetFeature(name)
+func TryUse[T any](a *Aegis, name PluginName) (T, bool) {
+	plugin, ok := a.core.GetPlugin(name)
 	if !ok {
 		var zero T
 		return zero, false
 	}
-	typed, ok := feature.(T)
+	typed, ok := plugin.(T)
 	return typed, ok
 }
 
-func registerPluginRoutes(router *Router, features []Feature, httpCore *AegisHTTPCore, config *httpConfig) {
-	for _, feature := range features {
-		featureConfig := feature.PluginHTTPConfig()
+func registerPluginRoutes(router *Router, plugins []Plugin, httpCore *AegisHTTPCore, config *httpConfig) {
+	for _, plugin := range plugins {
+		featureConfig := plugin.PluginHTTPConfig()
 		basePath := featureConfig.BasePath
-		override := config.overrides[string(feature.Name())]
+		override := config.overrides[string(plugin.Name())]
 		normalizedBasePath := normalizePluginPath(config.basePath, basePath, override)
 		routeBuilder := &RouteBuilder{
 			group: router.Group(normalizedBasePath, featureConfig.Middleware...),
 			core:  httpCore,
 		}
 
-		feature.RegisterRoutes(httpCore, routeBuilder)
+		plugin.RegisterRoutes(httpCore, routeBuilder)
 
 		if featureConfig.Hooks != nil {
 			router.AddHooks(featureConfig.Hooks)
@@ -171,7 +171,7 @@ func registerPluginRoutes(router *Router, features []Feature, httpCore *AegisHTT
 	}
 }
 
-func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, features []Feature) []Middleware {
+func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, plugins []Plugin) []Middleware {
 	globalMiddlewares := []Middleware{middlewareAdditionalFieldsContext()}
 
 	if config.originCheck {
@@ -181,7 +181,7 @@ func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, featu
 		globalMiddlewares = append(globalMiddlewares, httpCore.middlewareCSRFProtection())
 	}
 
-	rateLimiterRules := prepareRateLimiterRules(config.basePath, config, features)
+	rateLimiterRules := prepareRateLimiterRules(config.basePath, config, plugins)
 	rateLimiter := newRateLimiter(config.rateLimiter, httpCore, rateLimiterRules)
 	globalMiddlewares = append(globalMiddlewares, rateLimiter.handle)
 
@@ -189,13 +189,13 @@ func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, featu
 	return globalMiddlewares
 }
 
-func prepareRateLimiterRules(basePath string, httpConfig *httpConfig, features []Feature) map[string]*RateLimitRule {
+func prepareRateLimiterRules(basePath string, httpConfig *httpConfig, plugins []Plugin) map[string]*RateLimitRule {
 	rules := make(map[string]*RateLimitRule)
 
 	customRules := httpConfig.rateLimiter.customRules
 
-	for _, feature := range features {
-		featureRules := processFeatureRateLimitRules(feature, basePath, httpConfig, customRules)
+	for _, plugin := range plugins {
+		featureRules := processPluginRateLimitRules(plugin, basePath, httpConfig, customRules)
 		maps.Copy(rules, featureRules)
 	}
 
@@ -205,10 +205,10 @@ func prepareRateLimiterRules(basePath string, httpConfig *httpConfig, features [
 	return rules
 }
 
-func processFeatureRateLimitRules(feature Feature, basePath string, httpConfig *httpConfig, customRules map[string]*RateLimitRule) map[string]*RateLimitRule {
+func processPluginRateLimitRules(plugin Plugin, basePath string, httpConfig *httpConfig, customRules map[string]*RateLimitRule) map[string]*RateLimitRule {
 	rules := make(map[string]*RateLimitRule)
-	featureConfig := feature.PluginHTTPConfig()
-	override := httpConfig.overrides[string(feature.Name())]
+	featureConfig := plugin.PluginHTTPConfig()
+	override := httpConfig.overrides[string(plugin.Name())]
 	normalizedBasePath := normalizePluginPath(basePath, featureConfig.BasePath, override)
 
 	if len(featureConfig.RateLimitRules) == 0 {

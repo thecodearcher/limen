@@ -112,7 +112,7 @@ import (
 )
 ```
 
-### Full Featured (Multiple Plugins)
+### Full Plugind (Multiple Plugins)
 
 ```go
 import (

@@ -7,7 +7,7 @@ import (
 )
 
 // this file contains the types for the aegis library
-// NO FEATURES SHOULD BE ADDED TO THIS FILE those go in the feature.go file
+// NO FEATURES SHOULD BE ADDED TO THIS FILE those go in the plugin.go file
 
 // OAuthAccountProfile holds the data returned by the provider after a successful OAuth authentication.
 type OAuthAccountProfile struct {

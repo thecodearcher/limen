@@ -16,7 +16,7 @@ type AegisCore struct {
 	SessionManager SessionManager
 	cookies        *CookieManager
 	schemaResolver *SchemaResolver
-	features       map[FeatureName]Feature
+	plugins        map[PluginName]Plugin
 	signingSecret  []byte
 }
 
@@ -34,11 +34,11 @@ func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDef
 	return nil
 }
 
-// GetFeature retrieves a feature by its name from the plugin registry.
-// Returns the feature and true if found, or nil and false if not found.
-func (c *AegisCore) GetFeature(name FeatureName) (Feature, bool) {
-	feature, ok := c.features[name]
-	return feature, ok
+// GetPlugin retrieves a plugin by its name from the plugin registry.
+// Returns the plugin and true if found, or nil and false if not found.
+func (c *AegisCore) GetPlugin(name PluginName) (Plugin, bool) {
+	plugin, ok := c.plugins[name]
+	return plugin, ok
 }
 
 // Cookies returns the shared CookieManager that plugins should use for
@@ -62,13 +62,13 @@ func (c *AegisCore) GetFullBaseURL() string {
 	return c.fullBaseURL
 }
 
-func (c *AegisCore) GetBaseURLWithPluginPath(pluginName FeatureName, pathToJoin string) string {
-	feature, ok := c.GetFeature(pluginName)
+func (c *AegisCore) GetBaseURLWithPluginPath(pluginName PluginName, pathToJoin string) string {
+	plugin, ok := c.GetPlugin(pluginName)
 	if !ok {
 		return ""
 	}
 
-	featureConfig := feature.PluginHTTPConfig()
+	featureConfig := plugin.PluginHTTPConfig()
 	normalizedBasePath := normalizePluginPath(c.config.HTTP.basePath, featureConfig.BasePath, c.config.HTTP.overrides[string(pluginName)])
 	return joinURL(c.baseURL, normalizedBasePath, pathToJoin)
 }

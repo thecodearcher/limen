@@ -6,12 +6,12 @@ use (
 	./adapters/sql
 	./cmd/aegis
 	./examples/basic
-	./features/credential-password
-	./features/oauth
-	./features/oauth-github
-	./features/oauth-google
-	./features/oauth-generic
-	./features/two-factor
+	./plugins/credential-password
+	./plugins/oauth
+	./plugins/oauth-github
+	./plugins/oauth-google
+	./plugins/oauth-generic
+	./plugins/two-factor
 )
 
 replace github.com/thecodearcher/aegis v0.0.0 => ./
@@ -20,14 +20,14 @@ replace github.com/thecodearcher/aegis/adapters/gorm v0.0.0 => ./adapters/gorm
 
 replace github.com/thecodearcher/aegis/adapters/sql v0.0.0 => ./adapters/sql
 
-replace github.com/thecodearcher/aegis/features/credential-password v0.0.0 => ./features/credential-password
+replace github.com/thecodearcher/aegis/plugins/credential-password v0.0.0 => ./plugins/credential-password
 
-replace github.com/thecodearcher/aegis/features/oauth v0.0.0 => ./features/oauth
+replace github.com/thecodearcher/aegis/plugins/oauth v0.0.0 => ./plugins/oauth
 
-replace github.com/thecodearcher/aegis/features/oauth-google v0.0.0 => ./features/oauth-google
+replace github.com/thecodearcher/aegis/plugins/oauth-google v0.0.0 => ./plugins/oauth-google
 
-replace github.com/thecodearcher/aegis/features/oauth-github v0.0.0 => ./features/oauth-github
+replace github.com/thecodearcher/aegis/plugins/oauth-github v0.0.0 => ./plugins/oauth-github
 
-replace github.com/thecodearcher/aegis/features/oauth-generic v0.0.0 => ./features/oauth-generic
+replace github.com/thecodearcher/aegis/plugins/oauth-generic v0.0.0 => ./plugins/oauth-generic
 
-replace github.com/thecodearcher/aegis/features/two-factor v0.0.0 => ./features/two-factor
+replace github.com/thecodearcher/aegis/plugins/two-factor v0.0.0 => ./plugins/two-factor

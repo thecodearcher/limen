@@ -1,16 +1,16 @@
 package aegis
 
-// Feature is the interface that all features must implement.
-type Feature interface {
-	// Unique identifier for the feature.
-	Name() FeatureName
-	// Initialize initializes the feature.
+// Plugin is the interface that all plugins must implement.
+type Plugin interface {
+	// Unique identifier for the plugin.
+	Name() PluginName
+	// Initialize initializes the plugin.
 	Initialize(core *AegisCore) error
 	// PluginHTTPConfig returns the configuration for the plugin's HTTP surface.
 	PluginHTTPConfig() PluginHTTPConfig
 	// RegisterRoutes registers routes for the plugin.
 	RegisterRoutes(httpCore *AegisHTTPCore, routeBuilder *RouteBuilder)
-	// GetSchemas returns all schemas provided by this feature.
+	// GetSchemas returns all schemas provided by this plugin.
 	// Returns a map of schema name to SchemaIntrospector.
 	// Plugins can extend core schemas by setting Extends field, or create new tables.
 	// If a plugin extends a core schema, it should return a schema with the same name

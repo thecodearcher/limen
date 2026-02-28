@@ -25,7 +25,7 @@ type sessionConfig struct {
 	IPAddressExtractor RequestExtractorFn
 	// UserAgentExtractor: the function to extract the user agent from the request
 	UserAgentExtractor RequestExtractorFn
-	// ShortSessionDuration: when > 0, sign-in with remember_me=false uses this shorter TTL instead of Duration. The session is not extended. 0 = remember-me feature disabled.
+	// ShortSessionDuration: when > 0, sign-in with remember_me=false uses this shorter TTL instead of Duration. The session is not extended. 0 = remember-me plugin disabled.
 	ShortSessionDuration time.Duration
 }
 
@@ -129,7 +129,7 @@ func WithSessionActivityCheckInterval(activityCheckInterval time.Duration) Sessi
 }
 
 // WithSessionShortDuration sets the short TTL for non-remembered sessions.
-// Must be less than global session Duration. 0 = remember-me feature disabled.
+// Must be less than global session Duration. 0 = remember-me plugin disabled.
 func WithSessionShortDuration(d time.Duration) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.ShortSessionDuration = d

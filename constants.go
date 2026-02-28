@@ -35,17 +35,17 @@ const (
 )
 
 // ============================================================================
-// Feature Constants
+// Plugin Constants
 // ============================================================================
 
-// FeatureName represents the name of a feature/plugin
-type FeatureName string
+// PluginName represents the name of a plugin/plugin
+type PluginName string
 
-// Feature Names
+// Plugin Names
 const (
-	FeatureCredentialPassword FeatureName = "credential-password"
-	FeatureTwoFactor          FeatureName = "two-factor"
-	FeatureOAuth              FeatureName = "oauth"
+	PluginCredentialPassword PluginName = "credential-password"
+	PluginTwoFactor          PluginName = "two-factor"
+	PluginOAuth              PluginName = "oauth"
 )
 
 // ============================================================================

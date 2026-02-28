@@ -9,9 +9,9 @@ import (
 
 // MemorySessionStore implements SessionStore using in-memory storage.
 type MemorySessionStore struct {
-	sessions     map[string]*Session          // token -> session
-	sessionsByID map[string]*Session          // id -> session (for O(1) ID lookups)
-	userSessions map[string]map[string]bool   // userID -> set of tokens
+	sessions     map[string]*Session        // token -> session
+	sessionsByID map[string]*Session        // id -> session (for O(1) ID lookups)
+	userSessions map[string]map[string]bool // userID -> set of tokens
 	mu           sync.RWMutex
 }
 

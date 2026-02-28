@@ -34,8 +34,8 @@ type SchemaConfig struct {
 	RateLimit *RateLimitSchema
 	// Core schema customizations
 	coreSchemaCustomizations map[SchemaName]PluginSchemaConfig
-	// Plugin schema customizations: FeatureName -> SchemaName -> Config
-	pluginSchemas map[FeatureName]map[SchemaName]PluginSchemaConfig
+	// Plugin schema customizations: PluginName -> SchemaName -> Config
+	pluginSchemas map[PluginName]map[SchemaName]PluginSchemaConfig
 }
 
 type SchemaConfigOption func(*SchemaConfig)
@@ -43,7 +43,7 @@ type SchemaConfigOption func(*SchemaConfig)
 // NewDefaultSchemaConfig creates a new SchemaConfig with default values.
 func NewDefaultSchemaConfig(opts ...SchemaConfigOption) *SchemaConfig {
 	config := &SchemaConfig{
-		pluginSchemas:            make(map[FeatureName]map[SchemaName]PluginSchemaConfig),
+		pluginSchemas:            make(map[PluginName]map[SchemaName]PluginSchemaConfig),
 		coreSchemaCustomizations: make(map[SchemaName]PluginSchemaConfig),
 		User:                     newDefaultUserSchema(nil),
 		Verification:             newDefaultVerificationSchema(nil),

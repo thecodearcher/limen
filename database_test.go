@@ -128,7 +128,7 @@ func TestComplexConditions(t *testing.T) {
 		Eq("status", "active"),
 		Gt("created_at", now.AddDate(0, -1, 0)),
 		Contains("email", "gmail").Or(),
-		In("role", []string{"admin", "user"}),
+		In("role", []any{"admin", "user"}),
 	}
 
 	if len(conditions) != 4 {

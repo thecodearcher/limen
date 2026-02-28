@@ -69,7 +69,7 @@ func WithPluginFieldName(logicalField SchemaField, columnName string) PluginSche
 }
 
 // WithPluginSchema sets the configuration for a plugin schema
-func WithPluginSchema(featureName FeatureName, schemaName SchemaName, opts ...PluginSchemaConfigOption) SchemaConfigOption {
+func WithPluginSchema(featureName PluginName, schemaName SchemaName, opts ...PluginSchemaConfigOption) SchemaConfigOption {
 	return func(c *SchemaConfig) {
 		if c.pluginSchemas[featureName] == nil {
 			c.pluginSchemas[featureName] = make(map[SchemaName]PluginSchemaConfig)

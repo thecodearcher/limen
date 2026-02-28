@@ -9,7 +9,7 @@ import (
 type Config struct {
 	BaseURL       string
 	Database      DatabaseAdapter
-	Features      []Feature
+	Plugins       []Plugin
 	Schema        *SchemaConfig
 	Session       *sessionConfig
 	HTTP          *httpConfig

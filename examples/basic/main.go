@@ -10,29 +10,27 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"github.com/joho/godotenv"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/joho/godotenv"
-
 	"github.com/thecodearcher/aegis"
-	adapter "github.com/thecodearcher/aegis/adapters/gorm"
+	gormadapter "github.com/thecodearcher/aegis/adapters/gorm"
+	sqladapter "github.com/thecodearcher/aegis/adapters/sql"
 	"github.com/thecodearcher/aegis/examples/basic/pkg"
-	credentialpassword "github.com/thecodearcher/aegis/features/credential-password"
-	"github.com/thecodearcher/aegis/features/oauth"
-	oauthgithub "github.com/thecodearcher/aegis/features/oauth-github"
-	oauthgoogle "github.com/thecodearcher/aegis/features/oauth-google"
-	twofactor "github.com/thecodearcher/aegis/features/two-factor"
+	credentialpassword "github.com/thecodearcher/aegis/plugins/credential-password"
+	"github.com/thecodearcher/aegis/plugins/oauth"
+	oauthgeneric "github.com/thecodearcher/aegis/plugins/oauth-generic"
+	oauthgithub "github.com/thecodearcher/aegis/plugins/oauth-github"
+	oauthgoogle "github.com/thecodearcher/aegis/plugins/oauth-google"
+	twofactor "github.com/thecodearcher/aegis/plugins/two-factor"
 )
-
-// GetConfig returns the aegis configuration
-// This function is exported for use by the CLI tool
-func GetConfig() *aegis.Config {
-	// Return config without database connection for CLI usage
-	// Database adapter is not needed for schema discovery
-	return buildConfig(nil)
-}
 
 type UUIDGenerator struct {
 }
@@ -45,12 +43,129 @@ func (g *UUIDGenerator) Generate(ctx context.Context) (any, error) {
 	return uuid.New().String(), nil
 }
 
-// buildConfig builds the aegis configuration
-func buildConfig(db *gorm.DB) *aegis.Config {
-	var dbAdapter aegis.DatabaseAdapter
-	if db != nil {
-		dbAdapter = adapter.New(db)
+// strFromRaw returns a string from a JSON value (string or number).
+func strFromRaw(v any) string {
+	if v == nil {
+		return ""
 	}
+	switch s := v.(type) {
+	case string:
+		return s
+	case float64:
+		return fmt.Sprintf("%.0f", s)
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+// discordMapUserInfo maps Discord's /users/@me response to oauth.ProviderUserInfo.
+func discordMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
+	id := strFromRaw(raw["id"])
+	username := strFromRaw(raw["username"])
+	email := strFromRaw(raw["email"])
+	avatar := strFromRaw(raw["avatar"])
+	avatarURL := ""
+	if id != "" && avatar != "" {
+		avatarURL = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.png", id, avatar)
+	}
+	return &oauth.ProviderUserInfo{
+		ID:            id,
+		Email:         email,
+		EmailVerified: false,
+		Name:          username,
+		AvatarURL:     avatarURL,
+	}, nil
+}
+
+// oidcMapUserInfo maps standard OIDC claims (id_token or userinfo) to oauth.ProviderUserInfo.
+// Works with Keycloak, Auth0, and other OpenID Connect providers.
+func oidcMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
+	sub := strFromRaw(raw["sub"])
+	if sub == "" {
+		return nil, fmt.Errorf("oidc: missing sub claim")
+	}
+	email := strFromRaw(raw["email"])
+	name := strFromRaw(raw["name"])
+	if name == "" {
+		name = strFromRaw(raw["preferred_username"])
+	}
+	picture := strFromRaw(raw["picture"])
+	emailVerified := false
+	if v, ok := raw["email_verified"]; ok {
+		switch b := v.(type) {
+		case bool:
+			emailVerified = b
+		case string:
+			emailVerified = b == "true" || b == "1"
+		}
+	}
+	return &oauth.ProviderUserInfo{
+		ID:            sub,
+		Email:         email,
+		EmailVerified: emailVerified,
+		Name:          name,
+		AvatarURL:     picture,
+	}, nil
+}
+
+// buildOAuthOptions returns OAuth plugin options, including generic Discord and Keycloak (discovery) providers when credentials are set.
+func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
+	opts := []oauth.ConfigOption{
+		oauth.WithProvider(oauthgoogle.New(
+			oauthgoogle.WithClientID(googleClientID),
+			oauthgoogle.WithClientSecret(googleClientSecret),
+			oauthgoogle.WithOption("access_type", "offline"),
+			oauthgoogle.WithOption("prompt", "consent"),
+		)),
+		oauth.WithProvider(oauthgithub.New(
+			oauthgithub.WithClientID(githubClientID),
+			oauthgithub.WithClientSecret(githubClientSecret),
+		)),
+	}
+	if discordClientID != "" && discordClientSecret != "" {
+		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
+			oauthgeneric.WithName("discord"),
+			oauthgeneric.WithClientID(discordClientID),
+			oauthgeneric.WithClientSecret(discordClientSecret),
+			oauthgeneric.WithAuthorizationURL("https://discord.com/api/oauth2/authorize"),
+			oauthgeneric.WithTokenURL("https://discord.com/api/oauth2/token"),
+			oauthgeneric.WithUserInfoURL("https://discord.com/api/users/@me"),
+			oauthgeneric.WithScopes("identify", "email"),
+			oauthgeneric.WithMapUserInfo(discordMapUserInfo),
+		)))
+	}
+	if keycloakDiscoveryURL != "" && keycloakClientID != "" && keycloakClientSecret != "" {
+		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
+			oauthgeneric.WithName("keycloak"),
+			oauthgeneric.WithClientID(keycloakClientID),
+			oauthgeneric.WithClientSecret(keycloakClientSecret),
+			oauthgeneric.WithDiscoveryURL(keycloakDiscoveryURL),
+			oauthgeneric.WithMapUserInfo(oidcMapUserInfo),
+		)))
+	}
+	opts = append(opts, oauth.WithMapProfileToUser(func(info *aegis.OAuthAccountProfile) map[string]any {
+		fmt.Printf("Mapping OAuth profile to user additional fields: %+v\n", info)
+		switch info.Provider {
+		case "google":
+			firstName, _ := info.Raw["given_name"].(string)
+			lastName, _ := info.Raw["family_name"].(string)
+			return map[string]any{"first_name": firstName, "last_name": lastName}
+		case "discord":
+			username, _ := info.Raw["username"].(string)
+			return map[string]any{"first_name": username, "last_name": ""}
+		case "keycloak":
+			name, _ := info.Raw["name"].(string)
+			return map[string]any{"first_name": name, "last_name": ""}
+		default:
+			name, _ := info.Raw["name"].(string)
+			return map[string]any{"first_name": name, "last_name": ""}
+		}
+	}))
+	return opts
+}
+
+// buildConfig builds the aegis configuration
+func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Failed to load .env file: %v", err)
@@ -59,13 +174,19 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
 	githubClientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
+	discordClientID := os.Getenv("DISCORD_CLIENT_ID")
+	discordClientSecret := os.Getenv("DISCORD_CLIENT_SECRET")
+	keycloakDiscoveryURL := os.Getenv("KEYCLOAK_DISCOVERY_URL") // e.g. https://keycloak.example.com/realms/master/.well-known/openid-configuration
+	keycloakClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
+	keycloakClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
 
 	fmt.Printf("Google Client ID: %s\n", googleClientID)
 
 	return &aegis.Config{
-		BaseURL:  "http://localhost:8080",
-		Database: dbAdapter,
-		Features: []aegis.Feature{
+		BaseURL:       "http://localhost:8080",
+		Database:      db,
+		SigningSecret: []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
+		Plugins: []aegis.Plugin{
 
 			credentialpassword.New(
 				credentialpassword.WithRequireEmailVerification(true),
@@ -80,43 +201,13 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 
 				}),
 				credentialpassword.WithUsernameSupport(true),
-				credentialpassword.WithRequireUsernameOnSignUp(true),
+				credentialpassword.WithRequireUsernameOnSignUp(false),
 			),
-			oauth.New(
-				oauth.WithSecret("0123456789abcdef0123456789abcdef"), // 32 bytes for OAuth encryption
-				// oauth.WithDatabaseState(),x
-				oauth.WithProvider(oauthgoogle.New(
-					oauthgoogle.WithClientID(googleClientID),
-					oauthgoogle.WithClientSecret(googleClientSecret),
-					// oauthgoogle.WithRedirectURL("http://localhost:8080/api/auth/oauth/google/callback"),
-					// oauthgoogle.WithScopes("openid", "email", "profile"),
-					// oauthgoogle.WithOption("prompt", "consent"),
-					// oauthgoogle.WithAccessType(oauthgoogle.AccessTypeOffline),
-				)),
-				oauth.WithProvider(oauthgithub.New(
-					oauthgithub.WithClientID(githubClientID),
-					oauthgithub.WithClientSecret(githubClientSecret),
-				)),
-				oauth.WithMapProfileToUser(func(info *aegis.OAuthAccountProfile) map[string]any {
-					fmt.Printf("Mapping OAuth profile to user additional fields: %+v\n", info)
-					if info.Provider == "google" {
-						firstName := info.Raw["given_name"].(string)
-						lastName := info.Raw["family_name"].(string)
-						return map[string]any{
-							"first_name": firstName,
-							"last_name":  lastName,
-						}
-					}
-					return map[string]any{
-						"first_name": info.Raw["name"].(string),
-						"last_name":  "",
-					}
-				}),
-			),
+			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
 			twofactor.New(
-				twofactor.WithCookieExpiration(1*time.Minute),
+				// twofactor.WithCookieExpiration(2*time.Minute),
+				twofactor.WithSecret("aegis_2fa_totp_secret_1234567890"),
 				twofactor.WithTOTP(
-					// twofactor.WithTOTPSecret([]byte("default_secret")),
 					twofactor.WithTOTPIssuer("Aegis"),
 				),
 				twofactor.WithBackupCodes(
@@ -152,7 +243,7 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 					// 	return nil, aegis.NewAegisError("lastname is required", http.StatusBadRequest, nil)
 					// }
 					return map[string]any{
-						"uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
+						// "uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
 						"first_name": ctx.GetBodyValue("firstname"),
 						"last_name":  ctx.GetBodyValue("lastname"),
 						"updated_at": time.Now().Format(time.RFC3339),
@@ -171,7 +262,7 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			aegis.WithSchemaVerification(
 				aegis.WithVerificationAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, error) {
 					return map[string]any{
-						"uuid":       uuid.New().String(),
+						// "uuid":       uuid.New().String(),
 						"created_at": time.Now().Format(time.RFC3339),
 						"updated_at": time.Now().Format(time.RFC3339),
 					}, nil
@@ -179,7 +270,7 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 			),
 			// Example: Customize plugin schema table and field names
 
-			aegis.WithPluginSchema(aegis.FeatureCredentialPassword, "something_map_name2",
+			aegis.WithPluginSchema(aegis.PluginCredentialPassword, "something_map_name2",
 				aegis.WithPluginFieldName("name", "name_from_plugin"),
 			),
 		),
@@ -251,6 +342,31 @@ func buildConfig(db *gorm.DB) *aegis.Config {
 	}
 }
 
+// ANSI color codes for terminal output (no dependency)
+const (
+	_reset   = "\033[0m"
+	_dim     = "\033[2m"
+	_red     = "\033[31m"
+	_green   = "\033[32m"
+	_yellow  = "\033[33m"
+	_blue    = "\033[34m"
+	_magenta = "\033[35m"
+	_cyan    = "\033[36m"
+)
+
+type slogger struct {
+	sqladapter.QueryLogger
+}
+
+func (l *slogger) LogQuery(ctx context.Context, query string, args any, duration time.Duration, err error) {
+	fmt.Printf("%s[SQL]%s %s%s%s\n", _cyan, _reset, _green, query, _reset)
+	fmt.Printf("  %sargs:%s %v\n", _dim, _reset, args)
+	fmt.Printf("  %sduration:%s %s\n", _dim, _reset, _yellow+duration.String()+_reset)
+	if err != nil {
+		fmt.Printf("  %serr:%s %s%v%s\n", _dim, _reset, _red, err, _reset)
+	}
+}
+
 // Example showing basic usage of the aegis library
 func main() {
 	fmt.Println(pkg.SomeShi())
@@ -262,17 +378,39 @@ func main() {
 		"aegis",
 		"5432",
 	)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
+
+	gormdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
+
+	// mysqlDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", "root", "", "localhost", "3306", "aegis")
+	// db, err := sql.Open("mysql", mysqlDSN)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 
-	config := buildConfig(db)
+	// db = sqldblogger.OpenDriver(mysqlDSN, db.Driver(), loggerAdapter /*, using_default_options*/) // db is STILL *sql.DB
+
+	// sqldbAdapter := sqladapter.NewMySQL(db).WithLogger(&logger{})
+	config := buildConfig(gormadapter.New(gormdb))
 
 	auth, err := aegis.New(config)
 	if err != nil {
 		log.Fatalf("Failed to create aegis: %v", err)
 	}
+
+	// Type-safe plugin access via Use() -- chainable, panics if plugin not registered.
+	// Assign once, call many times:
+	//   cp := credentialpassword.Use(auth)
+	//   result, err := cp.SignInWithCredentialAndPassword(ctx, "user@example.com", "password")
+	//
+	// One-liner chaining:
+	//   oauth.Use(auth).GetAuthorizationURL(ctx, "google", &oauth.OAuthAuthorizeURLData{})
+	//   twofactor.Use(auth).InitiateTwoFactorSetup(ctx, user, "password")
+	//
+	// Safe variant (returns bool instead of panicking):
+	//   oauthAPI, ok := aegis.UsePlugin[oauth.API](auth, aegis.PluginOAuth)
+	_ = credentialpassword.Use(auth)
+	_ = oauth.Use(auth)
+	_ = twofactor.Use(auth)
 
 	handler := auth.Handler()
 

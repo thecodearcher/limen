@@ -64,8 +64,8 @@ func (m *OpaqueSessionManager) CreateSession(ctx context.Context, request *http.
 	}
 
 	result := &SessionResult{
-		Token:      token,
-		Cookie:     m.createSessionCookie(token, expiresAt),
+		Token:        token,
+		Cookie:       m.createSessionCookie(token, expiresAt),
 		ShortSession: &shortSession,
 	}
 
