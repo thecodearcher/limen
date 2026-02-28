@@ -75,8 +75,8 @@ func applyCoreSchemaCustomizations(schemas map[SchemaName]SchemaDefinition, conf
 	}
 }
 
-func applyPluginCustomizations(def *SchemaDefinition, featureName PluginName, schemaName SchemaName, config *SchemaConfig) {
-	schemaConfigs, exists := config.pluginSchemas[featureName]
+func applyPluginCustomizations(def *SchemaDefinition, pluginName PluginName, schemaName SchemaName, config *SchemaConfig) {
+	schemaConfigs, exists := config.pluginSchemas[pluginName]
 	if !exists {
 		return
 	}
@@ -89,8 +89,8 @@ func applyPluginCustomizations(def *SchemaDefinition, featureName PluginName, sc
 }
 
 func processPluginSchemas(plugin Plugin, schemaConfig *SchemaConfig, schemas map[SchemaName]SchemaDefinition) error {
-	featureSchemas := plugin.GetSchemas(schemaConfig)
-	for _, introspector := range featureSchemas {
+	pluginSchemas := plugin.GetSchemas(schemaConfig)
+	for _, introspector := range pluginSchemas {
 		def := introspector.(*SchemaDefinition)
 		def.PluginName = string(plugin.Name())
 

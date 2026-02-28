@@ -2,7 +2,7 @@
 
 A modern, plugin-first authentication library for Go applications, inspired by better-auth from the TypeScript ecosystem.
 
-## Features
+## plugins
 
 - 🔌 **Plugin-first architecture** - Only import what you need
 - 🏗️ **Struct-based configuration** - Simple, strongly-typed setup

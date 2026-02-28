@@ -154,19 +154,19 @@ func TryUse[T any](a *Aegis, name PluginName) (T, bool) {
 
 func registerPluginRoutes(router *Router, plugins []Plugin, httpCore *AegisHTTPCore, config *httpConfig) {
 	for _, plugin := range plugins {
-		featureConfig := plugin.PluginHTTPConfig()
-		basePath := featureConfig.BasePath
+		pluginConfig := plugin.PluginHTTPConfig()
+		basePath := pluginConfig.BasePath
 		override := config.overrides[string(plugin.Name())]
 		normalizedBasePath := normalizePluginPath(config.basePath, basePath, override)
 		routeBuilder := &RouteBuilder{
-			group: router.Group(normalizedBasePath, featureConfig.Middleware...),
+			group: router.Group(normalizedBasePath, pluginConfig.Middleware...),
 			core:  httpCore,
 		}
 
 		plugin.RegisterRoutes(httpCore, routeBuilder)
 
-		if featureConfig.Hooks != nil {
-			router.AddHooks(featureConfig.Hooks)
+		if pluginConfig.Hooks != nil {
+			router.AddHooks(pluginConfig.Hooks)
 		}
 	}
 }
@@ -195,8 +195,8 @@ func prepareRateLimiterRules(basePath string, httpConfig *httpConfig, plugins []
 	customRules := httpConfig.rateLimiter.customRules
 
 	for _, plugin := range plugins {
-		featureRules := processPluginRateLimitRules(plugin, basePath, httpConfig, customRules)
-		maps.Copy(rules, featureRules)
+		pluginRules := processPluginRateLimitRules(plugin, basePath, httpConfig, customRules)
+		maps.Copy(rules, pluginRules)
 	}
 
 	resolvedCustomRules := processCustomRateLimitRules(basePath, customRules)
@@ -207,15 +207,15 @@ func prepareRateLimiterRules(basePath string, httpConfig *httpConfig, plugins []
 
 func processPluginRateLimitRules(plugin Plugin, basePath string, httpConfig *httpConfig, customRules map[string]*RateLimitRule) map[string]*RateLimitRule {
 	rules := make(map[string]*RateLimitRule)
-	featureConfig := plugin.PluginHTTPConfig()
+	pluginConfig := plugin.PluginHTTPConfig()
 	override := httpConfig.overrides[string(plugin.Name())]
-	normalizedBasePath := normalizePluginPath(basePath, featureConfig.BasePath, override)
+	normalizedBasePath := normalizePluginPath(basePath, pluginConfig.BasePath, override)
 
-	if len(featureConfig.RateLimitRules) == 0 {
+	if len(pluginConfig.RateLimitRules) == 0 {
 		return rules
 	}
 
-	for _, rule := range featureConfig.RateLimitRules {
+	for _, rule := range pluginConfig.RateLimitRules {
 		finalRule := resolveRuleOverride(rule, customRules)
 		completePath := path.Join(normalizedBasePath, rule.path)
 

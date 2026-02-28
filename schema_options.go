@@ -69,10 +69,10 @@ func WithPluginFieldName(logicalField SchemaField, columnName string) PluginSche
 }
 
 // WithPluginSchema sets the configuration for a plugin schema
-func WithPluginSchema(featureName PluginName, schemaName SchemaName, opts ...PluginSchemaConfigOption) SchemaConfigOption {
+func WithPluginSchema(pluginName PluginName, schemaName SchemaName, opts ...PluginSchemaConfigOption) SchemaConfigOption {
 	return func(c *SchemaConfig) {
-		if c.pluginSchemas[featureName] == nil {
-			c.pluginSchemas[featureName] = make(map[SchemaName]PluginSchemaConfig)
+		if c.pluginSchemas[pluginName] == nil {
+			c.pluginSchemas[pluginName] = make(map[SchemaName]PluginSchemaConfig)
 		}
 		config := PluginSchemaConfig{
 			Fields: make(map[SchemaField]string),
@@ -80,7 +80,7 @@ func WithPluginSchema(featureName PluginName, schemaName SchemaName, opts ...Plu
 		for _, opt := range opts {
 			opt(&config)
 		}
-		c.pluginSchemas[featureName][schemaName] = config
+		c.pluginSchemas[pluginName][schemaName] = config
 	}
 }
 

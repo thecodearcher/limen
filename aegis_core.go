@@ -68,8 +68,8 @@ func (c *AegisCore) GetBaseURLWithPluginPath(pluginName PluginName, pathToJoin s
 		return ""
 	}
 
-	featureConfig := plugin.PluginHTTPConfig()
-	normalizedBasePath := normalizePluginPath(c.config.HTTP.basePath, featureConfig.BasePath, c.config.HTTP.overrides[string(pluginName)])
+	pluginConfig := plugin.PluginHTTPConfig()
+	normalizedBasePath := normalizePluginPath(c.config.HTTP.basePath, pluginConfig.BasePath, c.config.HTTP.overrides[string(pluginName)])
 	return joinURL(c.baseURL, normalizedBasePath, pathToJoin)
 }
 
