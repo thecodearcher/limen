@@ -63,11 +63,6 @@ func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, pay
 		return nil
 	}
 
-	if rs.cfg.serializer != nil {
-		body, _ := json.Marshal(payload)
-		return rs.cfg.serializer(w, r, status, body, nil)
-	}
-
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 
@@ -97,10 +92,6 @@ func (rs Responder) Error(w http.ResponseWriter, r *http.Request, err error) err
 	ae := ToAegisError(err)
 	if tryDeferResponse(w, ae.Status(), ae, true) {
 		return nil
-	}
-
-	if rs.cfg.serializer != nil {
-		return rs.cfg.serializer(w, r, ae.Status(), nil, ae)
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

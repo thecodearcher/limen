@@ -60,14 +60,6 @@ type crossDomainConfig struct {
 	domain  string
 }
 
-type EnvelopeSerializer func(
-	w http.ResponseWriter,
-	r *http.Request,
-	status int,
-	rawBody []byte,
-	err *AegisError,
-) error
-
 // SessionTransformer customizes the session response payload.
 type SessionTransformer func(user map[string]any, sessionResult *SessionResult) (map[string]any, error)
 
@@ -77,9 +69,8 @@ type EnvelopeFields struct {
 }
 
 type responseEnvelopeConfig struct {
-	mode       EnvelopeMode
-	fields     EnvelopeFields
-	serializer EnvelopeSerializer
+	mode   EnvelopeMode
+	fields EnvelopeFields
 }
 
 type PluginHTTPOverride struct {
@@ -160,12 +151,6 @@ func WithHTTPResponseEnvelopeMode(mode EnvelopeMode) HTTPConfigOption {
 func WithHTTPResponseEnvelopeFields(fields EnvelopeFields) HTTPConfigOption {
 	return func(c *httpConfig) {
 		c.responseEnvelope.fields = fields
-	}
-}
-
-func WithHTTPResponseEnvelopeSerializer(serializer EnvelopeSerializer) HTTPConfigOption {
-	return func(c *httpConfig) {
-		c.responseEnvelope.serializer = serializer
 	}
 }
 
