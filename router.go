@@ -295,12 +295,14 @@ func (r *Router) prepareHookContext(req *http.Request, w http.ResponseWriter, ro
 		routePattern = route.Metadata.OriginalPattern
 	}
 	return &HookContext{
-		request:      req,
-		response:     w,
-		method:       req.Method,
-		path:         req.URL.Path,
-		routeID:      string(route.RouteID),
-		routePattern: routePattern,
+		responder:        r.responder,
+		request:          req,
+		response:         w,
+		method:           req.Method,
+		path:             req.URL.Path,
+		routeID:          string(route.RouteID),
+		routePattern:     routePattern,
+		originalBodyData: GetJSONBody(req),
 	}
 }
 

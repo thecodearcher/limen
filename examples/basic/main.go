@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -330,6 +331,24 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 						Run: func(ctx *aegis.HookContext) bool {
 							fmt.Printf("Before request %s %s\n", ctx.Method(), ctx.Path())
 							fmt.Printf("Before request route pattern: %+v\n", ctx.RoutePattern())
+							return true
+						},
+					},
+					{
+						PathMatcher: func(ctx *aegis.HookContext) bool {
+							return ctx.RouteID() == "signup"
+						},
+						Run: func(ctx *aegis.HookContext) bool {
+							email, ok := ctx.GetJSONBodyValue("email").(string)
+							if !ok {
+								return true
+							}
+
+							if !strings.Contains(email, "@example.com") {
+								ctx.WriteErrorResponse(aegis.NewAegisError("email domain not allowed", http.StatusBadRequest, nil))
+								return false
+							}
+
 							return true
 						},
 					},

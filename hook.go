@@ -33,26 +33,42 @@ type ResponseData struct {
 }
 
 type HookContext struct {
-	request      *http.Request
-	response     http.ResponseWriter
-	routeID      string
-	routePattern string
-	method       string
-	path         string
-	statusCode   int
-	modifiedData map[string]any
-	bodyModified bool
+	request          *http.Request
+	response         http.ResponseWriter
+	routeID          string
+	routePattern     string
+	method           string
+	path             string
+	statusCode       int
+	originalBodyData map[string]any
+	modifiedData     map[string]any
+	bodyModified     bool
+	responder        *Responder
 }
 
 // Getter methods for read-only access to HookContext fields
 
-func (hc *HookContext) Request() *http.Request        { return hc.request }
-func (hc *HookContext) Response() http.ResponseWriter { return hc.response }
-func (hc *HookContext) RouteID() string               { return hc.routeID }
-func (hc *HookContext) RoutePattern() string          { return hc.routePattern }
-func (hc *HookContext) Method() string                { return hc.method }
-func (hc *HookContext) Path() string                  { return hc.path }
-func (hc *HookContext) StatusCode() int               { return hc.statusCode }
+func (hc *HookContext) Request() *http.Request          { return hc.request }
+func (hc *HookContext) Response() http.ResponseWriter   { return hc.response }
+func (hc *HookContext) RouteID() string                 { return hc.routeID }
+func (hc *HookContext) RoutePattern() string            { return hc.routePattern }
+func (hc *HookContext) Method() string                  { return hc.method }
+func (hc *HookContext) Path() string                    { return hc.path }
+func (hc *HookContext) StatusCode() int                 { return hc.statusCode }
+func (hc *HookContext) GetJSONBodyData() map[string]any { return hc.originalBodyData }
+func (hc *HookContext) GetJSONBodyValue(key string) any { return hc.originalBodyData[key] }
+
+// WriteResponse writes a response to the client and should only be used in a before hook
+// when you want to return a response immediately without waiting for the request to complete.
+func (hc *HookContext) WriteJSONResponse(status int, payload any) {
+	hc.responder.JSON(hc.response, hc.request, status, payload)
+}
+
+// WriteErrorResponse writes an error response to the client and should only be used in a before hook
+// when you want to return an error response immediately without waiting for the request to complete.
+func (hc *HookContext) WriteErrorResponse(err error) {
+	hc.responder.Error(hc.response, hc.request, err)
+}
 
 func (hc *HookContext) SetBody(data map[string]any) {
 	hc.modifiedData = data
