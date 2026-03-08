@@ -179,7 +179,7 @@ func (t *twoFactorPlugin) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaI
 			Column:           TwoFactorSchemaUserIDField,
 			ReferencedSchema: aegis.CoreSchemaUsers,
 			ReferencedField:  aegis.SchemaIDField,
-			OnDelete:         aegis.FKActionCascade,
+			OnDelete:         aegis.FKActionRestrict,
 			OnUpdate:         aegis.FKActionCascade,
 		}),
 		aegis.WithSchemaUniqueIndex("idx_two_factors_user_id", []aegis.SchemaField{TwoFactorSchemaUserIDField}),

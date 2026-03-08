@@ -25,7 +25,6 @@ var (
 	ErrUsernameTooShort          = aegis.NewAegisError("username is too short", http.StatusUnprocessableEntity, nil)
 	ErrUsernameTooLong           = aegis.NewAegisError("username is too long", http.StatusUnprocessableEntity, nil)
 	ErrUsernameInvalidFormat     = aegis.NewAegisError("username contains invalid characters", http.StatusUnprocessableEntity, nil)
-	ErrPasswordReuseNotAllowed   = aegis.NewAegisError("new password must be different from current password", http.StatusUnprocessableEntity, nil)
 	ErrPasswordNotSet            = aegis.NewAegisError("password is not set", http.StatusForbidden, nil)
 	ErrPasswordAlreadySet        = aegis.NewAegisError("password is already set", http.StatusForbidden, nil)
 )

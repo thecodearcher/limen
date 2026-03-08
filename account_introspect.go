@@ -21,7 +21,7 @@ func (s *AccountSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 				Column:           AccountSchemaUserIDField,
 				ReferencedSchema: CoreSchemaUsers,
 				ReferencedField:  SchemaIDField,
-				OnDelete:         FKActionCascade,
+				OnDelete:         FKActionRestrict,
 				OnUpdate:         FKActionCascade,
 			},
 		},
