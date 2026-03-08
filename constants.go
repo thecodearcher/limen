@@ -46,6 +46,7 @@ const (
 	PluginCredentialPassword PluginName = "credential-password"
 	PluginTwoFactor          PluginName = "two-factor"
 	PluginOAuth              PluginName = "oauth"
+	PluginSessionJWT         PluginName = "session-jwt"
 )
 
 // ============================================================================

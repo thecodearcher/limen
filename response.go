@@ -125,15 +125,28 @@ func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core
 		return rs.Error(w, r, err)
 	}
 
+	rs.setSessionHeaders(w, sessionResult)
+
 	if rs.sessionTransformer != nil {
 		if err := rs.handleSessionTransformer(w, r, result, sessionResult); err != nil {
 			return rs.Error(w, r, err)
 		}
 	}
 
-	return rs.JSON(w, r, http.StatusOK, map[string]any{
+	payload := map[string]any{
 		"user": SerializeModel(core.Schema.User, result.User),
-	})
+	}
+
+	if sessionResult != nil && sessionResult.Cookie == nil && sessionResult.Token != "" {
+		// If the session result has a token but no cookie, add it to the payload
+		payload["token"] = sessionResult.Token
+	}
+
+	if sessionResult != nil && sessionResult.RefreshToken != "" {
+		payload["refreshToken"] = sessionResult.RefreshToken
+	}
+
+	return rs.JSON(w, r, http.StatusOK, payload)
 }
 
 func (rs Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Request, result *AuthenticationResult, sessionResult *SessionResult) error {
@@ -163,6 +176,19 @@ func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *Sess
 	return rs.cookies.SetSessionCookie(w, sessionResult)
 }
 
+func (rs Responder) setSessionHeaders(w http.ResponseWriter, sessionResult *SessionResult) {
+	if sessionResult == nil || sessionResult.Cookie != nil {
+		return
+	}
+
+	if sessionResult.Token != "" {
+		rs.AddHeader(w, "Set-Auth-Token", sessionResult.Token)
+	}
+	if sessionResult.RefreshToken != "" {
+		rs.AddHeader(w, "Set-Refresh-Token", sessionResult.RefreshToken)
+	}
+}
+
 // Redirect sends a redirect response. When the response is deferred (after-hooks in use),
 // the redirect is stored and sent after hooks run so the browser receives a proper 3xx.
 func (rs Responder) Redirect(w http.ResponseWriter, r *http.Request, redirectURL string, status int) {
@@ -179,6 +205,9 @@ func (rs Responder) RedirectWithSession(w http.ResponseWriter, r *http.Request, 
 		rs.Error(w, r, err)
 		return
 	}
+
+	rs.setSessionHeaders(w, sessionResult)
+
 	rs.Redirect(w, r, redirectURL, http.StatusFound)
 }
 

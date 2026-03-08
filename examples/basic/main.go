@@ -30,6 +30,7 @@ import (
 	oauthgeneric "github.com/thecodearcher/aegis/plugins/oauth-generic"
 	oauthgithub "github.com/thecodearcher/aegis/plugins/oauth-github"
 	oauthgoogle "github.com/thecodearcher/aegis/plugins/oauth-google"
+	sessionjwt "github.com/thecodearcher/aegis/plugins/session-jwt"
 	twofactor "github.com/thecodearcher/aegis/plugins/two-factor"
 )
 
@@ -188,6 +189,15 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 		Database:      db,
 		SigningSecret: []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
 		Plugins: []aegis.Plugin{
+			sessionjwt.New(
+			// sessionjwt.WithRefreshToken(false),
+			// sessionjwt.WithSigningKey([]byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw")),
+			// sessionjwt.WithSigningMethod(jwt.SigningMethodRS512),
+			// sessionjwt.WithAccessTokenDuration(15*time.Minute),
+			// sessionjwt.WithRefreshTokenDuration(7*24*time.Hour),
+			// sessionjwt.WithRefreshTokenRotation(true),
+			// sessionjwt.WithBlacklist(true),
+			),
 
 			credentialpassword.New(
 				credentialpassword.WithRequireEmailVerification(true),

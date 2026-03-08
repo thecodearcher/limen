@@ -60,11 +60,15 @@ type AuthenticationResult struct {
 
 // SessionResult contains token and delivery information for a session.
 type SessionResult struct {
-	Token  string       `json:"token,omitzero"`
-	Cookie *http.Cookie `json:"-"`
+	Token        string       `json:"token,omitzero"`
+	RefreshToken string       `json:"refreshToken,omitzero"`
+	Cookie       *http.Cookie `json:"-"`
 	// ShortSession indicates if the session is a short session i.e expires in less than the global session duration
 	// This is typically when "remember me" is not checked.
 	ShortSession *bool
+	// ExtraCookies holds additional cookies that session managers or plugins need to
+	// deliver alongside the main session cookie (e.g. refresh tokens).
+	ExtraCookies []*http.Cookie `json:"-"`
 }
 
 // SessionUpdates contains fields for partial session updates.

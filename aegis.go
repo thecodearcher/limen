@@ -64,11 +64,20 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	// Initialize plugins
+	var smProvider PluginName
 	for _, plugin := range config.Plugins {
 		if err := plugin.Initialize(core); err != nil {
 			return nil, fmt.Errorf("failed to initialize plugin %s: %w", plugin.Name(), err)
 		}
 		core.plugins[plugin.Name()] = plugin
+
+		if sp, ok := plugin.(SessionManagerProvider); ok {
+			if smProvider != "" {
+				return nil, fmt.Errorf("multiple session manager plugins: %s and %s", smProvider, plugin.Name())
+			}
+			core.SessionManager = sp.SessionManager()
+			smProvider = plugin.Name()
+		}
 	}
 
 	aegis.core = core

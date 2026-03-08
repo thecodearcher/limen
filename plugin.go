@@ -18,6 +18,13 @@ type Plugin interface {
 	GetSchemas(schema *SchemaConfig) []SchemaIntrospector
 }
 
+// SessionManagerProvider is an optional interface that plugins can implement
+// to provide an alternative SessionManager. The core detects this during
+// initialization and wires the session manager automatically.
+type SessionManagerProvider interface {
+	SessionManager() SessionManager
+}
+
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.
 type PluginHTTPConfig struct {
 	// The base path where the plugin's routes will be mounted.
