@@ -178,13 +178,15 @@ func (m *opaqueSessionManager) extractToken(request *http.Request) (string, erro
 		}
 	}
 
-	authHeader := request.Header.Get("Authorization")
-	if authHeader != "" {
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-			token := strings.TrimSpace(parts[1])
-			if token != "" {
-				return token, nil
+	if m.config.BearerEnabled {
+		authHeader := request.Header.Get("Authorization")
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+				token := strings.TrimSpace(parts[1])
+				if token != "" {
+					return token, nil
+				}
 			}
 		}
 	}

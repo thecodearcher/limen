@@ -35,7 +35,7 @@ var (
 func generateCryptoSecureRandomString() string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
-	return base64.URLEncoding.EncodeToString(bytes)
+	return base64.RawURLEncoding.EncodeToString(bytes)
 }
 
 func GenerateRandomString(length int, charSetType ...CharSetType) string {

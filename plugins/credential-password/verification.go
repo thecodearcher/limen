@@ -91,5 +91,5 @@ func (p *credentialPasswordPlugin) generateVerificationToken(user *aegis.User) (
 		return "", fmt.Errorf("failed to generate reset token: %w", err)
 	}
 
-	return base64.URLEncoding.EncodeToString(tokenBytes), nil
+	return base64.RawURLEncoding.EncodeToString(tokenBytes), nil
 }

@@ -3,15 +3,17 @@ package aegis
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 type Responder struct {
 	cfg                *responseEnvelopeConfig
 	sessionTransformer SessionTransformer
 	cookies            *CookieManager
+	bearerEnabled      bool
 }
 
-func newResponder(cfg *httpConfig, cookies *CookieManager) *Responder {
+func newResponder(cfg *httpConfig, cookies *CookieManager, bearerEnabled bool) *Responder {
 	if cfg == nil {
 		cfg = &httpConfig{}
 	}
@@ -28,6 +30,7 @@ func newResponder(cfg *httpConfig, cookies *CookieManager) *Responder {
 		cfg:                envelopeConfig,
 		sessionTransformer: cfg.sessionTransformer,
 		cookies:            cookies,
+		bearerEnabled:      bearerEnabled,
 	}
 }
 
@@ -128,33 +131,22 @@ func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core
 	rs.setSessionHeaders(w, sessionResult)
 
 	if rs.sessionTransformer != nil {
-		if err := rs.handleSessionTransformer(w, r, result, sessionResult); err != nil {
-			return rs.Error(w, r, err)
-		}
+		rs.handleSessionTransformer(w, r, result, sessionResult)
+		return nil
 	}
 
-	payload := map[string]any{
+	return rs.JSON(w, r, http.StatusOK, map[string]any{
 		"user": SerializeModel(core.Schema.User, result.User),
-	}
-
-	if sessionResult != nil && sessionResult.Cookie == nil && sessionResult.Token != "" {
-		// If the session result has a token but no cookie, add it to the payload
-		payload["token"] = sessionResult.Token
-	}
-
-	if sessionResult != nil && sessionResult.RefreshToken != "" {
-		payload["refreshToken"] = sessionResult.RefreshToken
-	}
-
-	return rs.JSON(w, r, http.StatusOK, payload)
+	})
 }
 
-func (rs Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Request, result *AuthenticationResult, sessionResult *SessionResult) error {
+func (rs Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Request, result *AuthenticationResult, sessionResult *SessionResult) {
 	payload, err := rs.sessionTransformer(result.User.Raw(), sessionResult)
 	if err != nil {
-		return rs.Error(w, r, err)
+		rs.Error(w, r, err)
+		return
 	}
-	return rs.JSON(w, r, http.StatusOK, payload)
+	rs.JSON(w, r, http.StatusOK, payload)
 }
 
 // SetHeader sets a response header
@@ -169,7 +161,7 @@ func (rs Responder) AddHeader(w http.ResponseWriter, key, value string) {
 
 // setSessionCookies sets the session cookie in the response.
 func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *SessionResult) error {
-	if sessionResult == nil || sessionResult.Cookie == nil {
+	if sessionResult == nil {
 		return nil
 	}
 
@@ -177,16 +169,38 @@ func (rs Responder) setSessionCookies(w http.ResponseWriter, sessionResult *Sess
 }
 
 func (rs Responder) setSessionHeaders(w http.ResponseWriter, sessionResult *SessionResult) {
-	if sessionResult == nil || sessionResult.Cookie != nil {
+	if sessionResult == nil {
+		return
+	}
+	if sessionResult.Cookie != nil && !rs.bearerEnabled {
 		return
 	}
 
+	var exposed []string
+
 	if sessionResult.Token != "" {
 		rs.AddHeader(w, "Set-Auth-Token", sessionResult.Token)
+		exposed = append(exposed, "Set-Auth-Token")
 	}
 	if sessionResult.RefreshToken != "" {
 		rs.AddHeader(w, "Set-Refresh-Token", sessionResult.RefreshToken)
+		exposed = append(exposed, "Set-Refresh-Token")
 	}
+
+	if len(exposed) > 0 {
+		rs.appendExposeHeaders(w, exposed...)
+	}
+}
+
+// appendExposeHeaders appends header names to Access-Control-Expose-Headers
+// without overwriting values already set by the user's CORS middleware.
+func (rs Responder) appendExposeHeaders(w http.ResponseWriter, headers ...string) {
+	existing := w.Header().Get("Access-Control-Expose-Headers")
+	toAdd := strings.Join(headers, ", ")
+	if existing != "" {
+		toAdd = existing + ", " + toAdd
+	}
+	w.Header().Set("Access-Control-Expose-Headers", toAdd)
 }
 
 // Redirect sends a redirect response. When the response is deferred (after-hooks in use),

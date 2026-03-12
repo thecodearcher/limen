@@ -94,7 +94,7 @@ func (a *Aegis) Handler() http.Handler {
 	allUrls = append(allUrls, config.trustedOrigins...)
 
 	httpCore := &AegisHTTPCore{
-		Responder:              newResponder(config, a.core.cookies),
+		Responder:              newResponder(config, a.core.cookies, a.config.Session.BearerEnabled),
 		authInstance:           a,
 		config:                 config,
 		core:                   a.core,

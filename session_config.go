@@ -27,6 +27,12 @@ type sessionConfig struct {
 	UserAgentExtractor RequestExtractorFn
 	// ShortSessionDuration: when > 0, sign-in with remember_me=false uses this shorter TTL instead of Duration. The session is not extended. 0 = remember-me plugin disabled.
 	ShortSessionDuration time.Duration
+	// BearerEnabled: when true, the opaque session manager also accepts
+	// Authorization: Bearer <token> on requests, and session responses
+	// include the token in Set-Auth-Token / Set-Refresh-Token headers
+	// alongside cookies. Use when the client or API does not support
+	// cookies or requires Bearer token authentication.
+	BearerEnabled bool
 }
 
 func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
@@ -132,5 +138,16 @@ func WithSessionActivityCheckInterval(activityCheckInterval time.Duration) Sessi
 func WithSessionShortDuration(d time.Duration) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.ShortSessionDuration = d
+	}
+}
+
+// WithBearerEnabled enables Bearer token support for opaque sessions.
+// When enabled, the session manager accepts Authorization: Bearer <token>
+// in addition to cookies, and session responses include the token in
+// Set-Auth-Token / Set-Refresh-Token headers. Use when the client or API
+// does not support cookies or requires Bearer token authentication.
+func WithBearerEnabled() SessionConfigOption {
+	return func(c *sessionConfig) {
+		c.BearerEnabled = true
 	}
 }

@@ -117,7 +117,9 @@ func (cm *CookieManager) SetSessionCookie(w http.ResponseWriter, sessionResult *
 		return nil
 	}
 
-	cm.writeCookie(w, sessionResult.Cookie)
+	if sessionResult.Cookie != nil {
+		cm.writeCookie(w, sessionResult.Cookie)
+	}
 
 	for _, extra := range sessionResult.ExtraCookies {
 		cm.writeCookie(w, extra)

@@ -134,7 +134,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := newResponder(nil, nil)
+		responder := newResponder(nil, nil, false)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v.RequiredString("email", d["email"].(string)).
@@ -162,7 +162,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := newResponder(nil, nil)
+		responder := newResponder(nil, nil, false)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v.RequiredString("email", d["email"].(string)).
@@ -184,7 +184,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := newResponder(nil, nil)
+		responder := newResponder(nil, nil, false)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			return v
@@ -203,7 +203,7 @@ func TestValidateJSON(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/test", bytes.NewBufferString(jsonBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
-		responder := newResponder(nil, nil)
+		responder := newResponder(nil, nil, false)
 
 		data := ValidateJSON(w, req, responder, func(v *Validator, d map[string]any) *Validator {
 			email, _ := d["email"].(string)
