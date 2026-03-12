@@ -23,14 +23,6 @@ const (
 	StoreTypeCache StoreType = "cache_store"
 )
 
-// TokenDeliveryMethod specifies how tokens should be delivered
-type TokenDeliveryMethod string
-
-const (
-	// TokenDeliveryCookie delivers tokens via HttpOnly cookies
-	TokenDeliveryCookie TokenDeliveryMethod = "cookie"
-)
-
 // ============================================================================
 // Plugin Constants
 // ============================================================================
