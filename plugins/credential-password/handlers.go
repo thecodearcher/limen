@@ -100,6 +100,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 			Custom("username", func() error {
 				username, ok := data["username"].(string)
 				if !ok {
+					data["username"] = ""
 					username = ""
 				}
 				return p.plugin.validateUsername(username)
@@ -107,6 +108,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 			Custom("password", func() error {
 				password, ok := data["password"].(string)
 				if !ok {
+					data["password"] = ""
 					password = ""
 				}
 				return p.plugin.validatePassword(password)
