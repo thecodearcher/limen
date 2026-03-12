@@ -136,7 +136,7 @@ func (d *postgresDriver) MapGoTypeToSQL(goType aegis.ColumnType, isAutoIncrement
 	case aegis.ColumnTypeString:
 		return "VARCHAR(255)"
 	case aegis.ColumnTypeTime:
-		return "TIMESTAMP"
+		return "TIMESTAMPTZ"
 	case aegis.ColumnTypeUUID:
 		return "UUID"
 	case aegis.ColumnTypeMapStringAny:
