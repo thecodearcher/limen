@@ -21,6 +21,7 @@ type config struct {
 	issuer               string
 	audience             []string
 	blacklistEnabled     bool
+	blacklistStoreType   aegis.StoreType
 	refreshTokenEnabled  bool
 	subjectEncoder       func(user *aegis.User) string
 	subjectResolver      func(subject string) (any, error)
@@ -112,12 +113,22 @@ func WithAudience(audience []string) ConfigOption {
 	}
 }
 
-// WithBlacklist enables an optional JWT blacklist. When a session is revoked
+// WithBlacklistEnabled enables an optional JWT blacklist. When a session is revoked
 // the JWT's jti is recorded so that ValidateSession can reject it before its
-// natural expiry. This adds a DB lookup on every validation call.
-func WithBlacklist(enabled bool) ConfigOption {
+// natural expiry. This adds a cache or DB lookup on every validation call depending on the store type.
+func WithBlacklistEnabled(enabled bool) ConfigOption {
 	return func(c *config) {
 		c.blacklistEnabled = enabled
+	}
+}
+
+// WithBlacklistStoreType selects the storage backend for the JWT blacklist.
+// When set to StoreTypeCache, entries are stored in the shared CacheAdapter
+// with a TTL equal to the token's remaining lifetime.
+// Defaults to StoreTypeCache.
+func WithBlacklistStoreType(storeType aegis.StoreType) ConfigOption {
+	return func(c *config) {
+		c.blacklistStoreType = storeType
 	}
 }
 

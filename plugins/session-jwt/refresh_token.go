@@ -103,11 +103,7 @@ func (p *sessionJWTPlugin) AddToBlacklist(ctx context.Context, jti string, expir
 	if !p.config.blacklistEnabled {
 		return nil
 	}
-	entry := &BlacklistEntry{
-		JTI:       jti,
-		ExpiresAt: expiresAt,
-	}
-	return p.core.Create(ctx, p.blacklistSchema, entry, nil)
+	return p.blacklist.Add(ctx, jti, expiresAt)
 }
 
 // IsBlacklisted checks whether a JWT ID has been revoked.
@@ -115,20 +111,16 @@ func (p *sessionJWTPlugin) IsBlacklisted(ctx context.Context, jti string) (bool,
 	if !p.config.blacklistEnabled {
 		return false, nil
 	}
-	return p.core.Exists(ctx, p.blacklistSchema, []aegis.Where{
-		aegis.Eq(string(BlacklistSchemaJTIField), jti),
-	})
+	return p.blacklist.Has(ctx, jti)
 }
 
 // PruneExpiredBlacklist removes blacklist entries whose JWT has already
-// expired naturally, keeping the table compact.
+// expired naturally, keeping the table compact. No-op when using cache (TTL handles expiry).
 func (p *sessionJWTPlugin) PruneExpiredBlacklist(ctx context.Context) error {
 	if !p.config.blacklistEnabled {
 		return nil
 	}
-	return p.core.Delete(ctx, p.blacklistSchema, []aegis.Where{
-		aegis.Lt(p.blacklistSchema.GetExpiresAtField(), time.Now()),
-	})
+	return p.blacklist.Prune(ctx)
 }
 
 // PruneExpiredRefreshTokens removes refresh tokens that have passed their

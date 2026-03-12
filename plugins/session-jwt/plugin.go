@@ -14,6 +14,7 @@ type sessionJWTPlugin struct {
 	config             *config
 	refreshTokenSchema *refreshTokenSchema
 	blacklistSchema    *blacklistSchema
+	blacklist          blacklistStore
 }
 
 // New creates a new session-jwt plugin. When registered, it replaces the
@@ -29,6 +30,7 @@ func New(opts ...ConfigOption) *sessionJWTPlugin {
 		subjectEncoder:       func(user *aegis.User) string { return fmt.Sprintf("%v", user.ID) },
 		subjectResolver:      func(subject string) (any, error) { return subject, nil },
 		refreshUser:          false,
+		blacklistStoreType:   aegis.StoreTypeCache,
 	}
 
 	for _, opt := range opts {
@@ -71,11 +73,25 @@ func (p *sessionJWTPlugin) Initialize(core *aegis.AegisCore) error {
 		return fmt.Errorf("session-jwt: audience is required; use WithAudience or set Config.BaseURL")
 	}
 
-	if err := p.config.resolveKeys(core.SigningSecret()); err != nil {
+	if err := p.config.resolveKeys(core.Secret()); err != nil {
 		return err
 	}
 
+	if p.config.blacklistEnabled {
+		p.blacklist = p.determineBlacklistStore()
+	}
+
 	return nil
+}
+
+func (p *sessionJWTPlugin) determineBlacklistStore() blacklistStore {
+	if p.config.blacklistStoreType == aegis.StoreTypeDatabase {
+		return &dbBlacklistStore{core: p.core, schema: p.blacklistSchema}
+	}
+	return &cacheBlacklistStore{
+		cache:  p.core.CacheStore(),
+		prefix: p.core.CacheKeyPrefix(),
+	}
 }
 
 func (p *sessionJWTPlugin) SessionManager() aegis.SessionManager {
@@ -105,7 +121,7 @@ func (p *sessionJWTPlugin) GetSchemas(schema *aegis.SchemaConfig) []aegis.Schema
 		schemas = append(schemas, buildRefreshTokenTableDef(schema, p.refreshTokenSchema))
 	}
 
-	if p.config.blacklistEnabled {
+	if p.config.blacklistEnabled && p.config.blacklistStoreType != aegis.StoreTypeCache {
 		p.blacklistSchema = newBlacklistSchema()
 		schemas = append(schemas, buildBlacklistTableDef(p.blacklistSchema))
 	}
