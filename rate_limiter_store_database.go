@@ -1,16 +1,19 @@
 package aegis
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
-type DatabaseRateLimiterStore struct {
+type databaseRateLimiterStore struct {
 	core *AegisCore
 }
 
-func NewDatabaseRateLimiterStore(core *AegisCore) RateLimiterStore {
-	return &DatabaseRateLimiterStore{core: core}
+func newDatabaseRateLimiterStore(core *AegisCore) RateLimiterStore {
+	return &databaseRateLimiterStore{core: core}
 }
 
-func (s *DatabaseRateLimiterStore) Get(ctx context.Context, key string) (*RateLimit, error) {
+func (s *databaseRateLimiterStore) Get(ctx context.Context, key string) (*RateLimit, error) {
 	limit, err := s.core.FindOne(ctx, s.core.Schema.RateLimit, []Where{
 		Eq(s.core.Schema.RateLimit.GetKeyField(), key),
 	}, nil)
@@ -22,12 +25,11 @@ func (s *DatabaseRateLimiterStore) Get(ctx context.Context, key string) (*RateLi
 	return limit.(*RateLimit), nil
 }
 
-func (s *DatabaseRateLimiterStore) Create(ctx context.Context, value *RateLimit) error {
-	return s.core.Create(ctx, s.core.Schema.RateLimit, value, nil)
-}
-
-func (d *DatabaseRateLimiterStore) Update(ctx context.Context, key string, value *RateLimit) error {
-	return d.core.UpdateRaw(ctx, d.core.Schema.RateLimit, value, []Where{
-		Eq(d.core.Schema.RateLimit.GetKeyField(), key),
+func (s *databaseRateLimiterStore) Set(ctx context.Context, key string, value *RateLimit, _ time.Duration) error {
+	if value.ID == nil {
+		return s.core.Create(ctx, s.core.Schema.RateLimit, value, nil)
+	}
+	return s.core.UpdateRaw(ctx, s.core.Schema.RateLimit, value, []Where{
+		Eq(s.core.Schema.RateLimit.GetKeyField(), key),
 	}, false)
 }

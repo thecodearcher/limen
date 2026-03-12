@@ -71,26 +71,19 @@ type SessionResult struct {
 	ExtraCookies []*http.Cookie `json:"-"`
 }
 
-// SessionUpdates contains fields for partial session updates.
-type SessionUpdates struct {
-	ExpiresAt  *time.Time
-	LastAccess *time.Time
-	Metadata   map[string]any
-}
-
 // SessionStore defines the interface for session storage backends.
 type SessionStore interface {
-	Create(ctx context.Context, session *Session) error
-	GetByToken(ctx context.Context, token string) (*Session, error)
-	UpdateByToken(ctx context.Context, token string, updates *SessionUpdates) error
-	DeleteByToken(ctx context.Context, token string) error
+	Get(ctx context.Context, token string) (*Session, error)
+	Set(ctx context.Context, session *Session) error
+	Delete(ctx context.Context, token string) error
 	DeleteByUserID(ctx context.Context, userID any) error
+	ListByUserID(ctx context.Context, userID any) ([]Session, error)
 }
 
+// RateLimiterStore defines the interface for rate-limit storage backends.
 type RateLimiterStore interface {
 	Get(ctx context.Context, key string) (*RateLimit, error)
-	Create(ctx context.Context, value *RateLimit) error
-	Update(ctx context.Context, key string, value *RateLimit) error
+	Set(ctx context.Context, key string, value *RateLimit, ttl time.Duration) error
 }
 
 // IDGenerator generates IDs for database records.

@@ -6,13 +6,13 @@ import (
 )
 
 type Session struct {
-	ID         any
-	Token      string
-	UserID     any
-	CreatedAt  time.Time
-	ExpiresAt  time.Time
-	LastAccess time.Time
-	Metadata   map[string]any
+	ID         any            `json:"id,omitempty"`
+	Token      string         `json:"token"`
+	UserID     any            `json:"user_id"`
+	CreatedAt  time.Time      `json:"created_at"`
+	ExpiresAt  time.Time      `json:"expires_at"`
+	LastAccess time.Time      `json:"last_access"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
 	raw        map[string]any
 }
 

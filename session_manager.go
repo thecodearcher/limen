@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// OpaqueSessionManager implements SessionManager using opaque tokens.
-type OpaqueSessionManager struct {
+// opaqueSessionManager implements SessionManager using opaque tokens.
+type opaqueSessionManager struct {
 	store      SessionStore
 	config     *sessionConfig
 	core       *AegisCore
@@ -17,12 +17,12 @@ type OpaqueSessionManager struct {
 	cookieName string
 }
 
-func newOpaqueSessionManager(core *AegisCore, config *sessionConfig) *OpaqueSessionManager {
+func newOpaqueSessionManager(core *AegisCore, config *sessionConfig) *opaqueSessionManager {
 	var cookieName string
 	if core.cookies != nil && core.config.HTTP.cookieConfig != nil {
 		cookieName = core.config.HTTP.cookieConfig.sessionCookieName
 	}
-	return &OpaqueSessionManager{
+	return &opaqueSessionManager{
 		store:      determineStore(config, core),
 		config:     config,
 		core:       core,
@@ -39,27 +39,30 @@ type sessionPolicy struct {
 
 // resolveSessionPolicy returns the effective policy for this session. Short sessions
 // (ExpiresAt - CreatedAt < global Duration) are not extended so they stay at their fixed TTL.
-func (m *OpaqueSessionManager) resolveSessionPolicy(session *Session) sessionPolicy {
+func (m *opaqueSessionManager) resolveSessionPolicy(session *Session) sessionPolicy {
 	p := sessionPolicy{
 		Duration:    m.config.Duration,
 		IdleTimeout: m.config.IdleTimeout,
 		UpdateAge:   m.config.UpdateAge,
 	}
+
 	if session.ExpiresAt.Sub(session.CreatedAt) < m.config.Duration {
 		p.UpdateAge = 0
 	}
+
 	return p
 }
 
-func (m *OpaqueSessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult, shortSession bool) (*SessionResult, error) {
+func (m *opaqueSessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult, shortSession bool) (*SessionResult, error) {
 	duration := m.config.Duration
 	if m.config.ShortSessionDuration > 0 && shortSession {
 		duration = m.config.ShortSessionDuration
 	}
 
 	token := generateCryptoSecureRandomString()
-	expiresAt := time.Now().Add(duration)
-	if err := m.storeSession(ctx, request, authResult.User.ID, token, expiresAt); err != nil {
+	clock := time.Now()
+	expiresAt := clock.Add(duration)
+	if err := m.storeSession(ctx, request, authResult.User.ID, token, clock, expiresAt); err != nil {
 		return nil, fmt.Errorf("failed to store session: %w", err)
 	}
 
@@ -72,29 +75,28 @@ func (m *OpaqueSessionManager) CreateSession(ctx context.Context, request *http.
 	return result, nil
 }
 
-func (m *OpaqueSessionManager) ValidateSession(ctx context.Context, request *http.Request) (*ValidatedSession, error) {
+func (m *opaqueSessionManager) ValidateSession(ctx context.Context, request *http.Request) (*ValidatedSession, error) {
 	token, err := m.extractToken(request)
 	if err != nil {
 		return nil, ErrSessionNotFound
 	}
 
-	session, err := m.store.GetByToken(ctx, token)
+	session, err := m.store.Get(ctx, token)
 	if err != nil {
 		return nil, ErrSessionNotFound
 	}
 
 	policy := m.resolveSessionPolicy(session)
 	if session.IsExpired(policy.IdleTimeout) {
-		m.store.DeleteByToken(ctx, token)
+		m.store.Delete(ctx, token)
 		return nil, ErrSessionExpired
 	}
 
 	if m.config.ActivityCheckInterval > 0 && time.Now().After(session.LastAccess.Add(m.config.ActivityCheckInterval)) {
-		now := time.Now()
-		if err := m.store.UpdateByToken(ctx, token, &SessionUpdates{LastAccess: &now}); err != nil {
+		session.LastAccess = time.Now()
+		if err := m.store.Set(ctx, session); err != nil {
 			return nil, fmt.Errorf("failed to update session: %w", err)
 		}
-		session.LastAccess = now
 	}
 
 	user, err := m.core.DBAction.FindUserByID(ctx, session.UserID)
@@ -108,7 +110,7 @@ func (m *OpaqueSessionManager) ValidateSession(ctx context.Context, request *htt
 	}
 
 	if session.ShouldExtendExpiration(policy.Duration, policy.UpdateAge) {
-		refreshed, err := m.extendSessionExpiration(ctx, request, session)
+		refreshed, err := m.extendSessionExpiration(ctx, session)
 		if err != nil {
 			return nil, err
 		}
@@ -118,28 +120,24 @@ func (m *OpaqueSessionManager) ValidateSession(ctx context.Context, request *htt
 	return result, nil
 }
 
-func (m *OpaqueSessionManager) RevokeSession(ctx context.Context, token string) error {
-	return m.store.DeleteByToken(ctx, token)
+func (m *opaqueSessionManager) RevokeSession(ctx context.Context, token string) error {
+	return m.store.Delete(ctx, token)
 }
 
-func (m *OpaqueSessionManager) RevokeAllSessions(ctx context.Context, userID any) error {
+func (m *opaqueSessionManager) RevokeAllSessions(ctx context.Context, userID any) error {
 	return m.store.DeleteByUserID(ctx, userID)
 }
 
-func (m *OpaqueSessionManager) extendSessionExpiration(ctx context.Context, request *http.Request, session *Session) (*SessionResult, error) {
+func (m *opaqueSessionManager) extendSessionExpiration(ctx context.Context, session *Session) (*SessionResult, error) {
 	policy := m.resolveSessionPolicy(session)
 	now := time.Now()
-	newExpiresAt := now.Add(policy.Duration)
 
-	if err := m.store.UpdateByToken(ctx, session.Token, &SessionUpdates{
-		ExpiresAt:  &newExpiresAt,
-		LastAccess: &now,
-	}); err != nil {
+	session.ExpiresAt = now.Add(policy.Duration)
+	session.LastAccess = now
+
+	if err := m.store.Set(ctx, session); err != nil {
 		return nil, fmt.Errorf("failed to update session: %w", err)
 	}
-
-	session.ExpiresAt = newExpiresAt
-	session.LastAccess = now
 
 	return &SessionResult{
 		Token:  session.Token,
@@ -147,31 +145,30 @@ func (m *OpaqueSessionManager) extendSessionExpiration(ctx context.Context, requ
 	}, nil
 }
 
-func (m *OpaqueSessionManager) createSessionCookie(token string, expiresAt time.Time) *http.Cookie {
+func (m *opaqueSessionManager) createSessionCookie(token string, expiresAt time.Time) *http.Cookie {
 	if m.cookies == nil {
 		return nil
 	}
 	return m.cookies.NewCookie(m.cookieName, token, int(time.Until(expiresAt).Seconds()))
 }
 
-func (m *OpaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, expiresAt time.Time) error {
-	now := time.Now()
+func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, clock, expiresAt time.Time) error {
 	session := &Session{
 		Token:      token,
 		UserID:     userID,
-		CreatedAt:  now,
+		CreatedAt:  clock,
 		ExpiresAt:  expiresAt,
-		LastAccess: now,
+		LastAccess: clock,
 		Metadata: map[string]any{
 			"ip_address": m.config.IPAddressExtractor(request),
 			"user_agent": m.config.UserAgentExtractor(request),
 		},
 	}
 
-	return m.store.Create(ctx, session)
+	return m.store.Set(ctx, session)
 }
 
-func (m *OpaqueSessionManager) extractToken(request *http.Request) (string, error) {
+func (m *opaqueSessionManager) extractToken(request *http.Request) (string, error) {
 	if m.cookies != nil {
 		if val, err := m.cookies.Get(request, m.cookieName); err == nil {
 			token := strings.TrimSpace(val)
@@ -200,12 +197,8 @@ func determineStore(config *sessionConfig, core *AegisCore) SessionStore {
 		return config.CustomStore
 	}
 
-	switch config.StoreType {
-	case SessionStoreTypeDatabase:
-		return NewDatabaseSessionStore(core)
-	case SessionStoreTypeMemory:
-		fallthrough
-	default:
-		return NewMemorySessionStore()
+	if config.StoreType == StoreTypeDatabase {
+		return newDatabaseSessionStore(core)
 	}
+	return newSecondarySessionStore(core)
 }

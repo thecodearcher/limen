@@ -39,7 +39,7 @@ func (o *oauthPlugin) Initialize(core *aegis.AegisCore) error {
 	o.cookies = core.Cookies()
 	o.accountSchema = core.Schema.Account
 	if len(o.config.secret) == 0 {
-		if base := core.SigningSecret(); len(base) == 32 {
+		if base := core.Secret(); len(base) == 32 {
 			o.config.secret = base
 		}
 	}

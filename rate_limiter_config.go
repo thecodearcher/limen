@@ -13,7 +13,7 @@ type RateLimiterConfig struct {
 	// Window: the duration of the window
 	Window time.Duration
 	// Store: the type of store to use
-	Store RateLimiterStoreType
+	Store StoreType
 	// CustomStore: a custom store to use
 	CustomStore RateLimiterStore
 	// KeyGenerator: a function to generate the key for the rate limiter
@@ -30,7 +30,7 @@ func NewDefaultRateLimiterConfig(opts ...RateLimiterOption) *RateLimiterConfig {
 		MaxRequests:  100,
 		Window:       time.Minute,
 		KeyGenerator: ipExtractorFromRemoteAddr,
-		Store:        RateLimiterStoreTypeMemory,
+		Store:        StoreTypeCache,
 		customRules:  make(map[string]*RateLimitRule),
 	}
 
@@ -81,9 +81,9 @@ func WithRateLimiterWindow(window time.Duration) RateLimiterOption {
 	}
 }
 
-// WithRateLimiterStore sets the type of store to use
-// default is memory
-func WithRateLimiterStore(store RateLimiterStoreType) RateLimiterOption {
+// WithRateLimiterStore sets the type of store to use.
+// Default is StoreTypeCache.
+func WithRateLimiterStore(store StoreType) RateLimiterOption {
 	return func(c *RateLimiterConfig) {
 		c.Store = store
 	}

@@ -18,7 +18,7 @@ type sessionConfig struct {
 	// ActivityCheckInterval: the interval at which the session last access time will be updated
 	ActivityCheckInterval time.Duration
 	// StoreType: the type of session store to use if no custom store is provided
-	StoreType SessionStoreType
+	StoreType StoreType
 	// CustomStore: a custom session store to use instead of the default store
 	CustomStore SessionStore
 	// IPAddressExtractor: the function to extract the IP address from the request
@@ -35,7 +35,7 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 		UpdateAge:             24 * time.Hour,     // 1 day
 		IdleTimeout:           0,                  // no idle timeout
 		ActivityCheckInterval: 0,                  // no activity check interval
-		StoreType:             SessionStoreTypeDatabase,
+		StoreType:             StoreTypeDatabase,
 		IPAddressExtractor:    ipExtractorFromRemoteAddr,
 		ShortSessionDuration:  24 * time.Hour,
 		UserAgentExtractor: func(request *http.Request) string {
@@ -51,7 +51,6 @@ func NewDefaultSessionConfig(opts ...SessionConfigOption) *sessionConfig {
 }
 
 func (c *sessionConfig) validate() error {
-
 	if c.UpdateAge > c.Duration {
 		return fmt.Errorf("update age cannot be greater than duration")
 	}
@@ -86,7 +85,7 @@ func WithCustomSessionStore(store SessionStore) SessionConfigOption {
 	}
 }
 
-func WithSessionStoreType(storeType SessionStoreType) SessionConfigOption {
+func WithSessionStoreType(storeType StoreType) SessionConfigOption {
 	return func(c *sessionConfig) {
 		c.StoreType = storeType
 	}

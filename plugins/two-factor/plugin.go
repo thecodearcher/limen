@@ -53,7 +53,7 @@ func (t *twoFactorPlugin) Initialize(core *aegis.AegisCore) error {
 	t.core = core
 	t.cookies = core.Cookies()
 	if len(t.config.secret) == 0 {
-		if base := core.SigningSecret(); len(base) > 0 {
+		if base := core.Secret(); len(base) > 0 {
 			t.config.secret = base
 		}
 	}

@@ -3,10 +3,10 @@ package aegis
 import "time"
 
 type RateLimit struct {
-	ID            any
-	Key           string
-	Count         int
-	LastRequestAt int64
+	ID            any    `json:"id,omitempty"`
+	Key           string `json:"key"`
+	Count         int    `json:"count"`
+	LastRequestAt int64  `json:"last_request_at"`
 	raw           map[string]any
 }
 

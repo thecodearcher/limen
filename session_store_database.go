@@ -4,55 +4,39 @@ import (
 	"context"
 )
 
-// DatabaseSessionStore implements SessionStore using a database adapter
-type DatabaseSessionStore struct {
+type databaseSessionStore struct {
 	core   *AegisCore
 	schema *SessionSchema
 }
 
-// NewDatabaseSessionStore creates a new database-backed session store
-func NewDatabaseSessionStore(core *AegisCore) *DatabaseSessionStore {
-	return &DatabaseSessionStore{
+func newDatabaseSessionStore(core *AegisCore) *databaseSessionStore {
+	return &databaseSessionStore{
 		core:   core,
 		schema: core.Schema.Session,
 	}
 }
 
-// Create creates a new session
-func (s *DatabaseSessionStore) Create(ctx context.Context, session *Session) error {
-	return s.core.DBAction.CreateSession(ctx, session, nil)
-}
-
-// GetByToken retrieves a session by token
-func (s *DatabaseSessionStore) GetByToken(ctx context.Context, token string) (*Session, error) {
+func (s *databaseSessionStore) Get(ctx context.Context, token string) (*Session, error) {
 	return s.core.DBAction.FindSessionByToken(ctx, token)
 }
 
-// UpdateByToken updates an existing session by token
-func (s *DatabaseSessionStore) UpdateByToken(ctx context.Context, token string, updates *SessionUpdates) error {
-	// Convert SessionUpdates to Session for the database action
-	session := &Session{}
-	if updates.ExpiresAt != nil {
-		session.ExpiresAt = *updates.ExpiresAt
+func (s *databaseSessionStore) Set(ctx context.Context, session *Session) error {
+	if session.ID == nil {
+		return s.core.DBAction.CreateSession(ctx, session, nil)
 	}
-	if updates.LastAccess != nil {
-		session.LastAccess = *updates.LastAccess
-	}
-	if updates.Metadata != nil {
-		session.Metadata = updates.Metadata
-	}
-
 	return s.core.DBAction.UpdateSession(ctx, session, []Where{
-		Eq(s.schema.GetTokenField(), token),
+		Eq(s.schema.GetTokenField(), session.Token),
 	})
 }
 
-// DeleteByToken removes a session by token
-func (s *DatabaseSessionStore) DeleteByToken(ctx context.Context, token string) error {
+func (s *databaseSessionStore) Delete(ctx context.Context, token string) error {
 	return s.core.DBAction.DeleteSessionByToken(ctx, token)
 }
 
-// DeleteByUserID removes all sessions for a specific user
-func (s *DatabaseSessionStore) DeleteByUserID(ctx context.Context, userID any) error {
+func (s *databaseSessionStore) DeleteByUserID(ctx context.Context, userID any) error {
 	return s.core.DBAction.DeleteSessionByUserID(ctx, userID)
+}
+
+func (s *databaseSessionStore) ListByUserID(ctx context.Context, userID any) ([]Session, error) {
+	return s.core.DBAction.ListSessionsByUserID(ctx, userID)
 }

@@ -7,14 +7,16 @@ import (
 
 // Config is the main configuration struct for the aegis library
 type Config struct {
-	BaseURL       string
-	Database      DatabaseAdapter
-	Plugins       []Plugin
-	Schema        *SchemaConfig
-	Session       *sessionConfig
-	HTTP          *httpConfig
-	CLI           *CLIConfig
-	SigningSecret []byte
+	BaseURL        string
+	Database       DatabaseAdapter
+	CacheStore     CacheAdapter
+	CacheKeyPrefix string
+	Plugins        []Plugin
+	Schema         *SchemaConfig
+	Session        *sessionConfig
+	HTTP           *httpConfig
+	CLI            *CLIConfig
+	Secret         []byte
 }
 
 // CLIConfig contains configuration for CLI tool support
@@ -32,10 +34,10 @@ func (c *Config) validate() error {
 		return ErrDatabaseAdapterRequired
 	}
 
-	secret := c.SigningSecret
+	secret := c.Secret
 	if len(secret) == 0 {
 		secret = []byte(os.Getenv("AEGIS_SECRET"))
-		c.SigningSecret = secret
+		c.Secret = secret
 	}
 	if len(secret) == 0 {
 		return fmt.Errorf("signing secret is required: set Config.SigningSecret, or AEGIS_SECRET environment variable")
@@ -43,6 +45,14 @@ func (c *Config) validate() error {
 
 	if len(secret) != 32 {
 		return fmt.Errorf("signing secret must be 32 bytes, got %d", len(secret))
+	}
+
+	if c.CacheStore == nil {
+		c.CacheStore = NewMemoryCacheStore()
+	}
+
+	if c.CacheKeyPrefix == "" {
+		c.CacheKeyPrefix = "aegis"
 	}
 
 	if c.Schema == nil {

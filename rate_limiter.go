@@ -35,21 +35,18 @@ func determineRateLimiterStore(config *RateLimiterConfig, core *AegisCore) RateL
 		return config.CustomStore
 	}
 
-	switch config.Store {
-	case RateLimiterStoreTypeDatabase:
-		return NewDatabaseRateLimiterStore(core)
-	case RateLimiterStoreTypeMemory:
-		fallthrough
-	default:
-		return NewMemoryRateLimiterStore()
+	if config.Store == StoreTypeDatabase {
+		return newDatabaseRateLimiterStore(core)
 	}
+
+	return newRateLimiterCacheStore(core)
 }
 
 func (r *rateLimiter) Check(ctx context.Context, key string, rule *RateLimitRule) (time.Duration, error) {
 	limit, err := r.store.Get(ctx, key)
 
 	if err == ErrRateLimitNotFound {
-		return r.createNewLimit(ctx, key)
+		return r.createNewLimit(ctx, key, rule.window)
 	}
 
 	if err != nil {
@@ -65,40 +62,40 @@ func (r *rateLimiter) Check(ctx context.Context, key string, rule *RateLimitRule
 		return remainingTime, ErrRateLimitExceeded
 	}
 
-	if err := r.incrementCounter(ctx, limit); err != nil {
+	if err := r.incrementCounter(ctx, limit, rule.window); err != nil {
 		return 0, err
 	}
 	return remainingTime, nil
 }
 
-func (r *rateLimiter) createNewLimit(ctx context.Context, key string) (time.Duration, error) {
+func (r *rateLimiter) createNewLimit(ctx context.Context, key string, window time.Duration) (time.Duration, error) {
 	limit := &RateLimit{
 		Key:           key,
 		Count:         1,
 		LastRequestAt: time.Now().UnixMilli(),
 	}
 
-	if err := r.store.Create(ctx, limit); err != nil {
-		return 0, err
-	}
-
-	return r.config.Window, nil
-}
-
-func (r *rateLimiter) resetAndIncrement(ctx context.Context, limit *RateLimit, window time.Duration) (time.Duration, error) {
-	limit.ResetCounter()
-	limit.Touch()
-
-	if err := r.store.Update(ctx, limit.Key, limit); err != nil {
+	if err := r.store.Set(ctx, limit.Key, limit, window); err != nil {
 		return 0, err
 	}
 
 	return window, nil
 }
 
-func (r *rateLimiter) incrementCounter(ctx context.Context, limit *RateLimit) error {
+func (r *rateLimiter) resetAndIncrement(ctx context.Context, limit *RateLimit, window time.Duration) (time.Duration, error) {
+	limit.ResetCounter()
 	limit.Touch()
-	return r.store.Update(ctx, limit.Key, limit)
+
+	if err := r.store.Set(ctx, limit.Key, limit, window); err != nil {
+		return 0, err
+	}
+
+	return window, nil
+}
+
+func (r *rateLimiter) incrementCounter(ctx context.Context, limit *RateLimit, window time.Duration) error {
+	limit.Touch()
+	return r.store.Set(ctx, limit.Key, limit, window)
 }
 
 func (r *rateLimiter) computeRemainingTime(limit *RateLimit, window time.Duration) time.Duration {

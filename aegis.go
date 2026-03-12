@@ -32,16 +32,17 @@ func New(config *Config) (*Aegis, error) {
 	}
 
 	core := &AegisCore{
-		config:        config,
-		baseURL:       config.BaseURL,
-		fullBaseURL:   joinURL(config.BaseURL, config.HTTP.basePath),
-		db:            config.Database,
-		Schema:        config.Schema,
-		plugins:       make(map[PluginName]Plugin),
-		signingSecret: config.SigningSecret,
+		config:      config,
+		baseURL:     config.BaseURL,
+		fullBaseURL: joinURL(config.BaseURL, config.HTTP.basePath),
+		db:          config.Database,
+		cacheStore:  config.CacheStore,
+		Schema:      config.Schema,
+		plugins:     make(map[PluginName]Plugin),
+		secret:      config.Secret,
 	}
 
-	core.cookies = newCookieManager(config.HTTP.cookieConfig, config.SigningSecret)
+	core.cookies = newCookieManager(config.HTTP.cookieConfig, config.Secret)
 	sessionManager := newOpaqueSessionManager(core, config.Session)
 	core.DBAction = newCommonDatabaseActionsHelper(core)
 	core.SessionManager = sessionManager

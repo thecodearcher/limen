@@ -16,7 +16,6 @@ linters:
     - goprintffuncname
     - gosec
     - misspell
-    - mnd
     - nakedret
     - noctx
     - nolintlint
@@ -59,12 +58,10 @@ linters:
       - linters:
           - funlen
           - gocyclo
-          - mnd
         path: _test\.go
       - linters:
           - funlen
           - gocyclo
-          - mnd
           - goconst
           - gosec
           - staticcheck

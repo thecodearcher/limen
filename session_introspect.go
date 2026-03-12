@@ -22,7 +22,7 @@ func (s *SessionSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 				Column:           SessionSchemaUserIDField,
 				ReferencedSchema: CoreSchemaUsers,
 				ReferencedField:  SchemaIDField,
-				OnDelete:         FKActionCascade,
+				OnDelete:         FKActionRestrict,
 				OnUpdate:         FKActionCascade,
 			},
 		},

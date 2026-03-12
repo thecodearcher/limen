@@ -188,6 +188,21 @@ func (h *DatabaseActionHelper) DeleteSessionByUserID(ctx context.Context, userID
 	})
 }
 
+func (h *DatabaseActionHelper) ListSessionsByUserID(ctx context.Context, userID any) ([]Session, error) {
+	sessionSchema := h.core.Schema.Session
+	models, err := h.core.FindMany(ctx, sessionSchema, []Where{
+		Eq(sessionSchema.GetUserIDField(), userID),
+	})
+	if err != nil {
+		return nil, err
+	}
+	sessions := make([]Session, 0, len(models))
+	for _, m := range models {
+		sessions = append(sessions, *m.(*Session))
+	}
+	return sessions, nil
+}
+
 func (h *DatabaseActionHelper) FindAccountByProviderAndProviderID(ctx context.Context, provider string, providerAccountID any) (*Account, error) {
 	raw, err := h.core.FindOne(ctx, h.core.Schema.Account, []Where{
 		Eq(h.core.Schema.Account.GetProviderField(), provider),

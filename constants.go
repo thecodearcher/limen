@@ -12,11 +12,15 @@ const (
 	EnvelopeAlways
 )
 
-type SessionStoreType string
+// StoreType selects the storage backend for features like sessions and rate limiting.
+type StoreType string
 
 const (
-	SessionStoreTypeMemory   SessionStoreType = "in_memory"
-	SessionStoreTypeDatabase SessionStoreType = "database"
+	// StoreTypeDatabase stores data in the primary database via the DatabaseAdapter.
+	StoreTypeDatabase StoreType = "database"
+	// StoreTypeCache stores data in the shared CacheAdapter (defaults to in-memory;
+	// swap with a Redis adapter for multi-instance deployments).
+	StoreTypeCache StoreType = "cache_store"
 )
 
 // TokenDeliveryMethod specifies how tokens should be delivered
@@ -25,13 +29,6 @@ type TokenDeliveryMethod string
 const (
 	// TokenDeliveryCookie delivers tokens via HttpOnly cookies
 	TokenDeliveryCookie TokenDeliveryMethod = "cookie"
-)
-
-type RateLimiterStoreType string
-
-const (
-	RateLimiterStoreTypeMemory   RateLimiterStoreType = "in_memory"
-	RateLimiterStoreTypeDatabase RateLimiterStoreType = "database"
 )
 
 // ============================================================================

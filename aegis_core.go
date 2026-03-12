@@ -11,13 +11,14 @@ type AegisCore struct {
 	baseURL        string
 	fullBaseURL    string // baseURL + HTTP.basePath
 	db             DatabaseAdapter
+	cacheStore     CacheAdapter
 	DBAction       *DatabaseActionHelper
 	Schema         *SchemaConfig
 	SessionManager SessionManager
 	cookies        *CookieManager
 	schemaResolver *SchemaResolver
 	plugins        map[PluginName]Plugin
-	signingSecret  []byte
+	secret         []byte
 }
 
 func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDefinition) error {
@@ -48,10 +49,21 @@ func (c *AegisCore) Cookies() *CookieManager {
 	return c.cookies
 }
 
-// SigningSecret returns the base signing secret.
+// CacheStore returns the global CacheAdapter instance.
+// Plugins should use this as a fallback when no per-feature store is configured.
+func (c *AegisCore) CacheStore() CacheAdapter {
+	return c.cacheStore
+}
+
+// CacheKeyPrefix returns the prefix used for all cache keys (sessions, rate limits).
+func (c *AegisCore) CacheKeyPrefix() string {
+	return c.config.CacheKeyPrefix
+}
+
+// Secret returns the base signing secret.
 // Plugins that do not configure their own secret can use this for encryption/signing.
-func (c *AegisCore) SigningSecret() []byte {
-	return c.signingSecret
+func (c *AegisCore) Secret() []byte {
+	return c.secret
 }
 
 func (c *AegisCore) GetBaseURL() string {
