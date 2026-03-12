@@ -185,9 +185,9 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 	fmt.Printf("Google Client ID: %s\n", googleClientID)
 
 	return &aegis.Config{
-		BaseURL:       "http://localhost:8080",
-		Database:      db,
-		SigningSecret: []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
+		BaseURL:  "http://localhost:8080",
+		Database: db,
+		Secret:   []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
 		Plugins: []aegis.Plugin{
 			sessionjwt.New(
 			// sessionjwt.WithRefreshToken(false),
