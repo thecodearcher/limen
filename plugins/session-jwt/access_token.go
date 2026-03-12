@@ -94,13 +94,14 @@ func (p *sessionJWTPlugin) RefreshAccessToken(r *http.Request) (*aegis.SessionRe
 func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken string, family string) (*aegis.SessionResult, *aegis.User, error) {
 	rt, err := p.FindRefreshTokenByToken(ctx, rawRefreshToken)
 	if err != nil {
-		if family != "" {
-			if active, _ := p.FamilyHasActiveTokens(ctx, family); active {
-				_ = p.DeleteRefreshTokenFamily(ctx, family)
-				return nil, nil, ErrRefreshTokenReuse
-			}
+		if family == "" {
+			return nil, nil, ErrInvalidRefreshToken
 		}
-		return nil, nil, ErrInvalidRefreshToken
+
+		if active, _ := p.FamilyHasActiveTokens(ctx, family); active {
+			_ = p.DeleteRefreshTokenFamily(ctx, family)
+			return nil, nil, ErrRefreshTokenReuse
+		}
 	}
 
 	if time.Now().After(rt.ExpiresAt) {
@@ -118,22 +119,19 @@ func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken s
 		return nil, nil, err
 	}
 
-	var result *aegis.SessionResult
-
 	if p.config.refreshTokenRotation {
 		newRT, err := p.RotateRefreshToken(ctx, rt, jti)
 		if err != nil {
 			return nil, nil, err
 		}
-		result = p.buildSessionResult(signed, newRT)
-	} else {
-		if err := p.updateRefreshTokenJWTID(ctx, rt.Token, jti); err != nil {
-			return nil, nil, err
-		}
-		result = p.buildSessionResult(signed, rt)
+		return p.buildSessionResult(signed, newRT), user, nil
 	}
 
-	return result, user, nil
+	if err := p.updateRefreshTokenJWTID(ctx, rt.Token, jti); err != nil {
+		return nil, nil, err
+	}
+
+	return p.buildSessionResult(signed, rt), user, nil
 }
 
 // parseAccessTokenLenient parses a JWT verifying the signature but tolerating

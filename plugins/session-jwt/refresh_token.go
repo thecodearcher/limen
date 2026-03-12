@@ -92,10 +92,24 @@ func (p *sessionJWTPlugin) FamilyHasActiveTokens(ctx context.Context, family str
 // RotateRefreshToken deletes the old refresh token and creates a new one in
 // the same family. Returns the new refresh token.
 func (p *sessionJWTPlugin) RotateRefreshToken(ctx context.Context, old *RefreshToken, newJWTID string) (*RefreshToken, error) {
-	if err := p.DeleteRefreshToken(ctx, old.Token); err != nil {
-		return nil, fmt.Errorf("session-jwt: failed to delete old refresh token: %w", err)
+	var newRT *RefreshToken
+	err := p.core.WithTransaction(ctx, func(txCtx context.Context) error {
+		if err := p.core.Delete(txCtx, p.refreshTokenSchema, []aegis.Where{
+			aegis.Eq(p.refreshTokenSchema.GetTokenField(), old.Token),
+		}); err != nil {
+			return fmt.Errorf("session-jwt: failed to delete old refresh token: %w", err)
+		}
+		rt, err := p.CreateRefreshToken(txCtx, old.UserID, newJWTID, old.Family, &old.ExpiresAt)
+		if err != nil {
+			return err
+		}
+		newRT = rt
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return p.CreateRefreshToken(ctx, old.UserID, newJWTID, old.Family, &old.ExpiresAt)
+	return newRT, nil
 }
 
 // AddToBlacklist records a revoked JWT so ValidateSession can reject it.
