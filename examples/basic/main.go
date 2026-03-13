@@ -36,6 +36,7 @@ import (
 	oauthlinkedin "github.com/thecodearcher/aegis/plugins/oauth-linkedin"
 	oauthmicrosoft "github.com/thecodearcher/aegis/plugins/oauth-microsoft"
 	oauthtwitter "github.com/thecodearcher/aegis/plugins/oauth-twitter"
+	oauthtwitch "github.com/thecodearcher/aegis/plugins/oauth-twitch"
 	twofactor "github.com/thecodearcher/aegis/plugins/two-factor"
 )
 
@@ -97,7 +98,7 @@ func oidcMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
 }
 
 // buildOAuthOptions returns OAuth plugin options, including generic Discord and Keycloak (discovery) providers when credentials are set.
-func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
+func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
 	opts := []oauth.ConfigOption{
 		oauth.WithProvider(oauthgoogle.New(
 			oauthgoogle.WithClientID(googleClientID),
@@ -140,6 +141,12 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 			oauthlinkedin.WithClientSecret(linkedinClientSecret),
 		)))
 	}
+	if twitchClientID != "" && twitchClientSecret != "" {
+		opts = append(opts, oauth.WithProvider(oauthtwitch.New(
+			oauthtwitch.WithClientID(twitchClientID),
+			oauthtwitch.WithClientSecret(twitchClientSecret),
+		)))
+	}
 	if keycloakDiscoveryURL != "" && keycloakClientID != "" && keycloakClientSecret != "" {
 		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
 			oauthgeneric.WithName("keycloak"),
@@ -172,6 +179,10 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 			firstName, _ := info.Raw["given_name"].(string)
 			lastName, _ := info.Raw["family_name"].(string)
 			return map[string]any{"first_name": firstName, "last_name": lastName}
+		case "twitch":
+			// OIDC id_token uses preferred_username for display name
+			displayName, _ := info.Raw["preferred_username"].(string)
+			return map[string]any{"first_name": displayName, "last_name": ""}
 		case "keycloak":
 			name, _ := info.Raw["name"].(string)
 			return map[string]any{"first_name": name, "last_name": ""}
@@ -203,6 +214,8 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 	twitterClientSecret := os.Getenv("TWITTER_CLIENT_SECRET")
 	linkedinClientID := os.Getenv("LINKEDIN_CLIENT_ID")
 	linkedinClientSecret := os.Getenv("LINKEDIN_CLIENT_SECRET")
+	twitchClientID := os.Getenv("TWITCH_CLIENT_ID")
+	twitchClientSecret := os.Getenv("TWITCH_CLIENT_SECRET")
 	keycloakDiscoveryURL := os.Getenv("KEYCLOAK_DISCOVERY_URL") // e.g. https://keycloak.example.com/realms/master/.well-known/openid-configuration
 	keycloakClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 	keycloakClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
@@ -239,7 +252,7 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(false),
 			),
-			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
+			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
 			twofactor.New(
 				// twofactor.WithCookieExpiration(2*time.Minute),
 				twofactor.WithSecret("aegis_2fa_totp_secret_1234567890"),
