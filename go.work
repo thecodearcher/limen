@@ -11,6 +11,7 @@ use (
 	./plugins/oauth-github
 	./plugins/oauth-google
 	./plugins/oauth-generic
+	./plugins/oauth-discord
 	./plugins/oauth-facebook
 	./plugins/two-factor
 	./plugins/session-jwt
@@ -31,6 +32,8 @@ replace github.com/thecodearcher/aegis/plugins/oauth-google v0.0.0 => ./plugins/
 replace github.com/thecodearcher/aegis/plugins/oauth-github v0.0.0 => ./plugins/oauth-github
 
 replace github.com/thecodearcher/aegis/plugins/oauth-generic v0.0.0 => ./plugins/oauth-generic
+
+replace github.com/thecodearcher/aegis/plugins/oauth-discord v0.0.0 => ./plugins/oauth-discord
 
 replace github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0 => ./plugins/oauth-facebook
 

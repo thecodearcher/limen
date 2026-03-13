@@ -28,6 +28,7 @@ import (
 	credentialpassword "github.com/thecodearcher/aegis/plugins/credential-password"
 	"github.com/thecodearcher/aegis/plugins/oauth"
 	oauthfacebook "github.com/thecodearcher/aegis/plugins/oauth-facebook"
+	oauthdiscord "github.com/thecodearcher/aegis/plugins/oauth-discord"
 	oauthgeneric "github.com/thecodearcher/aegis/plugins/oauth-generic"
 	oauthgithub "github.com/thecodearcher/aegis/plugins/oauth-github"
 	oauthgoogle "github.com/thecodearcher/aegis/plugins/oauth-google"
@@ -58,25 +59,6 @@ func strFromRaw(v any) string {
 	default:
 		return fmt.Sprint(v)
 	}
-}
-
-// discordMapUserInfo maps Discord's /users/@me response to oauth.ProviderUserInfo.
-func discordMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
-	id := strFromRaw(raw["id"])
-	username := strFromRaw(raw["username"])
-	email := strFromRaw(raw["email"])
-	avatar := strFromRaw(raw["avatar"])
-	avatarURL := ""
-	if id != "" && avatar != "" {
-		avatarURL = fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.png", id, avatar)
-	}
-	return &oauth.ProviderUserInfo{
-		ID:            id,
-		Email:         email,
-		EmailVerified: false,
-		Name:          username,
-		AvatarURL:     avatarURL,
-	}, nil
 }
 
 // oidcMapUserInfo maps standard OIDC claims (id_token or userinfo) to oauth.ProviderUserInfo.
@@ -131,15 +113,9 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 		)))
 	}
 	if discordClientID != "" && discordClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
-			oauthgeneric.WithName("discord"),
-			oauthgeneric.WithClientID(discordClientID),
-			oauthgeneric.WithClientSecret(discordClientSecret),
-			oauthgeneric.WithAuthorizationURL("https://discord.com/api/oauth2/authorize"),
-			oauthgeneric.WithTokenURL("https://discord.com/api/oauth2/token"),
-			oauthgeneric.WithUserInfoURL("https://discord.com/api/users/@me"),
-			oauthgeneric.WithScopes("identify", "email"),
-			oauthgeneric.WithMapUserInfo(discordMapUserInfo),
+		opts = append(opts, oauth.WithProvider(oauthdiscord.New(
+			oauthdiscord.WithClientID(discordClientID),
+			oauthdiscord.WithClientSecret(discordClientSecret),
 		)))
 	}
 	if keycloakDiscoveryURL != "" && keycloakClientID != "" && keycloakClientSecret != "" {

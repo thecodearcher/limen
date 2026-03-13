@@ -10,6 +10,7 @@ require (
 	github.com/thecodearcher/aegis/adapters/gorm v0.0.0
 	github.com/thecodearcher/aegis/plugins/credential-password v0.0.0
 	github.com/thecodearcher/aegis/plugins/oauth v0.0.0
+	github.com/thecodearcher/aegis/plugins/oauth-discord v0.0.0
 	github.com/thecodearcher/aegis/plugins/oauth-generic v0.0.0
 	github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0-00010101000000-000000000000
 	github.com/thecodearcher/aegis/plugins/oauth-github v0.0.0-00010101000000-000000000000
@@ -29,6 +30,8 @@ replace github.com/thecodearcher/aegis/plugins/two-factor => ../../plugins/two-f
 replace github.com/thecodearcher/aegis/plugins/oauth => ../../plugins/oauth
 
 replace github.com/thecodearcher/aegis/plugins/oauth-google => ../../plugins/oauth-google
+
+replace github.com/thecodearcher/aegis/plugins/oauth-discord => ../../plugins/oauth-discord
 
 replace github.com/thecodearcher/aegis/plugins/oauth-generic => ../../plugins/oauth-generic
 
