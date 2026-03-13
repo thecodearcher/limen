@@ -53,6 +53,9 @@ func ExchangeCode(ctx context.Context, config *oauth2.Config, code, codeVerifier
 	if scope, ok := tok.Extra("scope").(string); ok && scope != "" {
 		resp.Scope = scope
 	}
+	if resp.Scope == "" {
+		resp.Scope = strings.Join(config.Scopes, ",")
+	}
 	return resp, nil
 }
 

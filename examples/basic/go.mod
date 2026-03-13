@@ -11,6 +11,7 @@ require (
 	github.com/thecodearcher/aegis/plugins/credential-password v0.0.0
 	github.com/thecodearcher/aegis/plugins/oauth v0.0.0
 	github.com/thecodearcher/aegis/plugins/oauth-generic v0.0.0
+	github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0-00010101000000-000000000000
 	github.com/thecodearcher/aegis/plugins/oauth-github v0.0.0-00010101000000-000000000000
 	github.com/thecodearcher/aegis/plugins/oauth-google v0.0.0-00010101000000-000000000000
 	github.com/thecodearcher/aegis/plugins/two-factor v0.0.0
@@ -30,6 +31,8 @@ replace github.com/thecodearcher/aegis/plugins/oauth => ../../plugins/oauth
 replace github.com/thecodearcher/aegis/plugins/oauth-google => ../../plugins/oauth-google
 
 replace github.com/thecodearcher/aegis/plugins/oauth-generic => ../../plugins/oauth-generic
+
+replace github.com/thecodearcher/aegis/plugins/oauth-facebook => ../../plugins/oauth-facebook
 
 replace github.com/thecodearcher/aegis/plugins/oauth-github => ../../plugins/oauth-github
 

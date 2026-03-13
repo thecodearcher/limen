@@ -27,10 +27,10 @@ import (
 	"github.com/thecodearcher/aegis/examples/basic/pkg"
 	credentialpassword "github.com/thecodearcher/aegis/plugins/credential-password"
 	"github.com/thecodearcher/aegis/plugins/oauth"
+	oauthfacebook "github.com/thecodearcher/aegis/plugins/oauth-facebook"
 	oauthgeneric "github.com/thecodearcher/aegis/plugins/oauth-generic"
 	oauthgithub "github.com/thecodearcher/aegis/plugins/oauth-github"
 	oauthgoogle "github.com/thecodearcher/aegis/plugins/oauth-google"
-	sessionjwt "github.com/thecodearcher/aegis/plugins/session-jwt"
 	twofactor "github.com/thecodearcher/aegis/plugins/two-factor"
 )
 
@@ -111,7 +111,7 @@ func oidcMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
 }
 
 // buildOAuthOptions returns OAuth plugin options, including generic Discord and Keycloak (discovery) providers when credentials are set.
-func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
+func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
 	opts := []oauth.ConfigOption{
 		oauth.WithProvider(oauthgoogle.New(
 			oauthgoogle.WithClientID(googleClientID),
@@ -123,6 +123,12 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 			oauthgithub.WithClientID(githubClientID),
 			oauthgithub.WithClientSecret(githubClientSecret),
 		)),
+	}
+	if facebookClientID != "" && facebookClientSecret != "" {
+		opts = append(opts, oauth.WithProvider(oauthfacebook.New(
+			oauthfacebook.WithClientID(facebookClientID),
+			oauthfacebook.WithClientSecret(facebookClientSecret),
+		)))
 	}
 	if discordClientID != "" && discordClientSecret != "" {
 		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
@@ -152,6 +158,9 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 			firstName, _ := info.Raw["given_name"].(string)
 			lastName, _ := info.Raw["family_name"].(string)
 			return map[string]any{"first_name": firstName, "last_name": lastName}
+		case "facebook":
+			name, _ := info.Raw["name"].(string)
+			return map[string]any{"first_name": name, "last_name": ""}
 		case "discord":
 			username, _ := info.Raw["username"].(string)
 			return map[string]any{"first_name": username, "last_name": ""}
@@ -176,6 +185,8 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
 	githubClientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
+	facebookClientID := os.Getenv("FACEBOOK_CLIENT_ID")
+	facebookClientSecret := os.Getenv("FACEBOOK_CLIENT_SECRET")
 	discordClientID := os.Getenv("DISCORD_CLIENT_ID")
 	discordClientSecret := os.Getenv("DISCORD_CLIENT_SECRET")
 	keycloakDiscoveryURL := os.Getenv("KEYCLOAK_DISCOVERY_URL") // e.g. https://keycloak.example.com/realms/master/.well-known/openid-configuration
@@ -189,15 +200,15 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 		Database: db,
 		Secret:   []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
 		Plugins: []aegis.Plugin{
-			sessionjwt.New(
-			// sessionjwt.WithRefreshToken(false),
-			// sessionjwt.WithSigningKey([]byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw")),
-			// sessionjwt.WithSigningMethod(jwt.SigningMethodRS512),
-			// sessionjwt.WithAccessTokenDuration(15*time.Minute),
-			// sessionjwt.WithRefreshTokenDuration(7*24*time.Hour),
-			// sessionjwt.WithRefreshTokenRotation(true),
-			// sessionjwt.WithBlacklist(true),
-			),
+			// sessionjwt.New(
+			// // sessionjwt.WithRefreshToken(false),
+			// // sessionjwt.WithSigningKey([]byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw")),
+			// // sessionjwt.WithSigningMethod(jwt.SigningMethodRS512),
+			// // sessionjwt.WithAccessTokenDuration(15*time.Minute),
+			// // sessionjwt.WithRefreshTokenDuration(7*24*time.Hour),
+			// // sessionjwt.WithRefreshTokenRotation(true),
+			// // sessionjwt.WithBlacklist(true),
+			// ),
 
 			credentialpassword.New(
 				credentialpassword.WithRequireEmailVerification(true),
@@ -214,7 +225,7 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(false),
 			),
-			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
+			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
 			twofactor.New(
 				// twofactor.WithCookieExpiration(2*time.Minute),
 				twofactor.WithSecret("aegis_2fa_totp_secret_1234567890"),
@@ -231,7 +242,6 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 					twofactor.WithOTPSendCode(func(ctx context.Context, user *twofactor.UserWithTwoFactor, code string) {
 						fmt.Printf("Sending OTP code to %s\n", user.Email)
 						fmt.Printf("OTP code: %s\n", code)
-
 					}),
 				),
 			),
@@ -254,7 +264,7 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 					// 	return nil, aegis.NewAegisError("lastname is required", http.StatusBadRequest, nil)
 					// }
 					return map[string]any{
-						// "uuid":       "fbcb9690-0879-4595-bf03-09d21646c894",
+						"uuid":       uuid.New().String(),
 						"first_name": ctx.GetBodyValue("firstname"),
 						"last_name":  ctx.GetBodyValue("lastname"),
 						"updated_at": time.Now().Format(time.RFC3339),
