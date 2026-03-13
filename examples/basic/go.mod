@@ -15,6 +15,7 @@ require (
 	github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0-00010101000000-000000000000
 	github.com/thecodearcher/aegis/plugins/oauth-github v0.0.0-00010101000000-000000000000
 	github.com/thecodearcher/aegis/plugins/oauth-google v0.0.0-00010101000000-000000000000
+	github.com/thecodearcher/aegis/plugins/oauth-microsoft v0.0.0
 	github.com/thecodearcher/aegis/plugins/two-factor v0.0.0
 	gorm.io/gorm v1.30.1
 )
@@ -38,6 +39,8 @@ replace github.com/thecodearcher/aegis/plugins/oauth-generic => ../../plugins/oa
 replace github.com/thecodearcher/aegis/plugins/oauth-facebook => ../../plugins/oauth-facebook
 
 replace github.com/thecodearcher/aegis/plugins/oauth-github => ../../plugins/oauth-github
+
+replace github.com/thecodearcher/aegis/plugins/oauth-microsoft => ../../plugins/oauth-microsoft
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect

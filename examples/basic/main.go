@@ -32,6 +32,7 @@ import (
 	oauthgeneric "github.com/thecodearcher/aegis/plugins/oauth-generic"
 	oauthgithub "github.com/thecodearcher/aegis/plugins/oauth-github"
 	oauthgoogle "github.com/thecodearcher/aegis/plugins/oauth-google"
+	oauthmicrosoft "github.com/thecodearcher/aegis/plugins/oauth-microsoft"
 	twofactor "github.com/thecodearcher/aegis/plugins/two-factor"
 )
 
@@ -93,7 +94,7 @@ func oidcMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
 }
 
 // buildOAuthOptions returns OAuth plugin options, including generic Discord and Keycloak (discovery) providers when credentials are set.
-func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
+func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
 	opts := []oauth.ConfigOption{
 		oauth.WithProvider(oauthgoogle.New(
 			oauthgoogle.WithClientID(googleClientID),
@@ -118,6 +119,12 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 			oauthdiscord.WithClientSecret(discordClientSecret),
 		)))
 	}
+	if microsoftClientID != "" && microsoftClientSecret != "" {
+		opts = append(opts, oauth.WithProvider(oauthmicrosoft.New(
+			oauthmicrosoft.WithClientID(microsoftClientID),
+			oauthmicrosoft.WithClientSecret(microsoftClientSecret),
+		)))
+	}
 	if keycloakDiscoveryURL != "" && keycloakClientID != "" && keycloakClientSecret != "" {
 		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
 			oauthgeneric.WithName("keycloak"),
@@ -140,6 +147,9 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 		case "discord":
 			username, _ := info.Raw["username"].(string)
 			return map[string]any{"first_name": username, "last_name": ""}
+		case "microsoft":
+			displayName, _ := info.Raw["displayName"].(string)
+			return map[string]any{"first_name": displayName, "last_name": ""}
 		case "keycloak":
 			name, _ := info.Raw["name"].(string)
 			return map[string]any{"first_name": name, "last_name": ""}
@@ -165,6 +175,8 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 	facebookClientSecret := os.Getenv("FACEBOOK_CLIENT_SECRET")
 	discordClientID := os.Getenv("DISCORD_CLIENT_ID")
 	discordClientSecret := os.Getenv("DISCORD_CLIENT_SECRET")
+	microsoftClientID := os.Getenv("MICROSOFT_CLIENT_ID")
+	microsoftClientSecret := os.Getenv("MICROSOFT_CLIENT_SECRET")
 	keycloakDiscoveryURL := os.Getenv("KEYCLOAK_DISCOVERY_URL") // e.g. https://keycloak.example.com/realms/master/.well-known/openid-configuration
 	keycloakClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 	keycloakClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
@@ -201,7 +213,7 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(false),
 			),
-			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
+			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
 			twofactor.New(
 				// twofactor.WithCookieExpiration(2*time.Minute),
 				twofactor.WithSecret("aegis_2fa_totp_secret_1234567890"),
