@@ -15,6 +15,7 @@ use (
 	./plugins/oauth-facebook
 	./plugins/oauth-microsoft
 	./plugins/oauth-twitter
+	./plugins/oauth-linkedin
 	./plugins/two-factor
 	./plugins/session-jwt
 )
@@ -42,6 +43,8 @@ replace github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0 => ./plugin
 replace github.com/thecodearcher/aegis/plugins/oauth-microsoft v0.0.0 => ./plugins/oauth-microsoft
 
 replace github.com/thecodearcher/aegis/plugins/oauth-twitter v0.0.0 => ./plugins/oauth-twitter
+
+replace github.com/thecodearcher/aegis/plugins/oauth-linkedin v0.0.0 => ./plugins/oauth-linkedin
 
 replace github.com/thecodearcher/aegis/plugins/two-factor v0.0.0 => ./plugins/two-factor
 

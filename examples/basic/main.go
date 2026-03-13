@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -32,6 +33,7 @@ import (
 	oauthgeneric "github.com/thecodearcher/aegis/plugins/oauth-generic"
 	oauthgithub "github.com/thecodearcher/aegis/plugins/oauth-github"
 	oauthgoogle "github.com/thecodearcher/aegis/plugins/oauth-google"
+	oauthlinkedin "github.com/thecodearcher/aegis/plugins/oauth-linkedin"
 	oauthmicrosoft "github.com/thecodearcher/aegis/plugins/oauth-microsoft"
 	oauthtwitter "github.com/thecodearcher/aegis/plugins/oauth-twitter"
 	twofactor "github.com/thecodearcher/aegis/plugins/two-factor"
@@ -95,7 +97,7 @@ func oidcMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
 }
 
 // buildOAuthOptions returns OAuth plugin options, including generic Discord and Keycloak (discovery) providers when credentials are set.
-func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
+func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
 	opts := []oauth.ConfigOption{
 		oauth.WithProvider(oauthgoogle.New(
 			oauthgoogle.WithClientID(googleClientID),
@@ -132,6 +134,12 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 			oauthtwitter.WithClientSecret(twitterClientSecret),
 		)))
 	}
+	if linkedinClientID != "" && linkedinClientSecret != "" {
+		opts = append(opts, oauth.WithProvider(oauthlinkedin.New(
+			oauthlinkedin.WithClientID(linkedinClientID),
+			oauthlinkedin.WithClientSecret(linkedinClientSecret),
+		)))
+	}
 	if keycloakDiscoveryURL != "" && keycloakClientID != "" && keycloakClientSecret != "" {
 		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
 			oauthgeneric.WithName("keycloak"),
@@ -160,6 +168,10 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 		case "twitter":
 			name, _ := info.Raw["name"].(string)
 			return map[string]any{"first_name": name, "last_name": ""}
+		case "linkedin":
+			firstName, _ := info.Raw["given_name"].(string)
+			lastName, _ := info.Raw["family_name"].(string)
+			return map[string]any{"first_name": firstName, "last_name": lastName}
 		case "keycloak":
 			name, _ := info.Raw["name"].(string)
 			return map[string]any{"first_name": name, "last_name": ""}
@@ -189,6 +201,8 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 	microsoftClientSecret := os.Getenv("MICROSOFT_CLIENT_SECRET")
 	twitterClientID := os.Getenv("TWITTER_CLIENT_ID")
 	twitterClientSecret := os.Getenv("TWITTER_CLIENT_SECRET")
+	linkedinClientID := os.Getenv("LINKEDIN_CLIENT_ID")
+	linkedinClientSecret := os.Getenv("LINKEDIN_CLIENT_SECRET")
 	keycloakDiscoveryURL := os.Getenv("KEYCLOAK_DISCOVERY_URL") // e.g. https://keycloak.example.com/realms/master/.well-known/openid-configuration
 	keycloakClientID := os.Getenv("KEYCLOAK_CLIENT_ID")
 	keycloakClientSecret := os.Getenv("KEYCLOAK_CLIENT_SECRET")
@@ -225,7 +239,7 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(false),
 			),
-			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
+			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
 			twofactor.New(
 				// twofactor.WithCookieExpiration(2*time.Minute),
 				twofactor.WithSecret("aegis_2fa_totp_secret_1234567890"),
@@ -484,14 +498,26 @@ func main() {
 	// }),
 
 	r := gin.Default()
-	r.GET("/", func(c *gin.Context) {
+	r.POST("/", func(c *gin.Context) {
 		// session, err := auth.GetSession(c.Request)
 		// if err != nil {
 		// 	c.JSON(500, gin.H{"message": "Failed to get session"})
 		// 	return
 		// }
 		// fmt.Printf("Session: %+v\n", session)
-		http.Redirect(c.Writer, c.Request, "http://localhost:3000", 302)
+		form := url.Values{}
+
+		c.Bind(&form)
+		fmt.Printf("Request: %+v\n", c.Request)
+		fmt.Printf("Request Body: %+v\n", form)
+		fmt.Printf("Request Form: %+v\n", form)
+		fmt.Printf("Request Multipart Form: %+v\n", c.Request.MultipartForm)
+		fmt.Printf("Request URL: %+v\n", c.Request.URL)
+		fmt.Printf("Request Header: %+v\n", c.Request.Header)
+		fmt.Printf("Request Host: %+v\n", c.Request.Host)
+		fmt.Printf("Request Content Length: %+v\n", c.Request.ContentLength)
+		fmt.Printf("Request Transfer Encoding: %+v\n", c.Request.TransferEncoding)
+		http.Redirect(c.Writer, c.Request, "http://localhost:3001", 302)
 	})
 
 	r.Any("/api/auth/*path", func(c *gin.Context) {
