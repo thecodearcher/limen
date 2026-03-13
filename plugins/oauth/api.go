@@ -11,13 +11,13 @@ import (
 type API interface {
 	GetAuthorizationURL(ctx context.Context, providerName string, request *OAuthAuthorizeURLData) (string, string, error)
 
-	ExchangeAuthorizationCodeForTokens(ctx context.Context, provider Provider, state, cookieNonce, code string) (*TokenResponse, map[string]any, error)
+	ExchangeAuthorizationCodeForTokens(ctx context.Context, provider Provider, stateData map[string]any, code string) (*TokenResponse, error)
 
 	GetUserInfoWithTokens(ctx context.Context, provider Provider, token *TokenResponse) (*aegis.OAuthAccountProfile, error)
 
-	HandleOAuthCallback(ctx context.Context, providerName, code, state, cookieNonce string) (*aegis.OAuthAccountProfile, map[string]any, error)
+	HandleOAuthCallback(ctx context.Context, providerName, code, state, cookieNonce string, callbackErr *CallbackError) (*aegis.OAuthAccountProfile, map[string]any, error)
 
-	AuthenticateWithProvider(ctx context.Context, providerName, code, state, cookieNonce string) (*aegis.AuthenticationResult, map[string]any, error)
+	AuthenticateWithProvider(ctx context.Context, providerName, code, state, cookieNonce string, callbackErr *CallbackError) (*aegis.AuthenticationResult, map[string]any, error)
 
 	CreateOrLinkAccount(ctx context.Context, info *aegis.OAuthAccountProfile) (*aegis.AuthenticationResult, error)
 

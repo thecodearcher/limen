@@ -1,9 +1,7 @@
 package oauth
 
 import (
-	"fmt"
 	"net/http"
-	"net/url"
 
 	"github.com/thecodearcher/aegis"
 )
@@ -27,7 +25,6 @@ func (h *oauthHandlers) SignInWithOAuth(w http.ResponseWriter, r *http.Request) 
 		RedirectURI:      r.URL.Query().Get("redirect_uri"),
 		ErrorRedirectURI: r.URL.Query().Get("error_redirect_uri"),
 	}
-
 	url, cookieValue, err := h.plugin.GetAuthorizationURL(r.Context(), providerName, request)
 	if err != nil {
 		h.responder.Error(w, r, err)
@@ -42,6 +39,7 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 	providerName := aegis.GetParam(r, "provider")
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
+	callbackErr := callbackErrorFromQuery(r.URL.Query())
 
 	cookieValue, err := h.plugin.cookies.Get(r, h.plugin.config.cookieName)
 	if err != nil {
@@ -51,7 +49,7 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 
 	h.clearStateCookie(w)
 
-	result, stateData, err := h.plugin.AuthenticateWithProvider(r.Context(), providerName, code, state, cookieValue)
+	result, stateData, err := h.plugin.AuthenticateWithProvider(r.Context(), providerName, code, state, cookieValue, callbackErr)
 	if err != nil {
 		h.handleCallbackResponse(w, r, stateData, nil, nil, err)
 		return
@@ -168,7 +166,7 @@ func (h *oauthHandlers) RefreshAccessToken(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *aegis.AuthenticationResult, sessionResult *aegis.SessionResult, err error) {
-	if h.plugin.config.disableRedirect && (err != nil || stateData == nil) {
+	if (h.plugin.config.disableRedirect && err != nil) || stateData == nil {
 		h.responder.Error(w, r, err)
 		return
 	}
@@ -185,10 +183,26 @@ func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Re
 	}
 
 	if err != nil {
-		redirectURI = fmt.Sprintf("%s?error=%s", redirectURI, url.QueryEscape(err.Error()))
+		redirectURI = h.buildErrorRedirectURL(redirectURI, err)
 	}
 
 	h.responder.RedirectWithSession(w, r, redirectURI, sessionResult)
+}
+
+// buildErrorRedirectURL appends error query parameters to the redirect URL.
+// When the error carries structured OAuth details (code, error_description),
+// those are forwarded as separate params per RFC 6749. Otherwise the error
+// message is placed in a single "error" param.
+func (h *oauthHandlers) buildErrorRedirectURL(redirectURI string, err error) string {
+	ae := aegis.ToAegisError(err)
+	if details, ok := ae.Details().(map[string]string); ok {
+		code := details["code"]
+		if code != "" {
+			return appendOAuthErrorParams(redirectURI, code, details["error_description"])
+		}
+	}
+
+	return appendOAuthErrorParams(redirectURI, ae.Error(), "")
 }
 
 func (h *oauthHandlers) setStateCookie(w http.ResponseWriter, value string) {
