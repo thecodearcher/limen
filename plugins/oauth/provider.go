@@ -38,3 +38,10 @@ type TokenExchanger interface {
 type TokenRefresher interface {
 	RefreshToken(ctx context.Context, refreshToken string) (*TokenResponse, error)
 }
+
+// PKCEEnabledProvider is optional. If a Provider implements it and PKCEEnabled() returns false,
+// the authorization URL is built without code_challenge and the token exchange is
+// performed without code_verifier (for providers like LinkedIn that do not support PKCE).
+type PKCEEnabledProvider interface {
+	PKCEEnabled() bool
+}

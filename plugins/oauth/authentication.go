@@ -30,6 +30,9 @@ func (o *oauthPlugin) constructProviderRedirectURL(provider Provider, config *oa
 }
 
 func (o *oauthPlugin) buildAuthorizationURL(ctx context.Context, provider Provider, stateToken, verifier string) (string, error) {
+	if pkce, ok := provider.(PKCEEnabledProvider); ok && !pkce.PKCEEnabled() {
+		verifier = ""
+	}
 	config, authOpts := o.getProviderConfig(provider)
 	if builder, ok := provider.(AuthorizationURLBuilder); ok {
 		return builder.BuildAuthorizationURL(ctx, stateToken, verifier, config.RedirectURL)
@@ -41,6 +44,9 @@ func (o *oauthPlugin) exchangeCodeForTokens(ctx context.Context, provider Provid
 	config, _ := o.getProviderConfig(provider)
 	if exchanger, ok := provider.(TokenExchanger); ok {
 		return exchanger.ExchangeAuthorizationCode(ctx, code, codeVerifier, config.RedirectURL)
+	}
+	if pkce, ok := provider.(PKCEEnabledProvider); ok && !pkce.PKCEEnabled() {
+		codeVerifier = ""
 	}
 	return ExchangeCode(ctx, config, code, codeVerifier)
 }
