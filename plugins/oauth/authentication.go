@@ -139,7 +139,11 @@ func (o *oauthPlugin) GetUserInfoWithTokens(ctx context.Context, provider Provid
 	}
 
 	if userInfo == nil {
-		return nil, aegis.NewAegisError("provider user info not found", http.StatusNotFound, nil)
+		return nil, aegis.NewAegisError("provider user info not found", http.StatusUnauthorized, nil)
+	}
+
+	if userInfo.Email == "" || userInfo.ID == "" {
+		return nil, aegis.NewAegisError("provider user email or id not found", http.StatusBadRequest, nil)
 	}
 
 	var expiresAt *time.Time
