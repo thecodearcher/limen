@@ -14,6 +14,7 @@ use (
 	./plugins/oauth-discord
 	./plugins/oauth-facebook
 	./plugins/oauth-microsoft
+	./plugins/oauth-spotify
 	./plugins/oauth-twitch
 	./plugins/oauth-twitter
 	./plugins/oauth-linkedin
@@ -42,6 +43,8 @@ replace github.com/thecodearcher/aegis/plugins/oauth-discord v0.0.0 => ./plugins
 replace github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0 => ./plugins/oauth-facebook
 
 replace github.com/thecodearcher/aegis/plugins/oauth-microsoft v0.0.0 => ./plugins/oauth-microsoft
+
+replace github.com/thecodearcher/aegis/plugins/oauth-spotify v0.0.0 => ./plugins/oauth-spotify
 
 replace github.com/thecodearcher/aegis/plugins/oauth-twitch v0.0.0 => ./plugins/oauth-twitch
 
