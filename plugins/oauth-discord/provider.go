@@ -3,7 +3,6 @@ package oauthdiscord
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -60,23 +59,8 @@ func (d *discordProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOptio
 }
 
 func (d *discordProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		"https://discord.com/api/users/@me", nil)
+	raw, err := oauth.FetchUserInfoJSON(ctx, d.httpClient, "discord", "https://discord.com/api/users/@me", token.AccessToken, nil)
 	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-	resp, err := d.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("discord: user info request failed: %s", resp.Status)
-	}
-
-	var raw map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, err
 	}
 

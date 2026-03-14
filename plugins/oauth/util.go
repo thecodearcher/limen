@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -82,6 +83,34 @@ func RefreshToken(ctx context.Context, config *oauth2.Config, refreshToken strin
 		resp.Scope = scope
 	}
 	return resp, nil
+}
+
+// FetchUserInfoJSON performs a GET request to the given URL with a Bearer token
+// and decodes the JSON response into a map. Shared by REST-based OAuth providers.
+func FetchUserInfoJSON(ctx context.Context, client *http.Client, providerName, url, accessToken string, extraHeaders map[string]string) (map[string]any, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	for k, v := range extraHeaders {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%s: user info request failed: %s", providerName, resp.Status)
+	}
+
+	var raw map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
 }
 
 // DecodeIDTokenClaims decodes the payload segment of a JWT without verification.

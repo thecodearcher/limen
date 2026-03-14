@@ -61,26 +61,13 @@ func (g *githubProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOption
 }
 
 func (g *githubProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user", nil)
+	raw, err := oauth.FetchUserInfoJSON(ctx, g.httpClient, "github", "https://api.github.com/user", token.AccessToken, map[string]string{
+		"Accept": "application/json",
+	})
 	if err != nil {
 		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-	req.Header.Set("Accept", "application/json")
-	resp, err := g.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("user request failed: %s", resp.Status)
 	}
 
-	raw := map[string]any{}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, err
-	}
-	// GitHub may not return email in /user; fetch from /user/emails if needed
 	email := raw["email"]
 	if email == nil || email == "" {
 		email, _ = g.fetchPrimaryEmail(ctx, token.AccessToken)

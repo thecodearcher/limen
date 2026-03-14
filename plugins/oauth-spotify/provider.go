@@ -3,9 +3,7 @@ package oauthspotify
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -64,23 +62,8 @@ func (s *spotifyProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOptio
 }
 
 func (s *spotifyProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.spotify.com/v1/me", nil)
+	raw, err := oauth.FetchUserInfoJSON(ctx, s.httpClient, "spotify", "https://api.spotify.com/v1/me", token.AccessToken, nil)
 	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("spotify: user info request failed: %s", resp.Status)
-	}
-
-	var raw map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return nil, err
 	}
 

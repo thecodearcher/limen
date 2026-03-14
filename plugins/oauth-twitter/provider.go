@@ -3,9 +3,7 @@ package oauthtwitter
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -61,43 +59,28 @@ func (t *twitterProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOptio
 }
 
 func (t *twitterProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResponse) (*oauth.ProviderUserInfo, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		"https://api.x.com/2/users/me?user.fields=profile_image_url,confirmed_email", nil)
+	raw, err := oauth.FetchUserInfoJSON(ctx, t.httpClient, "twitter", "https://api.x.com/2/users/me?user.fields=profile_image_url,confirmed_email", token.AccessToken, nil)
 	if err != nil {
 		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token.AccessToken)
-	resp, err := t.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("twitter: user info request failed: %s", resp.Status)
 	}
 
-	var body struct {
-		Data map[string]any `json:"data"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
-		return nil, err
-	}
-	if body.Data == nil {
+	data, _ := raw["data"].(map[string]any)
+	if data == nil {
 		return nil, errors.New("twitter: empty data in user info response")
 	}
 
-	id, _ := body.Data["id"].(string)
+	id, _ := data["id"].(string)
 	if id == "" {
 		return nil, errors.New("twitter: missing id in user info response")
 	}
 
-	name, _ := body.Data["name"].(string)
-	username, _ := body.Data["username"].(string)
+	name, _ := data["name"].(string)
+	username, _ := data["username"].(string)
 	if name == "" {
 		name = username
 	}
-	avatarURL, _ := body.Data["profile_image_url"].(string)
-	email, _ := body.Data["confirmed_email"].(string)
+	avatarURL, _ := data["profile_image_url"].(string)
+	email, _ := data["confirmed_email"].(string)
 
 	if email == "" {
 		return nil, errors.New("twitter: email is required for authentication; enable 'Request email from users' in your X app settings and ensure the user has a confirmed email")
@@ -109,6 +92,6 @@ func (t *twitterProvider) GetUserInfo(ctx context.Context, token *oauth.TokenRes
 		EmailVerified: true,
 		Name:          name,
 		AvatarURL:     avatarURL,
-		Raw:           body.Data,
+		Raw:           data,
 	}, nil
 }
