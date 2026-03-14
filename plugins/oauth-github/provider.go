@@ -12,8 +12,6 @@ import (
 	"github.com/thecodearcher/aegis/plugins/oauth"
 )
 
-const providerName = "github"
-
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
 		scopes: []string{"read:user", "user:email"},
@@ -51,7 +49,7 @@ func newGitHubProvider(cfg *config) *githubProvider {
 }
 
 func (g *githubProvider) Name() string {
-	return providerName
+	return "github"
 }
 
 func (g *githubProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOption) {

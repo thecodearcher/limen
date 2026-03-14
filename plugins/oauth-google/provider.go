@@ -15,8 +15,6 @@ import (
 	"github.com/thecodearcher/aegis/plugins/oauth"
 )
 
-const providerName = "google"
-
 // New creates a Google OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
@@ -49,7 +47,7 @@ func newGoogleProvider(cfg *config) *googleProvider {
 }
 
 func (g *googleProvider) Name() string {
-	return providerName
+	return "google"
 }
 
 func (g *googleProvider) OAuth2Config() (*oauth2.Config, []oauth2.AuthCodeOption) {
