@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type otp struct {
@@ -19,7 +19,7 @@ func newDefaultOTP(plugin *twoFactorPlugin, config *otpConfig) *otp {
 	}
 }
 
-func (o *otp) registerRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+func (o *otp) registerRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	handlers := newOTPHandlers(o, httpCore.Responder)
 	routeBuilder.POST("/otp/send", "otp-send", handlers.SendCode)
 	routeBuilder.ProtectedPOST("/otp/verify", "otp-verify", handlers.VerifyCode)
@@ -59,7 +59,7 @@ func (o *otp) Verify(ctx context.Context, userID any, code string) error {
 	}
 
 	if err := o.plugin.core.DBAction.VerifyVerificationToken(ctx, code, otpAction, user.Email); err != nil {
-		if errors.Is(err, aegis.ErrVerificationTokenInvalid) {
+		if errors.Is(err, limen.ErrVerificationTokenInvalid) {
 			return ErrInvalidOTPCode
 		}
 		return err

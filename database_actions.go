@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 
 // DatabaseActionHelper provides common database operations for plugins.
 type DatabaseActionHelper struct {
-	core *AegisCore
+	core *LimenCore
 }
 
-func newCommonDatabaseActionsHelper(core *AegisCore) *DatabaseActionHelper {
+func newCommonDatabaseActionsHelper(core *LimenCore) *DatabaseActionHelper {
 	return &DatabaseActionHelper{core: core}
 }
 

@@ -6,16 +6,16 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type twoFactorHandlers struct {
 	plugin    *twoFactorPlugin
-	responder *aegis.Responder
-	httpCore  *aegis.AegisHTTPCore
+	responder *limen.Responder
+	httpCore  *limen.LimenHTTPCore
 }
 
-func newTwoFactorHandlers(plugin *twoFactorPlugin, responder *aegis.Responder, httpCore *aegis.AegisHTTPCore) *twoFactorHandlers {
+func newTwoFactorHandlers(plugin *twoFactorPlugin, responder *limen.Responder, httpCore *limen.LimenHTTPCore) *twoFactorHandlers {
 	return &twoFactorHandlers{
 		plugin:    plugin,
 		responder: responder,
@@ -24,7 +24,7 @@ func newTwoFactorHandlers(plugin *twoFactorPlugin, responder *aegis.Responder, h
 }
 
 func (a *twoFactorHandlers) InitiateTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, a.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("password", data["password"])
 	})
 
@@ -32,7 +32,7 @@ func (a *twoFactorHandlers) InitiateTwoFactorSetup(w http.ResponseWriter, r *htt
 		return
 	}
 
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		a.responder.Error(w, r, err)
 		return
@@ -49,7 +49,7 @@ func (a *twoFactorHandlers) InitiateTwoFactorSetup(w http.ResponseWriter, r *htt
 }
 
 func (a *twoFactorHandlers) FinalizeTwoFactorSetup(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, a.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("code", data["code"])
 	})
 
@@ -57,7 +57,7 @@ func (a *twoFactorHandlers) FinalizeTwoFactorSetup(w http.ResponseWriter, r *htt
 		return
 	}
 
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		a.responder.Error(w, r, err)
 		return
@@ -77,7 +77,7 @@ func (a *twoFactorHandlers) FinalizeTwoFactorSetup(w http.ResponseWriter, r *htt
 
 // Disable disables 2FA for the current user
 func (a *twoFactorHandlers) Disable(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, a.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("password", data["password"])
 	})
 
@@ -85,7 +85,7 @@ func (a *twoFactorHandlers) Disable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		a.responder.Error(w, r, err)
 		return
@@ -104,7 +104,7 @@ func (a *twoFactorHandlers) Disable(w http.ResponseWriter, r *http.Request) {
 
 // VerifyLoginWithTwoFactor verifies the 2FA code and completes the login process
 func (a *twoFactorHandlers) VerifyLoginWithTwoFactor(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, a.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, a.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("code", data["code"]).
 			Custom("method", func() error {
 				allowedMethods := []string{string(TwoFactorMethodOTP), string(TwoFactorMethodTOTP)}

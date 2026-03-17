@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 func generateOpaqueToken() string {
@@ -43,14 +43,14 @@ func (p *sessionJWTPlugin) extractToken(r *http.Request) (string, error) {
 		}
 	}
 
-	return "", aegis.ErrSessionNotFound
+	return "", limen.ErrSessionNotFound
 }
 
 // extractRefreshToken reads the refresh token from the JSON request body
 // and parses the token.family encoded value.
 func (p *sessionJWTPlugin) extractRefreshToken(r *http.Request) (token string, family string, err error) {
 	var raw string
-	if body := aegis.GetJSONBody(r); body != nil {
+	if body := limen.GetJSONBody(r); body != nil {
 		if val, ok := body["refreshToken"].(string); ok {
 			raw = strings.TrimSpace(val)
 		}

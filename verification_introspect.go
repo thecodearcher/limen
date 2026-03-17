@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 func (v *VerificationSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	fields := v.getDefaultColumns(config)

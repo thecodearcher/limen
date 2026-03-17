@@ -22,30 +22,30 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/thecodearcher/aegis"
-	gormadapter "github.com/thecodearcher/aegis/adapters/gorm"
-	sqladapter "github.com/thecodearcher/aegis/adapters/sql"
-	"github.com/thecodearcher/aegis/examples/basic/pkg"
-	credentialpassword "github.com/thecodearcher/aegis/plugins/credential-password"
-	"github.com/thecodearcher/aegis/plugins/oauth"
-	oauthdiscord "github.com/thecodearcher/aegis/plugins/oauth-discord"
-	oauthfacebook "github.com/thecodearcher/aegis/plugins/oauth-facebook"
-	oauthgeneric "github.com/thecodearcher/aegis/plugins/oauth-generic"
-	oauthgithub "github.com/thecodearcher/aegis/plugins/oauth-github"
-	oauthgoogle "github.com/thecodearcher/aegis/plugins/oauth-google"
-	oauthlinkedin "github.com/thecodearcher/aegis/plugins/oauth-linkedin"
-	oauthmicrosoft "github.com/thecodearcher/aegis/plugins/oauth-microsoft"
-	oauthspotify "github.com/thecodearcher/aegis/plugins/oauth-spotify"
-	oauthtwitch "github.com/thecodearcher/aegis/plugins/oauth-twitch"
-	oauthtwitter "github.com/thecodearcher/aegis/plugins/oauth-twitter"
-	twofactor "github.com/thecodearcher/aegis/plugins/two-factor"
+	"github.com/thecodearcher/limen"
+	gormadapter "github.com/thecodearcher/limen/adapters/gorm"
+	sqladapter "github.com/thecodearcher/limen/adapters/sql"
+	"github.com/thecodearcher/limen/examples/basic/pkg"
+	credentialpassword "github.com/thecodearcher/limen/plugins/credential-password"
+	"github.com/thecodearcher/limen/plugins/oauth"
+	oauthdiscord "github.com/thecodearcher/limen/plugins/oauth-discord"
+	oauthfacebook "github.com/thecodearcher/limen/plugins/oauth-facebook"
+	oauthgeneric "github.com/thecodearcher/limen/plugins/oauth-generic"
+	oauthgithub "github.com/thecodearcher/limen/plugins/oauth-github"
+	oauthgoogle "github.com/thecodearcher/limen/plugins/oauth-google"
+	oauthlinkedin "github.com/thecodearcher/limen/plugins/oauth-linkedin"
+	oauthmicrosoft "github.com/thecodearcher/limen/plugins/oauth-microsoft"
+	oauthspotify "github.com/thecodearcher/limen/plugins/oauth-spotify"
+	oauthtwitch "github.com/thecodearcher/limen/plugins/oauth-twitch"
+	oauthtwitter "github.com/thecodearcher/limen/plugins/oauth-twitter"
+	twofactor "github.com/thecodearcher/limen/plugins/two-factor"
 )
 
 type UUIDGenerator struct {
 }
 
-func (g *UUIDGenerator) GetColumnType() aegis.ColumnType {
-	return aegis.ColumnTypeUUID
+func (g *UUIDGenerator) GetColumnType() limen.ColumnType {
+	return limen.ColumnTypeUUID
 }
 
 func (g *UUIDGenerator) Generate(ctx context.Context) (any, error) {
@@ -164,7 +164,7 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 			oauthgeneric.WithMapUserInfo(oidcMapUserInfo),
 		)))
 	}
-	opts = append(opts, oauth.WithMapProfileToUser(func(info *aegis.OAuthAccountProfile) map[string]any {
+	opts = append(opts, oauth.WithMapProfileToUser(func(info *limen.OAuthAccountProfile) map[string]any {
 		fmt.Printf("Mapping OAuth profile to user additional fields: %+v\n", info)
 		switch info.Provider {
 		case "google":
@@ -205,8 +205,8 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 	return opts
 }
 
-// buildConfig builds the aegis configuration
-func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
+// buildConfig builds the limen configuration
+func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Failed to load .env file: %v", err)
@@ -235,11 +235,11 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 
 	fmt.Printf("Google Client ID: %s\n", googleClientID)
 
-	return &aegis.Config{
+	return &limen.Config{
 		BaseURL:  "http://localhost:8080",
 		Database: db,
 		Secret:   []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
-		Plugins: []aegis.Plugin{
+		Plugins: []limen.Plugin{
 			// sessionjwt.New(
 			// // sessionjwt.WithRefreshToken(false),
 			// // sessionjwt.WithSigningKey([]byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw")),
@@ -268,9 +268,9 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, spotifyClientID, spotifyClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
 			twofactor.New(
 				// twofactor.WithCookieExpiration(2*time.Minute),
-				twofactor.WithSecret("aegis_2fa_totp_secret_1234567890"),
+				twofactor.WithSecret("limen_2fa_totp_secret_1234567890"),
 				twofactor.WithTOTP(
-					twofactor.WithTOTPIssuer("Aegis"),
+					twofactor.WithTOTPIssuer("Limen"),
 				),
 				twofactor.WithBackupCodes(
 					twofactor.WithBackupCodesCount(20),
@@ -286,22 +286,22 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				),
 			),
 		},
-		CLI: &aegis.CLIConfig{
+		CLI: &limen.CLIConfig{
 			Enabled: true,
 		},
-		Schema: aegis.NewDefaultSchemaConfig(
-			// aegis.WithSchemaIDGenerator(&UUIDGenerator{}),
-			aegis.WithSchemaUser(
-				// aegis.WithUserTableName("usersz_from_personal_user_schema"),
-				// aegis.WithUserFieldID("id_from_personal"),
-				aegis.WithUserFieldEmailVerifiedAt("email_verified"),
-				// aegis.WithUserFieldEmail("email_from_personal"),
-				aegis.WithUserAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, error) {
+		Schema: limen.NewDefaultSchemaConfig(
+			// limen.WithSchemaIDGenerator(&UUIDGenerator{}),
+			limen.WithSchemaUser(
+				// limen.WithUserTableName("usersz_from_personal_user_schema"),
+				// limen.WithUserFieldID("id_from_personal"),
+				limen.WithUserFieldEmailVerifiedAt("email_verified"),
+				// limen.WithUserFieldEmail("email_from_personal"),
+				limen.WithUserAdditionalFields(func(ctx *limen.AdditionalFieldsContext) (map[string]any, error) {
 					// if ctx.IsEmpty("firstname") {
-					// 	return nil, aegis.NewAegisError("firstname is required", http.StatusBadRequest, nil)
+					// 	return nil, limen.NewLimenError("firstname is required", http.StatusBadRequest, nil)
 					// }
 					// if ctx.IsEmpty("lastname") {
-					// 	return nil, aegis.NewAegisError("lastname is required", http.StatusBadRequest, nil)
+					// 	return nil, limen.NewLimenError("lastname is required", http.StatusBadRequest, nil)
 					// }
 					return map[string]any{
 						"uuid":       uuid.New().String(),
@@ -311,7 +311,7 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 					}, nil
 				}),
 
-				// aegis.WithUserSerializer(func(data *aegis.User) map[string]any {
+				// limen.WithUserSerializer(func(data *limen.User) map[string]any {
 				// 	return map[string]any{
 				// 		"id":                data.ID,
 				// 		"email":             data.Email,
@@ -320,8 +320,8 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				// 	}
 				// }),
 			),
-			aegis.WithSchemaVerification(
-				aegis.WithVerificationAdditionalFields(func(ctx *aegis.AdditionalFieldsContext) (map[string]any, error) {
+			limen.WithSchemaVerification(
+				limen.WithVerificationAdditionalFields(func(ctx *limen.AdditionalFieldsContext) (map[string]any, error) {
 					return map[string]any{
 						// "uuid":       uuid.New().String(),
 						"created_at": time.Now().Format(time.RFC3339),
@@ -331,11 +331,11 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 			),
 			// Example: Customize plugin schema table and field names
 
-			aegis.WithPluginSchema(aegis.PluginCredentialPassword, "something_map_name2",
-				aegis.WithPluginFieldName("name", "name_from_plugin"),
+			limen.WithPluginSchema(limen.PluginCredentialPassword, "something_map_name2",
+				limen.WithPluginFieldName("name", "name_from_plugin"),
 			),
 		),
-		// Schema: aegis.SchemaConfig{
+		// Schema: limen.SchemaConfig{
 		// 	// AdditionalFields: func(ctx *schemas.AdditionalFieldsContext) map[string]any {
 		// 	// 	return map[string]any{
 		// 	// 		"uuid":       uuid.New().String(),
@@ -343,11 +343,11 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 		// 	// 		"updated_at": time.Now(),
 		// 	// 	}
 		// 	// },
-		// 	User: aegis.UserSchema{
-		// 		Fields: aegis.UserFields{
+		// 	User: limen.UserSchema{
+		// 		Fields: limen.UserFields{
 		// 			EmailVerifiedAt: "email_verified",
 		// 		},
-		// 		AdditionalFields: func(ctx *aegis.AdditionalFieldsContext) (map[string]any, *aegis.AegisError) {
+		// 		AdditionalFields: func(ctx *limen.AdditionalFieldsContext) (map[string]any, *limen.LimenError) {
 		// 			return map[string]any{
 		// 				"uuid":       uuid.New().String(),
 		// 				"created_at": time.Now().Format(time.RFC3339),
@@ -358,20 +358,20 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 		// 		},
 		// 	},
 		// },
-		Session: aegis.NewDefaultSessionConfig(
-			// aegis.WithSessionStoreType(aegis.SessionStoreTypeMemory),
-			// aegis.WithSessionStrategy(aegis.SessionStrategyServerSide),
-			aegis.WithSessionUpdateAge(10 * time.Second),
+		Session: limen.NewDefaultSessionConfig(
+			// limen.WithSessionStoreType(limen.SessionStoreTypeMemory),
+			// limen.WithSessionStrategy(limen.SessionStrategyServerSide),
+			limen.WithSessionUpdateAge(10 * time.Second),
 		),
-		HTTP: aegis.NewDefaultHTTPConfig(
-			aegis.WithHTTPBasePath("/api/auth"),
-			aegis.WithHTTPSessionCookieName("session"),
-			aegis.WithHTTPCookieSecure(false),
-			aegis.WithHTTPRateLimiter(aegis.WithRateLimiterDisableForPaths("/me", "/signin/email")),
+		HTTP: limen.NewDefaultHTTPConfig(
+			limen.WithHTTPBasePath("/api/auth"),
+			limen.WithHTTPSessionCookieName("session"),
+			limen.WithHTTPCookieSecure(false),
+			limen.WithHTTPRateLimiter(limen.WithRateLimiterDisableForPaths("/me", "/signin/email")),
 		
 
-			aegis.WithHTTPSessionTransformer(sessionTransformer),
-			aegis.WithHTTPTrustedOrigins([]string{
+			limen.WithHTTPSessionTransformer(sessionTransformer),
+			limen.WithHTTPTrustedOrigins([]string{
 				"*",
 				"http://localhost:8080",
 				"*.localhost:3000", "http://localhost:3000",
@@ -383,30 +383,30 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				"https://*.example.com",
 				"http://*.dev.example.com",
 			}),
-			aegis.WithHTTPHooks(&aegis.Hooks{
-				Before: []*aegis.Hook{
+			limen.WithHTTPHooks(&limen.Hooks{
+				Before: []*limen.Hook{
 					{
-						PathMatcher: func(ctx *aegis.HookContext) bool {
+						PathMatcher: func(ctx *limen.HookContext) bool {
 							return true
 						},
-						Run: func(ctx *aegis.HookContext) bool {
+						Run: func(ctx *limen.HookContext) bool {
 							fmt.Printf("Before request %s %s\n", ctx.Method(), ctx.Path())
 							fmt.Printf("Before request route pattern: %+v\n", ctx.RoutePattern())
 							return true
 						},
 					},
 					{
-						PathMatcher: func(ctx *aegis.HookContext) bool {
+						PathMatcher: func(ctx *limen.HookContext) bool {
 							return ctx.RouteID() == "signup"
 						},
-						Run: func(ctx *aegis.HookContext) bool {
+						Run: func(ctx *limen.HookContext) bool {
 							email, ok := ctx.GetJSONBodyValue("email").(string)
 							if !ok {
 								return true
 							}
 
 							if !strings.Contains(email, "@example.com") {
-								ctx.WriteErrorResponse(aegis.NewAegisError("email domain not allowed", http.StatusBadRequest, nil))
+								ctx.WriteErrorResponse(limen.NewLimenError("email domain not allowed", http.StatusBadRequest, nil))
 								return false
 							}
 
@@ -416,9 +416,9 @@ func buildConfig(db aegis.DatabaseAdapter) *aegis.Config {
 				},
 			}),
 		),
-		// 	aegis.WithRateLimiterWindow(time.Minute),
+		// 	limen.WithRateLimiterWindow(time.Minute),
 
-		// aegis.WithRateLimiterStore(aegis.RateLimiterStoreTypeDatabase),
+		// limen.WithRateLimiterStore(limen.RateLimiterStoreTypeDatabase),
 	}
 }
 
@@ -447,21 +447,21 @@ func (l *slogger) LogQuery(ctx context.Context, query string, args any, duration
 	}
 }
 
-// Example showing basic usage of the aegis library
+// Example showing basic usage of the limen library
 func main() {
 	fmt.Println(pkg.SomeShi())
-	fmt.Println("Aegis Authentication Library - Basic Example")
+	fmt.Println("Limen Authentication Library - Basic Example")
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		"localhost",
 		"root",
 		"root",
-		"aegis",
+		"limen",
 		"5432",
 	)
 
 	gormdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
 
-	// mysqlDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", "root", "", "localhost", "3306", "aegis")
+	// mysqlDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", "root", "", "localhost", "3306", "limen")
 	// db, err := sql.Open("mysql", mysqlDSN)
 	if err != nil {
 		log.Fatalf("Failed to open database: %v", err)
@@ -472,9 +472,9 @@ func main() {
 	// sqldbAdapter := sqladapter.NewMySQL(db).WithLogger(&logger{})
 	config := buildConfig(gormadapter.New(gormdb))
 
-	auth, err := aegis.New(config)
+	auth, err := limen.New(config)
 	if err != nil {
-		log.Fatalf("Failed to create aegis: %v", err)
+		log.Fatalf("Failed to create limen: %v", err)
 	}
 
 	// Type-safe plugin access via Use() -- chainable, panics if plugin not registered.
@@ -487,14 +487,14 @@ func main() {
 	//   twofactor.Use(auth).InitiateTwoFactorSetup(ctx, user, "password")
 	//
 	// Safe variant (returns bool instead of panicking):
-	//   oauthAPI, ok := aegis.UsePlugin[oauth.API](auth, aegis.PluginOAuth)
+	//   oauthAPI, ok := limen.UsePlugin[oauth.API](auth, limen.PluginOAuth)
 	_ = credentialpassword.Use(auth)
 	_ = oauth.Use(auth)
 	_ = twofactor.Use(auth)
 
 	handler := auth.Handler()
 
-	// schemas, err := aegis.DiscoverAllSchemasFromConfig(config)
+	// schemas, err := limen.DiscoverAllSchemasFromConfig(config)
 	// if err != nil {
 	// 	log.Fatalf("Failed to discover all schemas: %v", err)
 	// }
@@ -502,12 +502,12 @@ func main() {
 	// fmt.Printf("Schemas: %+v\n", schemas)
 	// copyConfig := &config
 
-	// migrations, err := aegis.GenerateMigrations(copyConfig, adapter.NewMigrationGenerator("postgres"))
+	// migrations, err := limen.GenerateMigrations(copyConfig, adapter.NewMigrationGenerator("postgres"))
 	// if err != nil {
 	// 	log.Fatalf("Failed to generate migrations: %v", err)
 	// }
 	// fmt.Printf("Migrations: %+v\n", migrations)
-	// code, err := aegis.GenerateGoStructsFromConfig(config, aegis.GenerateOptions{
+	// code, err := limen.GenerateGoStructsFromConfig(config, limen.GenerateOptions{
 	// 	PackageName: "models",
 	// 	Tags:        []string{"json", "gorm"},
 	// })
@@ -555,7 +555,7 @@ func main() {
 
 }
 
-func sessionTransformer(user map[string]any, sessionResult *aegis.SessionResult) (map[string]any, error) {
+func sessionTransformer(user map[string]any, sessionResult *limen.SessionResult) (map[string]any, error) {
 	payload := map[string]any{
 		"user": user,
 	}

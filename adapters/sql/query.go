@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
-func (a *Adapter) Create(ctx context.Context, tableName aegis.SchemaTableName, data map[string]any) error {
+func (a *Adapter) Create(ctx context.Context, tableName limen.SchemaTableName, data map[string]any) error {
 	if len(data) == 0 {
 		return fmt.Errorf("create: no data")
 	}
@@ -32,7 +32,7 @@ func (a *Adapter) Create(ctx context.Context, tableName aegis.SchemaTableName, d
 	return err
 }
 
-func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, orderBy []aegis.OrderBy) (map[string]any, error) {
+func (a *Adapter) FindOne(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where, orderBy []limen.OrderBy) (map[string]any, error) {
 	whereSQL, args := a.buildWhere(conditions)
 	query := "SELECT * FROM " + a.quoteIdent(string(tableName))
 	if whereSQL != "" {
@@ -52,7 +52,7 @@ func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, 
 	dest := make(map[string]any)
 	err := row.MapScan(dest)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, aegis.ErrRecordNotFound
+		return nil, limen.ErrRecordNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, 
 	return dest, nil
 }
 
-func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, options *aegis.QueryOptions) ([]map[string]any, error) {
+func (a *Adapter) FindMany(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where, options *limen.QueryOptions) ([]map[string]any, error) {
 	whereSQL, args := a.buildWhere(conditions)
 	query := "SELECT * FROM " + a.quoteIdent(string(tableName))
 	if whereSQL != "" {
@@ -104,7 +104,7 @@ func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName,
 	return results, rows.Err()
 }
 
-func (a *Adapter) Update(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, updates map[string]any) error {
+func (a *Adapter) Update(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where, updates map[string]any) error {
 	if len(updates) == 0 {
 		return nil
 	}
@@ -126,7 +126,7 @@ func (a *Adapter) Update(ctx context.Context, tableName aegis.SchemaTableName, c
 	return err
 }
 
-func (a *Adapter) Delete(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) error {
+func (a *Adapter) Delete(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where) error {
 	if len(conditions) == 0 {
 		return fmt.Errorf("delete: conditions required to prevent accidental table-wide delete")
 	}
@@ -137,7 +137,7 @@ func (a *Adapter) Delete(ctx context.Context, tableName aegis.SchemaTableName, c
 	return err
 }
 
-func (a *Adapter) Exists(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (bool, error) {
+func (a *Adapter) Exists(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where) (bool, error) {
 	whereSQL, args := a.buildWhere(conditions)
 	query := "SELECT 1 FROM " + a.quoteIdent(string(tableName))
 	if whereSQL != "" {
@@ -157,7 +157,7 @@ func (a *Adapter) Exists(ctx context.Context, tableName aegis.SchemaTableName, c
 	return true, nil
 }
 
-func (a *Adapter) Count(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (int64, error) {
+func (a *Adapter) Count(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where) (int64, error) {
 	whereSQL, args := a.buildWhere(conditions)
 	query := "SELECT COUNT(*) FROM " + a.quoteIdent(string(tableName))
 	if whereSQL != "" {

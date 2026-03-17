@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // RequestEmailVerification requests an email verification for the given user
 // and sends the verification email if shouldSendEmail is true and the send function is configured.
-func (p *credentialPasswordPlugin) RequestEmailVerification(ctx context.Context, user *aegis.User, shouldSendEmail bool) (*aegis.Verification, error) {
+func (p *credentialPasswordPlugin) RequestEmailVerification(ctx context.Context, user *limen.User, shouldSendEmail bool) (*limen.Verification, error) {
 	user, err := p.dbAction.FindUserByEmail(ctx, user.Email)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (p *credentialPasswordPlugin) RequestEmailVerification(ctx context.Context,
 
 // CreateEmailVerification creates a new email verification token for the given user.
 // Returns a Verification object containing the verification token.
-func (p *credentialPasswordPlugin) CreateEmailVerification(ctx context.Context, user *aegis.User) (*aegis.Verification, error) {
+func (p *credentialPasswordPlugin) CreateEmailVerification(ctx context.Context, user *limen.User) (*limen.Verification, error) {
 	token, err := p.generateVerificationToken(user)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (p *credentialPasswordPlugin) CreateEmailVerification(ctx context.Context, 
 }
 
 // SendVerificationEmail sends the verification email if the send function is configured.
-func (p *credentialPasswordPlugin) SendVerificationEmail(ctx context.Context, user *aegis.User, verification *aegis.Verification) {
+func (p *credentialPasswordPlugin) SendVerificationEmail(ctx context.Context, user *limen.User, verification *limen.Verification) {
 	if p.config.sendVerificationEmail != nil {
 		p.config.sendVerificationEmail(user.Email, verification.Value)
 	}
@@ -59,16 +59,16 @@ func (p *credentialPasswordPlugin) VerifyEmail(ctx context.Context, token string
 		return ErrResetTokenInvalid
 	}
 
-	action, identifier := aegis.ParseVerificationAction(verification.Subject)
+	action, identifier := limen.ParseVerificationAction(verification.Subject)
 	if action != EmailVerificationAction {
 		return ErrResetTokenInvalid
 	}
 
 	now := time.Now()
 	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
-		if err := p.dbAction.UpdateUser(ctx, &aegis.User{EmailVerifiedAt: &now},
-			[]aegis.Where{
-				aegis.Eq(p.userSchema.GetEmailField(), identifier),
+		if err := p.dbAction.UpdateUser(ctx, &limen.User{EmailVerifiedAt: &now},
+			[]limen.Where{
+				limen.Eq(p.userSchema.GetEmailField(), identifier),
 			}); err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func (p *credentialPasswordPlugin) VerifyEmail(ctx context.Context, token string
 
 // generateVerificationToken generates a cryptographically secure verification token.
 // Uses the custom token generator if configured, otherwise generates a random 32-byte token.
-func (p *credentialPasswordPlugin) generateVerificationToken(user *aegis.User) (string, error) {
+func (p *credentialPasswordPlugin) generateVerificationToken(user *limen.User) (string, error) {
 	if p.config.generateResetToken != nil {
 		return p.config.generateResetToken(user)
 	}

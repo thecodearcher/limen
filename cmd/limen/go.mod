@@ -1,10 +1,10 @@
-module github.com/thecodearcher/aegis/cmd/aegis
+module github.com/thecodearcher/limen/cmd/limen
 
 go 1.24.0
 
-replace github.com/thecodearcher/aegis => ../../
+replace github.com/thecodearcher/limen => ../../
 
-require github.com/thecodearcher/aegis v0.0.0
+require github.com/thecodearcher/limen v0.0.0
 
 require (
 	github.com/go-sql-driver/mysql v1.8.1

@@ -5,23 +5,23 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // API is the public programmatic interface for the session-jwt plugin.
 type API interface {
 	// GenerateAccessToken creates a signed JWT for the given user and
 	// returns the token string along with its unique JTI.
-	GenerateAccessToken(user *aegis.User) (token string, jti string, err error)
+	GenerateAccessToken(user *limen.User) (token string, jti string, err error)
 
 	// VerifyAccessToken parses and validates a JWT string, returning the
 	// decoded claims on success.
-	VerifyAccessToken(tokenString string) (*AegisClaims, error)
+	VerifyAccessToken(tokenString string) (*LimenClaims, error)
 
 	// RefreshAccessToken extracts the refresh token from the request body,
 	// validates it, and returns a new session result with a fresh JWT and
 	// (if rotation is enabled) a new refresh token.
-	RefreshAccessToken(r *http.Request) (*aegis.SessionResult, *aegis.User, error)
+	RefreshAccessToken(r *http.Request) (*limen.SessionResult, *limen.User, error)
 
 	// CreateRefreshToken stores a new opaque refresh token linked to the
 	// given user and JWT ID. Pass nil for expiresAt to use the configured
@@ -69,6 +69,6 @@ type API interface {
 
 // Use returns a type-safe API for the session-jwt plugin.
 // Panics if the plugin was not registered in Config.Plugins.
-func Use(a *aegis.Aegis) API {
-	return aegis.Use[API](a, aegis.PluginSessionJWT)
+func Use(a *limen.Limen) API {
+	return limen.Use[API](a, limen.PluginSessionJWT)
 }

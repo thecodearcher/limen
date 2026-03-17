@@ -1,4 +1,4 @@
-module github.com/thecodearcher/aegis/plugins/session-jwt
+module github.com/thecodearcher/limen/plugins/session-jwt
 
 go 1.24.0
 

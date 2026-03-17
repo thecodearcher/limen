@@ -1,9 +1,9 @@
-module github.com/thecodearcher/aegis/adapters/gorm
+module github.com/thecodearcher/limen/adapters/gorm
 
 go 1.24.0
 
 require (
-	github.com/thecodearcher/aegis v0.0.0
+	github.com/thecodearcher/limen v0.0.0
 	gorm.io/gorm v1.30.1
 )
 

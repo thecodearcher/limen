@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 //  2. Default database adapter
 //
 // if skipTx is true, the default database adapter is returned.
-func (core *AegisCore) getDB(ctx context.Context, skipTx ...bool) DatabaseAdapter {
+func (core *LimenCore) getDB(ctx context.Context, skipTx ...bool) DatabaseAdapter {
 	if len(skipTx) > 0 && skipTx[0] {
 		return core.db
 	}
@@ -25,7 +25,7 @@ func (core *AegisCore) getDB(ctx context.Context, skipTx ...bool) DatabaseAdapte
 	return core.db
 }
 
-func (core *AegisCore) FindOne(ctx context.Context, schema Schema, conditions []Where, orderBy []OrderBy) (Model, error) {
+func (core *LimenCore) FindOne(ctx context.Context, schema Schema, conditions []Where, orderBy []OrderBy) (Model, error) {
 	conditions = applySoftDeleteFilter(schema, conditions)
 	db := core.getDB(ctx)
 	result, err := db.FindOne(ctx, schema.GetTableName(), conditions, orderBy)
@@ -37,7 +37,7 @@ func (core *AegisCore) FindOne(ctx context.Context, schema Schema, conditions []
 	return model, nil
 }
 
-func (core *AegisCore) Create(ctx context.Context, schema Schema, data Model, additionalFields map[string]any) error {
+func (core *LimenCore) Create(ctx context.Context, schema Schema, data Model, additionalFields map[string]any) error {
 	payload := make(map[string]any)
 
 	additionalFieldsContext := getAdditionalFieldsContext(ctx)
@@ -75,7 +75,7 @@ func (core *AegisCore) Create(ctx context.Context, schema Schema, data Model, ad
 	return nil
 }
 
-func (core *AegisCore) Exists(ctx context.Context, schema Schema, conditions []Where) (bool, error) {
+func (core *LimenCore) Exists(ctx context.Context, schema Schema, conditions []Where) (bool, error) {
 	conditions = applySoftDeleteFilter(schema, conditions)
 	db := core.getDB(ctx)
 	return db.Exists(ctx, schema.GetTableName(), conditions)
@@ -90,11 +90,11 @@ func ParseVerificationAction(action string) (string, string) {
 	return parts[0], parts[1]
 }
 
-func (core *AegisCore) Update(ctx context.Context, schema Schema, updatedData Model, conditions []Where) error {
+func (core *LimenCore) Update(ctx context.Context, schema Schema, updatedData Model, conditions []Where) error {
 	return core.UpdateRaw(ctx, schema, updatedData, conditions, true)
 }
 
-func (core *AegisCore) UpdateRaw(ctx context.Context, schema Schema, updatedData Model, conditions []Where, removeEmptyValues bool) error {
+func (core *LimenCore) UpdateRaw(ctx context.Context, schema Schema, updatedData Model, conditions []Where, removeEmptyValues bool) error {
 	payload := make(map[string]any)
 
 	maps.Copy(payload, schema.ToStorage(updatedData))
@@ -114,7 +114,7 @@ func (core *AegisCore) UpdateRaw(ctx context.Context, schema Schema, updatedData
 	return db.Update(ctx, schema.GetTableName(), conditions, payload)
 }
 
-func (core *AegisCore) assignID(ctx context.Context, schema Schema, payload map[string]any) error {
+func (core *LimenCore) assignID(ctx context.Context, schema Schema, payload map[string]any) error {
 	idField := schema.GetIDField()
 	if idField == "" {
 		return nil
@@ -144,7 +144,7 @@ func applySoftDeleteFilter(schema Schema, conditions []Where) []Where {
 	return conditions
 }
 
-func (core *AegisCore) Delete(ctx context.Context, schema Schema, conditions []Where) error {
+func (core *LimenCore) Delete(ctx context.Context, schema Schema, conditions []Where) error {
 	db := core.getDB(ctx)
 	// if there are conditions, we update the soft delete field to the current time
 	// otherwise we delete the record directly
@@ -161,7 +161,7 @@ func (core *AegisCore) Delete(ctx context.Context, schema Schema, conditions []W
 	return db.Delete(ctx, schema.GetTableName(), conditions)
 }
 
-func (core *AegisCore) FindMany(ctx context.Context, schema Schema, conditions []Where) ([]Model, error) {
+func (core *LimenCore) FindMany(ctx context.Context, schema Schema, conditions []Where) ([]Model, error) {
 	db := core.getDB(ctx)
 	list, err := db.FindMany(ctx, schema.GetTableName(), conditions, nil)
 	if err != nil {
@@ -174,7 +174,7 @@ func (core *AegisCore) FindMany(ctx context.Context, schema Schema, conditions [
 	return out, nil
 }
 
-func (core *AegisCore) Count(ctx context.Context, schema Schema, conditions []Where) (int64, error) {
+func (core *LimenCore) Count(ctx context.Context, schema Schema, conditions []Where) (int64, error) {
 	db := core.getDB(ctx)
 	return db.Count(ctx, schema.GetTableName(), conditions)
 }

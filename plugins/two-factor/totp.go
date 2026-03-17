@@ -8,7 +8,7 @@ import (
 	pqotp "github.com/pquerna/otp"
 	pqtotp "github.com/pquerna/otp/totp"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type totp struct {
@@ -31,7 +31,7 @@ func newDefaultTOTP(plugin *twoFactorPlugin, config *totpConfig) *totp {
 }
 
 // RegisterRoutes registers TOTP-specific routes
-func (t *totp) registerRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+func (t *totp) registerRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	handlers := newTOTPHandlers(t, httpCore.Responder)
 	routeBuilder.ProtectedGET("/totp/uri", "totp-uri", handlers.GetSetupURI)
 	routeBuilder.ProtectedPOST("/totp/verify", "totp-verify", handlers.VerifyCode)

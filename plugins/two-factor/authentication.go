@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/thecodearcher/aegis"
-	credentialpassword "github.com/thecodearcher/aegis/plugins/credential-password"
+	"github.com/thecodearcher/limen"
+	credentialpassword "github.com/thecodearcher/limen/plugins/credential-password"
 )
 
 // InitiateTwoFactorSetup initiates the 2FA setup process
@@ -58,8 +58,8 @@ func (t *twoFactorPlugin) FinalizeTwoFactorSetup(ctx context.Context, user *User
 	}
 
 	updatedUser := &UserWithTwoFactor{TwoFactorEnabled: true}
-	if err := t.core.Update(ctx, t.userSchema, updatedUser, []aegis.Where{
-		aegis.Eq(t.userSchema.GetIDField(), user.ID),
+	if err := t.core.Update(ctx, t.userSchema, updatedUser, []limen.Where{
+		limen.Eq(t.userSchema.GetIDField(), user.ID),
 	}); err != nil {
 		return err
 	}
@@ -85,14 +85,14 @@ func (t *twoFactorPlugin) DisableTwoFactor(ctx context.Context, userID any, pass
 
 		updatedUser := &UserWithTwoFactor{TwoFactorEnabled: false}
 
-		return t.core.UpdateRaw(ctx, t.userSchema, updatedUser, []aegis.Where{
-			aegis.Eq(t.userSchema.GetIDField(), userID),
+		return t.core.UpdateRaw(ctx, t.userSchema, updatedUser, []limen.Where{
+			limen.Eq(t.userSchema.GetIDField(), userID),
 		}, false)
 	})
 }
 
-func (t *twoFactorPlugin) checkPassword(user *aegis.User, password string) error {
-	plugin, ok := t.core.GetPlugin(aegis.PluginCredentialPassword)
+func (t *twoFactorPlugin) checkPassword(user *limen.User, password string) error {
+	plugin, ok := t.core.GetPlugin(limen.PluginCredentialPassword)
 	if !ok {
 		return ErrCredentialPasswordPluginNotAvailable
 	}
@@ -110,7 +110,7 @@ func (t *twoFactorPlugin) checkPassword(user *aegis.User, password string) error
 }
 
 // VerifyLoginWithTwoFactor verifies the 2FA code and completes the login process
-func (t *twoFactorPlugin) VerifyLoginWithTwoFactor(r *http.Request, w http.ResponseWriter, code string, method TwoFactorMethod) (*aegis.AuthenticationResult, *aegis.SessionResult, error) {
+func (t *twoFactorPlugin) VerifyLoginWithTwoFactor(r *http.Request, w http.ResponseWriter, code string, method TwoFactorMethod) (*limen.AuthenticationResult, *limen.SessionResult, error) {
 	challengeToken, err := t.getChallengeFromCookie(r)
 	if err != nil {
 		return nil, nil, err
@@ -132,7 +132,7 @@ func (t *twoFactorPlugin) VerifyLoginWithTwoFactor(r *http.Request, w http.Respo
 		return nil, nil, err
 	}
 
-	authResult := &aegis.AuthenticationResult{User: user}
+	authResult := &limen.AuthenticationResult{User: user}
 	sessionResult, err := t.core.CreateSession(r.Context(), r, w, authResult)
 	if err != nil {
 		return nil, nil, err

@@ -3,17 +3,17 @@ package twofactor
 import (
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 const (
-	TwoFactorSchemaTableName aegis.SchemaTableName = "two_factors"
+	TwoFactorSchemaTableName limen.SchemaTableName = "two_factors"
 
-	TwoFactorSchemaUserIDField      aegis.SchemaField = "user_id"
-	TwoFactorSchemaSecretField      aegis.SchemaField = "secret"
-	TwoFactorSchemaBackupCodesField aegis.SchemaField = "backup_codes"
+	TwoFactorSchemaUserIDField      limen.SchemaField = "user_id"
+	TwoFactorSchemaSecretField      limen.SchemaField = "secret"
+	TwoFactorSchemaBackupCodesField limen.SchemaField = "backup_codes"
 
-	UserWithTwoFactorSchemaEnabledField aegis.SchemaField = "two_factor_enabled"
+	UserWithTwoFactorSchemaEnabledField limen.SchemaField = "two_factor_enabled"
 )
 
 const (

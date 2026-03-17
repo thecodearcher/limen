@@ -7,15 +7,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type databaseStateStore struct {
-	core *aegis.AegisCore
+	core *limen.LimenCore
 	ttl  time.Duration
 }
 
-func newDatabaseStateStore(core *aegis.AegisCore, ttl time.Duration) *databaseStateStore {
+func newDatabaseStateStore(core *limen.LimenCore, ttl time.Duration) *databaseStateStore {
 	return &databaseStateStore{core: core, ttl: ttl}
 }
 

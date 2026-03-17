@@ -3,7 +3,7 @@ package twofactor
 import (
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type TwoFactor struct {
@@ -21,14 +21,14 @@ func (t *TwoFactor) Raw() map[string]any {
 }
 
 type twoFactorSchema struct {
-	aegis.BaseSchema
+	limen.BaseSchema
 }
 
 type SchemaConfigTwoFactorOption func(*twoFactorSchema)
 
 func newDefaultTwoFactorSchema(opts ...SchemaConfigTwoFactorOption) *twoFactorSchema {
 	schema := &twoFactorSchema{
-		BaseSchema: aegis.BaseSchema{},
+		BaseSchema: limen.BaseSchema{},
 	}
 
 	for _, opt := range opts {
@@ -51,14 +51,14 @@ func (t *twoFactorSchema) GetBackupCodesField() string {
 }
 
 func (t *twoFactorSchema) GetCreatedAtField() string {
-	return t.GetField(aegis.SchemaCreatedAtField)
+	return t.GetField(limen.SchemaCreatedAtField)
 }
 
 func (t *twoFactorSchema) GetUpdatedAtField() string {
-	return t.GetField(aegis.SchemaUpdatedAtField)
+	return t.GetField(limen.SchemaUpdatedAtField)
 }
 
-func (t *twoFactorSchema) ToStorage(data aegis.Model) map[string]any {
+func (t *twoFactorSchema) ToStorage(data limen.Model) map[string]any {
 	twoFactor := data.(*TwoFactor)
 	return map[string]any{
 		t.GetUserIDField():      twoFactor.UserID,
@@ -67,7 +67,7 @@ func (t *twoFactorSchema) ToStorage(data aegis.Model) map[string]any {
 	}
 }
 
-func (t *twoFactorSchema) FromStorage(data map[string]any) aegis.Model {
+func (t *twoFactorSchema) FromStorage(data map[string]any) limen.Model {
 	return &TwoFactor{
 		ID:          data[t.GetIDField()],
 		UserID:      data[t.GetUserIDField()],

@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 // SchemaInfo is a convenience struct that provides resolved schema
 // information to schemas and wraps the SchemaResolver to make specific schema field lookups easier.

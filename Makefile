@@ -1,4 +1,4 @@
-# Aegis Authentication Library Makefile
+# Limen Authentication Library Makefile
 
 .PHONY: help build test test-verbose test-race test-cover clean lint fmt vet mod-tidy mod-download install-tools
 

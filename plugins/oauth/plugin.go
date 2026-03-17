@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type oauthPlugin struct {
-	core          *aegis.AegisCore
-	accountSchema *aegis.AccountSchema
+	core          *limen.LimenCore
+	accountSchema *limen.AccountSchema
 	config        *config
 	providers     map[string]Provider
 	stateStore    StateStore
-	httpCore      *aegis.AegisHTTPCore
-	cookies       *aegis.CookieManager
+	httpCore      *limen.LimenHTTPCore
+	cookies       *limen.CookieManager
 }
 
 func New(opts ...ConfigOption) *oauthPlugin {
 	cfg := &config{
-		cookieName: "aegis_oauth",
+		cookieName: "limen_oauth",
 		cookieTTL:  10 * time.Minute,
 	}
 	for _, opt := range opts {
@@ -30,11 +30,11 @@ func New(opts ...ConfigOption) *oauthPlugin {
 	}
 }
 
-func (o *oauthPlugin) Name() aegis.PluginName {
-	return aegis.PluginOAuth
+func (o *oauthPlugin) Name() limen.PluginName {
+	return limen.PluginOAuth
 }
 
-func (o *oauthPlugin) Initialize(core *aegis.AegisCore) error {
+func (o *oauthPlugin) Initialize(core *limen.LimenCore) error {
 	o.core = core
 	o.cookies = core.Cookies()
 	o.accountSchema = core.Schema.Account
@@ -64,21 +64,21 @@ func (o *oauthPlugin) Initialize(core *aegis.AegisCore) error {
 	return nil
 }
 
-func (o *oauthPlugin) PluginHTTPConfig() aegis.PluginHTTPConfig {
-	return aegis.PluginHTTPConfig{
+func (o *oauthPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
+	return limen.PluginHTTPConfig{
 		BasePath: "/oauth",
-		RateLimitRules: []*aegis.RateLimitRule{
-			aegis.NewRateLimitRule("/:provider/authorize", 10, time.Minute),
-			aegis.NewRateLimitRule("/:provider/callback", 10, time.Minute),
-			aegis.NewRateLimitRule("/:provider/link", 10, time.Minute),
-			aegis.NewRateLimitRule("/:provider/unlink", 10, time.Minute),
-			aegis.NewRateLimitRule("/:provider/token", 20, time.Minute),
-			aegis.NewRateLimitRule("/:provider/token/refresh", 10, time.Minute),
+		RateLimitRules: []*limen.RateLimitRule{
+			limen.NewRateLimitRule("/:provider/authorize", 10, time.Minute),
+			limen.NewRateLimitRule("/:provider/callback", 10, time.Minute),
+			limen.NewRateLimitRule("/:provider/link", 10, time.Minute),
+			limen.NewRateLimitRule("/:provider/unlink", 10, time.Minute),
+			limen.NewRateLimitRule("/:provider/token", 20, time.Minute),
+			limen.NewRateLimitRule("/:provider/token/refresh", 10, time.Minute),
 		},
 	}
 }
 
-func (o *oauthPlugin) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+func (o *oauthPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	handlers := newOAuthHandlers(o, httpCore)
 	o.httpCore = httpCore
 	routeBuilder.GET("/:provider/authorize", "oauth-authorize", handlers.SignInWithOAuth)
@@ -90,6 +90,6 @@ func (o *oauthPlugin) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder
 	routeBuilder.ProtectedPOST("/:provider/tokens/refresh", "oauth-refresh-tokens", handlers.RefreshAccessToken)
 }
 
-func (o *oauthPlugin) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
-	return []aegis.SchemaIntrospector{}
+func (o *oauthPlugin) GetSchemas(schema *limen.SchemaConfig) []limen.SchemaIntrospector {
+	return []limen.SchemaIntrospector{}
 }

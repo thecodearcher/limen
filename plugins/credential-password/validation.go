@@ -3,7 +3,7 @@ package credentialpassword
 import (
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 func (p *credentialPasswordPlugin) validatePassword(password string) error {
@@ -53,7 +53,7 @@ func (p *credentialPasswordPlugin) validateUsername(username string) error {
 	return nil
 }
 
-func (p *credentialPasswordPlugin) validateUser(user *aegis.User, additionalFields map[string]any) error {
+func (p *credentialPasswordPlugin) validateUser(user *limen.User, additionalFields map[string]any) error {
 	if user.Email == "" {
 		return ErrEmailRequired
 	}

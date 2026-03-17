@@ -6,11 +6,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type sessionJWTPlugin struct {
-	core               *aegis.AegisCore
+	core               *limen.LimenCore
 	config             *config
 	refreshTokenSchema *refreshTokenSchema
 	blacklistSchema    *blacklistSchema
@@ -27,10 +27,10 @@ func New(opts ...ConfigOption) *sessionJWTPlugin {
 		refreshTokenRotation: true,
 		blacklistEnabled:     false,
 		refreshTokenEnabled:  true,
-		subjectEncoder:       func(user *aegis.User) string { return fmt.Sprintf("%v", user.ID) },
+		subjectEncoder:       func(user *limen.User) string { return fmt.Sprintf("%v", user.ID) },
 		subjectResolver:      func(subject string) (any, error) { return subject, nil },
 		refreshUser:          false,
-		blacklistStoreType:   aegis.StoreTypeCache,
+		blacklistStoreType:   limen.StoreTypeCache,
 	}
 
 	for _, opt := range opts {
@@ -39,11 +39,11 @@ func New(opts ...ConfigOption) *sessionJWTPlugin {
 	return &sessionJWTPlugin{config: cfg}
 }
 
-func (p *sessionJWTPlugin) Name() aegis.PluginName {
-	return aegis.PluginSessionJWT
+func (p *sessionJWTPlugin) Name() limen.PluginName {
+	return limen.PluginSessionJWT
 }
 
-func (p *sessionJWTPlugin) Initialize(core *aegis.AegisCore) error {
+func (p *sessionJWTPlugin) Initialize(core *limen.LimenCore) error {
 	p.core = core
 
 	if p.config.accessTokenDuration <= 0 {
@@ -85,7 +85,7 @@ func (p *sessionJWTPlugin) Initialize(core *aegis.AegisCore) error {
 }
 
 func (p *sessionJWTPlugin) determineBlacklistStore() blacklistStore {
-	if p.config.blacklistStoreType == aegis.StoreTypeDatabase {
+	if p.config.blacklistStoreType == limen.StoreTypeDatabase {
 		return &dbBlacklistStore{core: p.core, schema: p.blacklistSchema}
 	}
 	return &cacheBlacklistStore{
@@ -94,18 +94,18 @@ func (p *sessionJWTPlugin) determineBlacklistStore() blacklistStore {
 	}
 }
 
-func (p *sessionJWTPlugin) SessionManager() aegis.SessionManager {
+func (p *sessionJWTPlugin) SessionManager() limen.SessionManager {
 	return &jwtSessionManager{plugin: p}
 }
 
-func (p *sessionJWTPlugin) PluginHTTPConfig() aegis.PluginHTTPConfig {
-	return aegis.PluginHTTPConfig{
+func (p *sessionJWTPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
+	return limen.PluginHTTPConfig{
 		BasePath:   "/",
-		Middleware: []aegis.Middleware{},
+		Middleware: []limen.Middleware{},
 	}
 }
 
-func (p *sessionJWTPlugin) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+func (p *sessionJWTPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	if !p.config.refreshTokenEnabled {
 		return
 	}
@@ -113,15 +113,15 @@ func (p *sessionJWTPlugin) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBu
 	routeBuilder.POST("/refresh", "session-jwt-refresh", handlers.Refresh)
 }
 
-func (p *sessionJWTPlugin) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
-	var schemas []aegis.SchemaIntrospector
+func (p *sessionJWTPlugin) GetSchemas(schema *limen.SchemaConfig) []limen.SchemaIntrospector {
+	var schemas []limen.SchemaIntrospector
 
 	if p.config.refreshTokenEnabled {
 		p.refreshTokenSchema = newRefreshTokenSchema()
 		schemas = append(schemas, buildRefreshTokenTableDef(schema, p.refreshTokenSchema))
 	}
 
-	if p.config.blacklistEnabled && p.config.blacklistStoreType != aegis.StoreTypeCache {
+	if p.config.blacklistEnabled && p.config.blacklistStoreType != limen.StoreTypeCache {
 		p.blacklistSchema = newBlacklistSchema()
 		schemas = append(schemas, buildBlacklistTableDef(p.blacklistSchema))
 	}

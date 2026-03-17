@@ -4,15 +4,15 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type otpHandlers struct {
 	otp       *otp
-	responder *aegis.Responder
+	responder *limen.Responder
 }
 
-func newOTPHandlers(otp *otp, responder *aegis.Responder) *otpHandlers {
+func newOTPHandlers(otp *otp, responder *limen.Responder) *otpHandlers {
 	return &otpHandlers{
 		otp:       otp,
 		responder: responder,
@@ -20,7 +20,7 @@ func newOTPHandlers(otp *otp, responder *aegis.Responder) *otpHandlers {
 }
 
 func (o *otpHandlers) SendCode(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, o.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, o.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("email", data["email"])
 	})
 
@@ -28,7 +28,7 @@ func (o *otpHandlers) SendCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := o.otp.SendOTPCode(r.Context(), body["email"].(string)); err != nil && !errors.Is(err, aegis.ErrRecordNotFound) {
+	if err := o.otp.SendOTPCode(r.Context(), body["email"].(string)); err != nil && !errors.Is(err, limen.ErrRecordNotFound) {
 		o.responder.Error(w, r, err)
 		return
 	}
@@ -39,7 +39,7 @@ func (o *otpHandlers) SendCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (o *otpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, o.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, o.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("code", data["code"])
 	})
 
@@ -47,7 +47,7 @@ func (o *otpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		o.responder.Error(w, r, err)
 		return

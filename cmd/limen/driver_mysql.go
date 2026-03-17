@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type mysqlDriver struct {
@@ -75,46 +75,46 @@ func (d *mysqlDriver) IntrospectForeignKeysQuery(tableName string) (string, []an
 	`, []any{tableName}
 }
 
-func (d *mysqlDriver) MapGoTypeToSQL(goType aegis.ColumnType, isAutoIncrement bool) string {
+func (d *mysqlDriver) MapGoTypeToSQL(goType limen.ColumnType, isAutoIncrement bool) string {
 	switch goType {
-	case aegis.ColumnTypeInt, aegis.ColumnTypeInt32:
+	case limen.ColumnTypeInt, limen.ColumnTypeInt32:
 		return "INTEGER"
-	case aegis.ColumnTypeInt64:
+	case limen.ColumnTypeInt64:
 		return "BIGINT"
-	case aegis.ColumnTypeBool:
+	case limen.ColumnTypeBool:
 		return "BOOLEAN"
-	case aegis.ColumnTypeString:
+	case limen.ColumnTypeString:
 		return "VARCHAR(255)"
-	case aegis.ColumnTypeTime:
+	case limen.ColumnTypeTime:
 		return "TIMESTAMP"
-	case aegis.ColumnTypeUUID:
+	case limen.ColumnTypeUUID:
 		return "VARCHAR(36)"
-	case aegis.ColumnTypeMapStringAny:
+	case limen.ColumnTypeMapStringAny:
 		return "JSON"
 	default:
 		return "TEXT"
 	}
 }
 
-func (d *mysqlDriver) MapSQLTypeToGoType(dataType string) aegis.ColumnType {
+func (d *mysqlDriver) MapSQLTypeToGoType(dataType string) limen.ColumnType {
 	dataType = strings.ToUpper(dataType)
 	switch dataType {
 	case "UUID", "VARCHAR(36)", "CHAR(36)":
-		return aegis.ColumnTypeUUID
+		return limen.ColumnTypeUUID
 	case "BOOLEAN", "BOOL", "TINYINT(1)":
-		return aegis.ColumnTypeBool
+		return limen.ColumnTypeBool
 	case "INTEGER", "INT", "INT4", "SMALLINT", "MEDIUMINT":
-		return aegis.ColumnTypeInt32
+		return limen.ColumnTypeInt32
 	case "BIGINT", "INT8":
-		return aegis.ColumnTypeInt64
+		return limen.ColumnTypeInt64
 	case "TIMESTAMP", "DATETIME", "DATE":
-		return aegis.ColumnTypeTime
+		return limen.ColumnTypeTime
 	case "JSON":
-		return aegis.ColumnTypeMapStringAny
+		return limen.ColumnTypeMapStringAny
 	case "VARCHAR", "TEXT", "CHAR", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT":
-		return aegis.ColumnTypeString
+		return limen.ColumnTypeString
 	default:
-		return aegis.ColumnTypeString
+		return limen.ColumnTypeString
 	}
 }
 
@@ -124,9 +124,9 @@ func (d *mysqlDriver) GetAutoIncrementSuffix() string {
 
 func (d *mysqlDriver) FormatDefaultValue(defaultValue string) string {
 	switch defaultValue {
-	case string(aegis.DatabaseDefaultValueNow):
+	case string(limen.DatabaseDefaultValueNow):
 		return "CURRENT_TIMESTAMP"
-	case string(aegis.DatabaseDefaultValueUUID):
+	case string(limen.DatabaseDefaultValueUUID):
 		return "UUID()"
 	}
 	return defaultValue

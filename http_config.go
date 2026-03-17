@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	shortSessionCookieName = "aegis_short_session"
+	shortSessionCookieName = "limen_short_session"
 	shortSessionMaxAgeSec  = 1 * time.Hour // 1 hour
 )
 
@@ -24,7 +24,7 @@ type httpConfig struct {
 	// Response envelope configuration
 	responseEnvelope *responseEnvelopeConfig
 	// SessionTransformer customizes the session response payload before it's sent to the client.
-	// Returns a map[string]any for the response body, or an AegisError to handle an error condition.
+	// Returns a map[string]any for the response body, or an LimenError to handle an error condition.
 	sessionTransformer SessionTransformer
 	// HTTPHooks are functions that are called before and after the request is processed
 	hooks *Hooks
@@ -51,7 +51,7 @@ type cookieConfig struct {
 	// Set Cookie.Domain to ".example.com" (your eTLD+1) when true.
 	crossSubdomain *crossDomainConfig
 	// crossDomain: allow cookies to be sent from entirely different sites (requires SameSite=None; Secure=true).
-	// When enabled, Aegis will require TrustedOrigins.
+	// When enabled, Limen will require TrustedOrigins.
 	crossDomain bool
 }
 
@@ -93,7 +93,7 @@ func NewDefaultHTTPConfig(opts ...HTTPConfigOption) *httpConfig {
 		csrfProtection: true,
 		originCheck:    true,
 		cookieConfig: &cookieConfig{
-			sessionCookieName: "aegis_session",
+			sessionCookieName: "limen_session",
 			path:              "/",
 			secure:            true,
 			httpOnly:          true,

@@ -1,30 +1,30 @@
-package aegis
+package limen
 
 import (
 	"regexp"
 )
 
-type AegisHTTPCore struct {
+type LimenHTTPCore struct {
 	Responder              *Responder
-	core                   *AegisCore
-	authInstance           *Aegis
+	core                   *LimenCore
+	authInstance           *Limen
 	config                 *httpConfig
 	trustedOriginsPatterns []*regexp.Regexp
 }
 
 // Cookies returns the shared CookieManager for cookie operations.
-func (httpCore *AegisHTTPCore) Cookies() *CookieManager {
+func (httpCore *LimenHTTPCore) Cookies() *CookieManager {
 	return httpCore.core.Cookies()
 }
 
-func (httpCore *AegisHTTPCore) SessionCookieName() string {
+func (httpCore *LimenHTTPCore) SessionCookieName() string {
 	if httpCore.config.cookieConfig == nil {
 		return ""
 	}
 	return httpCore.config.cookieConfig.sessionCookieName
 }
 
-func (httpCore *AegisHTTPCore) IsTrustedOrigin(url string) bool {
+func (httpCore *LimenHTTPCore) IsTrustedOrigin(url string) bool {
 	for _, pattern := range httpCore.trustedOriginsPatterns {
 		if pattern.MatchString(url) {
 			return true

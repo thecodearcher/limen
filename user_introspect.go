@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 func (u *UserSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	return &SchemaDefinition{

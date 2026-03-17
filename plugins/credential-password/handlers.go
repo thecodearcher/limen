@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type credentialPasswordHandlers struct {
 	plugin    *credentialPasswordPlugin
-	builder   *aegis.RouteBuilder
-	responder *aegis.Responder
+	builder   *limen.RouteBuilder
+	responder *limen.Responder
 }
 
-func NewCredentialPasswordAPI(emailPasswordPlugin *credentialPasswordPlugin, httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) *credentialPasswordHandlers {
+func NewCredentialPasswordAPI(emailPasswordPlugin *credentialPasswordPlugin, httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) *credentialPasswordHandlers {
 	return &credentialPasswordHandlers{
 		plugin:    emailPasswordPlugin,
 		builder:   routeBuilder,
@@ -25,23 +25,23 @@ func NewCredentialPasswordAPI(emailPasswordPlugin *credentialPasswordPlugin, htt
 
 // PluginHTTPConfig returns the HTTP configuration for the credential password plugin,
 // including rate limiting rules for all authentication endpoints.
-func (p *credentialPasswordPlugin) PluginHTTPConfig() aegis.PluginHTTPConfig {
-	return aegis.PluginHTTPConfig{
-		Middleware: []aegis.Middleware{},
-		RateLimitRules: []*aegis.RateLimitRule{
-			aegis.NewRateLimitRule("/signin/credential", 5, 10*time.Second),
-			aegis.NewRateLimitRule("/signup/credential", 5, 10*time.Second),
-			aegis.NewRateLimitRule("/passwords/request-reset", 5, 10*time.Minute),
-			aegis.NewRateLimitRule("/verify-email", 5, 10*time.Minute),
-			aegis.NewRateLimitRule("/passwords/reset", 5, 10*time.Minute),
-			aegis.NewRateLimitRule("/passwords/change", 5, 10*time.Minute),
-			aegis.NewRateLimitRule("/passwords", 5, 10*time.Minute),
-			aegis.NewRateLimitRule("/usernames/check", 10, 1*time.Minute),
+func (p *credentialPasswordPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
+	return limen.PluginHTTPConfig{
+		Middleware: []limen.Middleware{},
+		RateLimitRules: []*limen.RateLimitRule{
+			limen.NewRateLimitRule("/signin/credential", 5, 10*time.Second),
+			limen.NewRateLimitRule("/signup/credential", 5, 10*time.Second),
+			limen.NewRateLimitRule("/passwords/request-reset", 5, 10*time.Minute),
+			limen.NewRateLimitRule("/verify-email", 5, 10*time.Minute),
+			limen.NewRateLimitRule("/passwords/reset", 5, 10*time.Minute),
+			limen.NewRateLimitRule("/passwords/change", 5, 10*time.Minute),
+			limen.NewRateLimitRule("/passwords", 5, 10*time.Minute),
+			limen.NewRateLimitRule("/usernames/check", 10, 1*time.Minute),
 		},
 	}
 }
 
-func (p *credentialPasswordPlugin) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+func (p *credentialPasswordPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	api := NewCredentialPasswordAPI(p, httpCore, routeBuilder)
 	routes(api)
 }
@@ -61,8 +61,8 @@ func routes(e *credentialPasswordHandlers) {
 // SignInWithCredentialAndPassword handles user sign-in with either email or username (if enabled) and password.
 // The credential can be either an email address or a username.
 func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder,
-		func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder,
+		func(v *limen.Validator, data map[string]any) *limen.Validator {
 			return v.RequiredString("credential", data["credential"]).
 				RequiredString("password", data["password"])
 		})
@@ -73,7 +73,7 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 
 	result, err := p.plugin.SignInWithCredentialAndPassword(r.Context(), body["credential"].(string), body["password"].(string))
 	if err != nil {
-		p.responder.Error(w, r, aegis.NewAegisError(ErrInvalidCredential.Error(), ErrInvalidCredential.Status(), nil))
+		p.responder.Error(w, r, limen.NewLimenError(ErrInvalidCredential.Error(), ErrInvalidCredential.Status(), nil))
 		return
 	}
 
@@ -81,7 +81,7 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 	if val, ok := body["remember_me"].(bool); ok {
 		shortSession = !val
 	}
-	sessionResult, err := p.plugin.core.CreateSession(r.Context(), r, w, result, aegis.WithShortSession(shortSession))
+	sessionResult, err := p.plugin.core.CreateSession(r.Context(), r, w, result, limen.WithShortSession(shortSession))
 	if err != nil {
 		p.responder.Error(w, r, err)
 		return
@@ -93,7 +93,7 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 // SignUpWithCredentialAndPassword handles user registration with email and password.
 // If username support is enabled, a username can be provided in the request body.
 func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("email", data["email"]).
 			RequiredString("password", data["password"]).
 			Email("email", data["email"]).
@@ -125,7 +125,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 	}
 
 	password := body["password"].(string)
-	result, err := p.plugin.SignUpWithCredentialAndPassword(r.Context(), &aegis.User{
+	result, err := p.plugin.SignUpWithCredentialAndPassword(r.Context(), &limen.User{
 		Email:    body["email"].(string),
 		Password: &password,
 	}, additionalFields)
@@ -151,7 +151,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 
 // VerifyEmail handles email verification using a verification token.
 func (p *credentialPasswordHandlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("token", data["token"])
 	})
 
@@ -170,13 +170,13 @@ func (p *credentialPasswordHandlers) VerifyEmail(w http.ResponseWriter, r *http.
 
 // RequestEmailVerification handles requests for email verification.
 func (p *credentialPasswordHandlers) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		p.responder.Error(w, r, err)
 		return
 	}
 
-	_, err = p.plugin.RequestEmailVerification(r.Context(), &aegis.User{
+	_, err = p.plugin.RequestEmailVerification(r.Context(), &limen.User{
 		Email: session.User.Email,
 	}, true)
 
@@ -191,7 +191,7 @@ func (p *credentialPasswordHandlers) RequestEmailVerification(w http.ResponseWri
 // RequestPasswordReset handles password reset requests.
 // To prevent email enumeration, always returns success regardless of whether the email exists.
 func (p *credentialPasswordHandlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.
 			RequiredString("email", data["email"]).
 			Email("email", data["email"])
@@ -219,7 +219,7 @@ func (p *credentialPasswordHandlers) RequestPasswordReset(w http.ResponseWriter,
 
 // ResetPassword handles password reset using a valid reset token.
 func (p *credentialPasswordHandlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.
 			RequiredString("token", data["token"]).
 			RequiredString("new_password", data["new_password"]).
@@ -248,7 +248,7 @@ func (p *credentialPasswordHandlers) ResetPassword(w http.ResponseWriter, r *htt
 // ChangePassword handles password changes for authenticated users.
 // Optionally revokes all other sessions when revoke_other_sessions is true.
 func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.
 			RequiredString("current_password", data["current_password"]).
 			RequiredString("new_password", data["new_password"]).
@@ -270,7 +270,7 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 		revokeOtherSessions = value
 	}
 
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		p.responder.Error(w, r, err)
 		return
@@ -282,7 +282,7 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 		return
 	}
 
-	authResult := &aegis.AuthenticationResult{
+	authResult := &limen.AuthenticationResult{
 		User: session.User,
 	}
 
@@ -300,7 +300,7 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 }
 
 func (p *credentialPasswordHandlers) SetPassword(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.
 			RequiredString("new_password", data["new_password"]).
 			Custom("new_password", func() error {
@@ -321,7 +321,7 @@ func (p *credentialPasswordHandlers) SetPassword(w http.ResponseWriter, r *http.
 		revokeOtherSessions = value
 	}
 
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		p.responder.Error(w, r, err)
 		return
@@ -333,7 +333,7 @@ func (p *credentialPasswordHandlers) SetPassword(w http.ResponseWriter, r *http.
 		return
 	}
 
-	authResult := &aegis.AuthenticationResult{
+	authResult := &limen.AuthenticationResult{
 		User: session.User,
 	}
 
@@ -352,7 +352,7 @@ func (p *credentialPasswordHandlers) SetPassword(w http.ResponseWriter, r *http.
 
 // CheckUsernameAvailability handles username availability checks.
 func (p *credentialPasswordHandlers) CheckUsernameAvailability(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, p.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("username", data["username"]).
 			Custom("username", func() error {
 				username, ok := data["username"].(string)

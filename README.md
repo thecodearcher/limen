@@ -1,4 +1,4 @@
-# [WIP] Aegis Authentication Library
+# [WIP] Limen Authentication Library
 
 A modern, plugin-first authentication library for Go applications, inspired by better-auth from the TypeScript ecosystem.
 
@@ -17,9 +17,9 @@ A modern, plugin-first authentication library for Go applications, inspired by b
 package main
 
 import (
-    "github.com/thecodearcher/aegis"
-    "github.com/thecodearcher/aegis/adapters/gorm"
-    "github.com/thecodearcher/aegis/plugins/email-password"
+    "github.com/thecodearcher/limen"
+    "github.com/thecodearcher/limen/adapters/gorm"
+    "github.com/thecodearcher/limen/plugins/email-password"
 )
 
 func main() {
@@ -27,22 +27,22 @@ func main() {
     db, _ := gorm.Open(postgres.Open(dsn), &gorm.Config{})
     adapter := gorm.New(db)
 
-    // Configure aegis
-    config := &aegis.Config{
-        User: aegis.UserConfig{
+    // Configure limen
+    config := &limen.Config{
+        User: limen.UserConfig{
             ModelName: "users",
-            Fields: aegis.UserFieldMappings{
+            Fields: limen.UserFieldMappings{
                 ID:    "user_id",
                 Email: "email_address",
             },
         },
-        Database: aegis.DatabaseConfig{
+        Database: limen.DatabaseConfig{
             Adapter: adapter,
         },
     }
 
     // Create plugin registry
-    registry := aegis.NewPluginRegistry()
+    registry := limen.NewPluginRegistry()
 
     // Register authentication plugins
     emailPasswordPlugin := credentialpassword.New()
@@ -55,7 +55,7 @@ func main() {
 
 ## Architecture
 
-Aegis follows a layered architecture with clear separation of concerns:
+Limen follows a layered architecture with clear separation of concerns:
 
 - **Framework Adapters** - Integration with web frameworks
 - **Middleware Layer** - Authentication and authorization middleware
@@ -65,23 +65,23 @@ Aegis follows a layered architecture with clear separation of concerns:
 
 ## Configuration
 
-Aegis uses struct-based configuration similar to better-auth:
+Limen uses struct-based configuration similar to better-auth:
 
 ```go
-config := &aegis.Config{
-    User: aegis.UserConfig{
+config := &limen.Config{
+    User: limen.UserConfig{
         ModelName: "app_users",
-        Fields: aegis.UserFieldMappings{
+        Fields: limen.UserFieldMappings{
             ID:        "user_id",
             Email:     "email_address",
             CreatedAt: "created_timestamp",
             UpdatedAt: "modified_timestamp",
         },
     },
-    Session: aegis.SessionConfig{
+    Session: limen.SessionConfig{
         ModelName: "user_sessions",
         Duration:  24 * time.Hour,
-        Fields: aegis.SessionFieldMappings{
+        Fields: limen.SessionFieldMappings{
             ID:        "session_id",
             UserID:    "user_id",
             ExpiresAt: "expires_timestamp",
@@ -92,21 +92,21 @@ config := &aegis.Config{
 
 ## Database Integration
 
-Aegis works with your existing database through adapters:
+Limen works with your existing database through adapters:
 
 ```go
 // Using GORM
-import "github.com/thecodearcher/aegis/adapters/gorm"
+import "github.com/thecodearcher/limen/adapters/gorm"
 db, _ := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 adapter := gorm.New(db)
 
 // Using Ent
-import "github.com/thecodearcher/aegis/adapters/ent"
+import "github.com/thecodearcher/limen/adapters/ent"
 client, _ := ent.Open("postgres", dsn)
 adapter := ent.New(client)
 
 // Using database/sql
-import "github.com/thecodearcher/aegis/adapters/sql"
+import "github.com/thecodearcher/limen/adapters/sql"
 db, _ := sql.Open("postgres", dsn)
 adapter := sql.NewPostgreSQL(db)
 
@@ -115,35 +115,35 @@ config.Database.Adapter = adapter
 
 ## Typed Query Conditions
 
-Aegis provides type-safe query conditions:
+Limen provides type-safe query conditions:
 
 ```go
 // Simple conditions
-conditions := []aegis.Where{
-    aegis.Eq("email", "user@example.com"),
-    aegis.Gt("created_at", time.Now().AddDate(0, -1, 0)),
+conditions := []limen.Where{
+    limen.Eq("email", "user@example.com"),
+    limen.Gt("created_at", time.Now().AddDate(0, -1, 0)),
 }
 
 // Complex conditions with OR logic
-conditions := []aegis.Where{
-    aegis.Contains("email", "gmail"),
-    aegis.Contains("name", "john").Or(),
-    aegis.In("status", []string{"active", "pending"}),
+conditions := []limen.Where{
+    limen.Contains("email", "gmail"),
+    limen.Contains("name", "john").Or(),
+    limen.In("status", []string{"active", "pending"}),
 }
 ```
 
 ## Multi-Module Architecture
 
-Aegis uses a multi-module architecture where each adapter and plugin is a separate Go module:
+Limen uses a multi-module architecture where each adapter and plugin is a separate Go module:
 
 ```
-github.com/thecodearcher/aegis                    # Core library
-github.com/thecodearcher/aegis/adapters/gorm      # GORM adapter
-github.com/thecodearcher/aegis/adapters/ent       # Ent adapter
-github.com/thecodearcher/aegis/adapters/sql       # SQL adapter
-github.com/thecodearcher/aegis/plugins/email-password  # Email/password auth
-github.com/thecodearcher/aegis/plugins/oauth-google    # Google OAuth
-github.com/thecodearcher/aegis/plugins/two-factor      # 2FA
+github.com/thecodearcher/limen                    # Core library
+github.com/thecodearcher/limen/adapters/gorm      # GORM adapter
+github.com/thecodearcher/limen/adapters/ent       # Ent adapter
+github.com/thecodearcher/limen/adapters/sql       # SQL adapter
+github.com/thecodearcher/limen/plugins/email-password  # Email/password auth
+github.com/thecodearcher/limen/plugins/oauth-google    # Google OAuth
+github.com/thecodearcher/limen/plugins/two-factor      # 2FA
 ```
 
 ### Plugin System
@@ -152,13 +152,13 @@ Authentication methods are implemented as separate modules:
 
 ```go
 import (
-    "github.com/thecodearcher/aegis/plugins/email-password"
-    "github.com/thecodearcher/aegis/plugins/oauth-google"
-    "github.com/thecodearcher/aegis/plugins/two-factor"
+    "github.com/thecodearcher/limen/plugins/email-password"
+    "github.com/thecodearcher/limen/plugins/oauth-google"
+    "github.com/thecodearcher/limen/plugins/two-factor"
 )
 
 // Only import the plugins you need
-registry := aegis.NewPluginRegistry()
+registry := limen.NewPluginRegistry()
 registry.RegisterPlugin(credentialpassword.New())
 registry.RegisterPlugin(oauthgoogle.New(googleConfig))
 registry.RegisterPlugin(twofactor.New())

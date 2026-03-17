@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type GenerateOptions struct {
@@ -16,7 +16,7 @@ type GenerateOptions struct {
 }
 
 // GenerateGoStructs generates Go struct definitions from schema definitions
-func GenerateGoStructs(schemas aegis.SchemaDefinitionMap, opts GenerateOptions) string {
+func GenerateGoStructs(schemas limen.SchemaDefinitionMap, opts GenerateOptions) string {
 	var buf strings.Builder
 
 	fmt.Fprintf(&buf, "package %s\n\n", opts.PackageName)
@@ -40,7 +40,7 @@ func GenerateGoStructs(schemas aegis.SchemaDefinitionMap, opts GenerateOptions) 
 	return buf.String()
 }
 
-func generateSchemaStruct(buf *strings.Builder, schema aegis.SchemaDefinition, opts GenerateOptions) {
+func generateSchemaStruct(buf *strings.Builder, schema limen.SchemaDefinition, opts GenerateOptions) {
 	tableName := schema.GetTableName()
 	structName := opts.FieldNaming(string(tableName))
 
@@ -52,7 +52,7 @@ func generateSchemaStruct(buf *strings.Builder, schema aegis.SchemaDefinition, o
 	fmt.Fprintf(buf, "type %s struct {\n", structName)
 }
 
-func generateStructField(buf *strings.Builder, field aegis.ColumnDefinition, opts GenerateOptions) {
+func generateStructField(buf *strings.Builder, field limen.ColumnDefinition, opts GenerateOptions) {
 	goFieldName := opts.FieldNaming(field.Name)
 
 	tagParts := make([]string, 0, len(opts.Tags))

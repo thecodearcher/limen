@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type cacheSessionStore struct {
 	prefix string
 }
 
-func newSecondarySessionStore(core *AegisCore) *cacheSessionStore {
+func newSecondarySessionStore(core *LimenCore) *cacheSessionStore {
 	return &cacheSessionStore{
 		cache:  core.CacheStore(),
 		prefix: core.CacheKeyPrefix(),

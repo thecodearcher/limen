@@ -4,15 +4,15 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type jwtHandlers struct {
 	plugin   *sessionJWTPlugin
-	httpCore *aegis.AegisHTTPCore
+	httpCore *limen.LimenHTTPCore
 }
 
-func newJWTHandlers(plugin *sessionJWTPlugin, httpCore *aegis.AegisHTTPCore) *jwtHandlers {
+func newJWTHandlers(plugin *sessionJWTPlugin, httpCore *limen.LimenHTTPCore) *jwtHandlers {
 	return &jwtHandlers{
 		plugin:   plugin,
 		httpCore: httpCore,
@@ -33,6 +33,6 @@ func (h *jwtHandlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authResult := &aegis.AuthenticationResult{User: user}
+	authResult := &limen.AuthenticationResult{User: user}
 	h.httpCore.Responder.SessionResponse(w, r, h.plugin.core, authResult, sessionResult)
 }

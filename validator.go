@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"fmt"
@@ -186,7 +186,7 @@ func ValidateJSON(w http.ResponseWriter, r *http.Request, responder *Responder, 
 	body := GetJSONBody(r)
 
 	if len(body) == 0 || body == nil {
-		responder.Error(w, r, NewAegisError("empty JSON body", http.StatusBadRequest, nil))
+		responder.Error(w, r, NewLimenError("empty JSON body", http.StatusBadRequest, nil))
 		return nil
 	}
 
@@ -194,7 +194,7 @@ func ValidateJSON(w http.ResponseWriter, r *http.Request, responder *Responder, 
 	validateFunc(v, body)
 
 	if err := v.Validate(); err != nil {
-		responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnprocessableEntity, nil))
+		responder.Error(w, r, NewLimenError(err.Error(), http.StatusUnprocessableEntity, nil))
 		return nil
 	}
 

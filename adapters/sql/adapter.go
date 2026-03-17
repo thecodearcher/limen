@@ -8,10 +8,10 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
-// Adapter implements aegis.DatabaseAdapter using sqlx (extensions on database/sql).
+// Adapter implements limen.DatabaseAdapter using sqlx (extensions on database/sql).
 type Adapter struct {
 	db        *sqlx.DB
 	tx        *sqlx.Tx
@@ -107,7 +107,7 @@ func (a *Adapter) getQueryer() queryerContext {
 	return q
 }
 
-func (a *Adapter) BeginTx(ctx context.Context) (aegis.DatabaseTx, error) {
+func (a *Adapter) BeginTx(ctx context.Context) (limen.DatabaseTx, error) {
 	if a.tx != nil {
 		return nil, fmt.Errorf("already in a transaction")
 	}

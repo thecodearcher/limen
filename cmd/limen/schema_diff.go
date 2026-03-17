@@ -3,30 +3,30 @@ package main
 import (
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // schemaDiff represents the differences between an existing schema and a required schema
 type schemaDiff struct {
-	AddedColumns     []aegis.ColumnDefinition
-	AddedIndexes     []aegis.IndexDefinition
-	AddedForeignKeys []aegis.ForeignKeyDefinition
+	AddedColumns     []limen.ColumnDefinition
+	AddedIndexes     []limen.IndexDefinition
+	AddedForeignKeys []limen.ForeignKeyDefinition
 }
 
 // compareSchemas compares an existing schema with a required schema and returns the differences
-func compareSchemas(existing, schemas *aegis.SchemaDefinition) schemaDiff {
+func compareSchemas(existing, schemas *limen.SchemaDefinition) schemaDiff {
 	diff := schemaDiff{
-		AddedColumns:     []aegis.ColumnDefinition{},
-		AddedIndexes:     []aegis.IndexDefinition{},
-		AddedForeignKeys: []aegis.ForeignKeyDefinition{},
+		AddedColumns:     []limen.ColumnDefinition{},
+		AddedIndexes:     []limen.IndexDefinition{},
+		AddedForeignKeys: []limen.ForeignKeyDefinition{},
 	}
 
-	existingCols := make(map[string]aegis.ColumnDefinition)
+	existingCols := make(map[string]limen.ColumnDefinition)
 	for _, col := range existing.Columns {
 		existingCols[col.Name] = col
 	}
 
-	requiredCols := make(map[string]aegis.ColumnDefinition)
+	requiredCols := make(map[string]limen.ColumnDefinition)
 	for _, col := range schemas.Columns {
 		requiredCols[col.Name] = col
 	}
@@ -39,12 +39,12 @@ func compareSchemas(existing, schemas *aegis.SchemaDefinition) schemaDiff {
 	}
 
 	// Compare indexes
-	existingIndexes := make(map[string]aegis.IndexDefinition)
+	existingIndexes := make(map[string]limen.IndexDefinition)
 	for _, idx := range existing.Indexes {
 		existingIndexes[indexKey(idx)] = idx
 	}
 
-	requiredIndexes := make(map[string]aegis.IndexDefinition)
+	requiredIndexes := make(map[string]limen.IndexDefinition)
 	for _, idx := range schemas.Indexes {
 		requiredIndexes[indexKey(idx)] = idx
 	}
@@ -56,12 +56,12 @@ func compareSchemas(existing, schemas *aegis.SchemaDefinition) schemaDiff {
 	}
 
 	// Compare foreign keys
-	existingFKs := make(map[string]aegis.ForeignKeyDefinition)
+	existingFKs := make(map[string]limen.ForeignKeyDefinition)
 	for _, fk := range existing.ForeignKeys {
 		existingFKs[fk.Name] = fk
 	}
 
-	requiredFKs := make(map[string]aegis.ForeignKeyDefinition)
+	requiredFKs := make(map[string]limen.ForeignKeyDefinition)
 	for _, fk := range schemas.ForeignKeys {
 		requiredFKs[fk.Name] = fk
 	}
@@ -76,7 +76,7 @@ func compareSchemas(existing, schemas *aegis.SchemaDefinition) schemaDiff {
 }
 
 // indexKey creates a unique key for an index based on its columns and uniqueness
-func indexKey(idx aegis.IndexDefinition) string {
+func indexKey(idx limen.IndexDefinition) string {
 	var key strings.Builder
 	if idx.Unique {
 		key.WriteString("unique:")

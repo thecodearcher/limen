@@ -1,5 +1,5 @@
-// Package aegis is the main package for the Aegis authentication library.
-package aegis
+// Package limen is the main package for the Limen authentication library.
+package limen
 
 import (
 	"fmt"
@@ -9,12 +9,12 @@ import (
 	"path"
 )
 
-type Aegis struct {
+type Limen struct {
 	config *Config
-	core   *AegisCore
+	core   *LimenCore
 }
 
-func New(config *Config) (*Aegis, error) {
+func New(config *Config) (*Limen, error) {
 	if config == nil {
 		return nil, fmt.Errorf("missing configuration")
 	}
@@ -27,11 +27,11 @@ func New(config *Config) (*Aegis, error) {
 		config.Plugins = []Plugin{}
 	}
 
-	aegis := &Aegis{
+	limen := &Limen{
 		config: config,
 	}
 
-	core := &AegisCore{
+	core := &LimenCore{
 		config:      config,
 		baseURL:     config.BaseURL,
 		fullBaseURL: joinURL(config.BaseURL, config.HTTP.basePath),
@@ -81,19 +81,19 @@ func New(config *Config) (*Aegis, error) {
 		}
 	}
 
-	aegis.core = core
+	limen.core = core
 
-	return aegis, nil
+	return limen, nil
 }
 
-func (a *Aegis) Handler() http.Handler {
+func (a *Limen) Handler() http.Handler {
 	config := a.config.HTTP
 
 	config.basePath = NormalizePath(config.basePath)
 	allUrls := []string{a.core.GetBaseURL()}
 	allUrls = append(allUrls, config.trustedOrigins...)
 
-	httpCore := &AegisHTTPCore{
+	httpCore := &LimenHTTPCore{
 		Responder:              newResponder(config, a.core.cookies, a.config.Session.BearerEnabled),
 		authInstance:           a,
 		config:                 config,
@@ -114,7 +114,7 @@ func (a *Aegis) Handler() http.Handler {
 	return router
 }
 
-func (a *Aegis) GetSession(req *http.Request) (*ValidatedSession, error) {
+func (a *Limen) GetSession(req *http.Request) (*ValidatedSession, error) {
 	return a.core.SessionManager.ValidateSession(req.Context(), req)
 }
 
@@ -124,16 +124,16 @@ func (a *Aegis) GetSession(req *http.Request) (*ValidatedSession, error) {
 // T should be gotten from the plugin's API interface.
 // For example, if you want to use the credential-password plugin, you can get the API interface like this:
 //
-//	credentialpasswordAPI := credentialpassword.Use(aegis)
+//	credentialpasswordAPI := credentialpassword.Use(limen)
 //	credentialpasswordAPI.SignInWithCredentialAndPassword(ctx, "user@example.com", "password")
-func Use[T any](a *Aegis, name PluginName) T {
+func Use[T any](a *Limen, name PluginName) T {
 	plugin, ok := a.core.GetPlugin(name)
 	if !ok {
-		panic(fmt.Sprintf("aegis: plugin %q not registered; add it to Config.Plugins", name))
+		panic(fmt.Sprintf("limen: plugin %q not registered; add it to Config.Plugins", name))
 	}
 	typed, ok := plugin.(T)
 	if !ok {
-		panic(fmt.Sprintf("aegis: plugin %q does not implement the requested interface", name))
+		panic(fmt.Sprintf("limen: plugin %q does not implement the requested interface", name))
 	}
 	return typed
 }
@@ -147,12 +147,12 @@ func Use[T any](a *Aegis, name PluginName) T {
 //
 // For example, if you want to use the credential-password plugin, you can get the API interface like this:
 //
-//	credentialpasswordAPI, ok := aegis.TryUse[credentialpassword.API](aegis, aegis.PluginCredentialPassword)
+//	credentialpasswordAPI, ok := limen.TryUse[credentialpassword.API](limen, limen.PluginCredentialPassword)
 //	if !ok {
 //		return nil, fmt.Errorf("credential password plugin is not registered")
 //	}
 //	credentialpasswordAPI.SignInWithCredentialAndPassword(ctx, "user@example.com", "password")
-func TryUse[T any](a *Aegis, name PluginName) (T, bool) {
+func TryUse[T any](a *Limen, name PluginName) (T, bool) {
 	plugin, ok := a.core.GetPlugin(name)
 	if !ok {
 		var zero T
@@ -162,7 +162,7 @@ func TryUse[T any](a *Aegis, name PluginName) (T, bool) {
 	return typed, ok
 }
 
-func registerPluginRoutes(router *Router, plugins []Plugin, httpCore *AegisHTTPCore, config *httpConfig) {
+func registerPluginRoutes(router *Router, plugins []Plugin, httpCore *LimenHTTPCore, config *httpConfig) {
 	for _, plugin := range plugins {
 		pluginConfig := plugin.PluginHTTPConfig()
 		basePath := pluginConfig.BasePath
@@ -181,7 +181,7 @@ func registerPluginRoutes(router *Router, plugins []Plugin, httpCore *AegisHTTPC
 	}
 }
 
-func prepareGlobalMiddlewares(config *httpConfig, httpCore *AegisHTTPCore, plugins []Plugin) []Middleware {
+func prepareGlobalMiddlewares(config *httpConfig, httpCore *LimenHTTPCore, plugins []Plugin) []Middleware {
 	globalMiddlewares := []Middleware{middlewareAdditionalFieldsContext()}
 
 	if config.originCheck {

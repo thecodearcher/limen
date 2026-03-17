@@ -54,7 +54,7 @@ type totpConfig struct {
 
 func NewDefaultTOTPConfig(opts ...TOTPOption) *totpConfig {
 	config := &totpConfig{
-		issuer:    "Aegis",
+		issuer:    "Limen",
 		ttl:       30 * time.Second,
 		digits:    TOTPDigitsSix,
 		algorithm: TOTPAlgorithmSHA1,

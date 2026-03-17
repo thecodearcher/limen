@@ -5,5 +5,5 @@ specs
 .DS_Store
 tmp/
 .air.toml
-.aegis/
+.limen/
 .env

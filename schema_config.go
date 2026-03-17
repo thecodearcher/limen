@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 // PluginSchemaConfig represents customization for a plugin schema
 type PluginSchemaConfig struct {

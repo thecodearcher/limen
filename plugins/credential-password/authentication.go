@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // SignInWithCredentialAndPassword authenticates a user with either email or username (if enabled) and password.
 // The credential parameter can be either an email address or a username.
 // Returns an AuthenticationResult on success, or an error if authentication fails.
-func (p *credentialPasswordPlugin) SignInWithCredentialAndPassword(ctx context.Context, credential string, password string) (*aegis.AuthenticationResult, error) {
+func (p *credentialPasswordPlugin) SignInWithCredentialAndPassword(ctx context.Context, credential string, password string) (*limen.AuthenticationResult, error) {
 	isUsername := !strings.Contains(credential, "@") && p.config.enableUsername
 
-	var user *aegis.User
+	var user *limen.User
 	var err error
 
 	if isUsername {
@@ -33,7 +33,7 @@ func (p *credentialPasswordPlugin) SignInWithCredentialAndPassword(ctx context.C
 	return p.authenticateUser(user, password)
 }
 
-func (p *credentialPasswordPlugin) authenticateUser(user *aegis.User, password string) (*aegis.AuthenticationResult, error) {
+func (p *credentialPasswordPlugin) authenticateUser(user *limen.User, password string) (*limen.AuthenticationResult, error) {
 	isValid, err := p.ComparePassword(password, user.Password)
 	if err != nil {
 		return nil, err
@@ -43,36 +43,36 @@ func (p *credentialPasswordPlugin) authenticateUser(user *aegis.User, password s
 		return nil, ErrInvalidPassword
 	}
 
-	return &aegis.AuthenticationResult{User: user}, nil
+	return &limen.AuthenticationResult{User: user}, nil
 }
 
 // FindUserByUsername finds a user by their username.
 // Returns an error if username support is not enabled or if the user is not found.
-func (p *credentialPasswordPlugin) FindUserByUsername(ctx context.Context, username string) (*aegis.User, error) {
+func (p *credentialPasswordPlugin) FindUserByUsername(ctx context.Context, username string) (*limen.User, error) {
 	if !p.config.enableUsername {
 		return nil, fmt.Errorf("username support is not enabled")
 	}
 
-	user, err := p.core.FindOne(ctx, p.userSchema, []aegis.Where{
-		aegis.Eq(p.getUsernameField(), username),
+	user, err := p.core.FindOne(ctx, p.userSchema, []limen.Where{
+		limen.Eq(p.getUsernameField(), username),
 	}, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return user.(*aegis.User), nil
+	return user.(*limen.User), nil
 }
 
 // SignUpWithCredentialAndPassword creates a new user account with email and password.
 // If username support is enabled, a username can be provided in additionalFields.
 // Returns an AuthenticationResult on success, or an error if signup fails.
-func (p *credentialPasswordPlugin) SignUpWithCredentialAndPassword(ctx context.Context, user *aegis.User, additionalFields map[string]any) (*aegis.AuthenticationResult, error) {
+func (p *credentialPasswordPlugin) SignUpWithCredentialAndPassword(ctx context.Context, user *limen.User, additionalFields map[string]any) (*limen.AuthenticationResult, error) {
 	if err := p.validateUser(user, additionalFields); err != nil {
 		return nil, err
 	}
 
-	username := strings.TrimSpace(aegis.GetFromMap[string](additionalFields, "username"))
+	username := strings.TrimSpace(limen.GetFromMap[string](additionalFields, "username"))
 
 	if p.config.enableUsername && username != "" {
 		usernameExists, err := p.checkUsernameExists(ctx, username)
@@ -101,10 +101,10 @@ func (p *credentialPasswordPlugin) SignUpWithCredentialAndPassword(ctx context.C
 		return nil, err
 	}
 
-	var verification *aegis.Verification
+	var verification *limen.Verification
 
 	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
-		if err := p.dbAction.CreateUser(ctx, &aegis.User{
+		if err := p.dbAction.CreateUser(ctx, &limen.User{
 			Email:    user.Email,
 			Password: &hashedPassword,
 		}, additionalFields); err != nil {
@@ -132,7 +132,7 @@ func (p *credentialPasswordPlugin) SignUpWithCredentialAndPassword(ctx context.C
 		p.SendVerificationEmail(ctx, user, verification)
 	}
 
-	return &aegis.AuthenticationResult{User: user}, nil
+	return &limen.AuthenticationResult{User: user}, nil
 }
 
 func (p *credentialPasswordPlugin) checkUsernameExists(ctx context.Context, username string) (bool, error) {
@@ -140,8 +140,8 @@ func (p *credentialPasswordPlugin) checkUsernameExists(ctx context.Context, user
 		return false, nil
 	}
 
-	exists, err := p.core.Exists(ctx, p.userSchema, []aegis.Where{
-		aegis.Eq(p.getUsernameField(), username),
+	exists, err := p.core.Exists(ctx, p.userSchema, []limen.Where{
+		limen.Eq(p.getUsernameField(), username),
 	})
 	if err != nil {
 		return false, err
@@ -150,8 +150,8 @@ func (p *credentialPasswordPlugin) checkUsernameExists(ctx context.Context, user
 }
 
 func (p *credentialPasswordPlugin) checkEmailExists(ctx context.Context, email string) (bool, error) {
-	exists, err := p.core.Exists(ctx, p.userSchema, []aegis.Where{
-		aegis.Eq(p.userSchema.GetEmailField(), email),
+	exists, err := p.core.Exists(ctx, p.userSchema, []limen.Where{
+		limen.Eq(p.userSchema.GetEmailField(), email),
 	})
 	if err != nil {
 		return false, err

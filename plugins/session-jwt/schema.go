@@ -3,7 +3,7 @@ package sessionjwt
 import (
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // ============================================================================
@@ -11,21 +11,21 @@ import (
 // ============================================================================
 
 const (
-	RefreshTokenSchemaTableName aegis.SchemaTableName = "jwt_refresh_tokens"
+	RefreshTokenSchemaTableName limen.SchemaTableName = "jwt_refresh_tokens"
 
-	RefreshTokenSchemaTokenField     aegis.SchemaField = "token"
-	RefreshTokenSchemaUserIDField    aegis.SchemaField = "user_id"
-	RefreshTokenSchemaJWTIDField     aegis.SchemaField = "jwt_id"
-	RefreshTokenSchemaFamilyField    aegis.SchemaField = "family"
-	RefreshTokenSchemaExpiresAtField aegis.SchemaField = "expires_at"
-	RefreshTokenSchemaCreatedAtField aegis.SchemaField = "created_at"
+	RefreshTokenSchemaTokenField     limen.SchemaField = "token"
+	RefreshTokenSchemaUserIDField    limen.SchemaField = "user_id"
+	RefreshTokenSchemaJWTIDField     limen.SchemaField = "jwt_id"
+	RefreshTokenSchemaFamilyField    limen.SchemaField = "family"
+	RefreshTokenSchemaExpiresAtField limen.SchemaField = "expires_at"
+	RefreshTokenSchemaCreatedAtField limen.SchemaField = "created_at"
 )
 
 const (
-	BlacklistSchemaTableName aegis.SchemaTableName = "jwt_blacklist"
+	BlacklistSchemaTableName limen.SchemaTableName = "jwt_blacklist"
 
-	BlacklistSchemaJTIField       aegis.SchemaField = "jti"
-	BlacklistSchemaExpiresAtField aegis.SchemaField = "expires_at"
+	BlacklistSchemaJTIField       limen.SchemaField = "jti"
+	BlacklistSchemaExpiresAtField limen.SchemaField = "expires_at"
 )
 
 // ============================================================================
@@ -33,11 +33,11 @@ const (
 // ============================================================================
 
 type refreshTokenSchema struct {
-	aegis.BaseSchema
+	limen.BaseSchema
 }
 
 func newRefreshTokenSchema() *refreshTokenSchema {
-	return &refreshTokenSchema{BaseSchema: aegis.BaseSchema{}}
+	return &refreshTokenSchema{BaseSchema: limen.BaseSchema{}}
 }
 
 func (s *refreshTokenSchema) GetSoftDeleteField() string { return "" }
@@ -66,7 +66,7 @@ func (s *refreshTokenSchema) GetCreatedAtField() string {
 	return s.GetField(RefreshTokenSchemaCreatedAtField)
 }
 
-func (s *refreshTokenSchema) ToStorage(data aegis.Model) map[string]any {
+func (s *refreshTokenSchema) ToStorage(data limen.Model) map[string]any {
 	rt := data.(*RefreshToken)
 	return map[string]any{
 		s.GetTokenField():     rt.Token,
@@ -78,7 +78,7 @@ func (s *refreshTokenSchema) ToStorage(data aegis.Model) map[string]any {
 	}
 }
 
-func (s *refreshTokenSchema) FromStorage(data map[string]any) aegis.Model {
+func (s *refreshTokenSchema) FromStorage(data map[string]any) limen.Model {
 	return &RefreshToken{
 		ID:        data[s.GetIDField()],
 		Token:     data[s.GetTokenField()].(string),
@@ -96,11 +96,11 @@ func (s *refreshTokenSchema) FromStorage(data map[string]any) aegis.Model {
 // ============================================================================
 
 type blacklistSchema struct {
-	aegis.BaseSchema
+	limen.BaseSchema
 }
 
 func newBlacklistSchema() *blacklistSchema {
-	return &blacklistSchema{BaseSchema: aegis.BaseSchema{}}
+	return &blacklistSchema{BaseSchema: limen.BaseSchema{}}
 }
 
 func (s *blacklistSchema) GetSoftDeleteField() string { return "" }
@@ -113,7 +113,7 @@ func (s *blacklistSchema) GetExpiresAtField() string {
 	return s.GetField(BlacklistSchemaExpiresAtField)
 }
 
-func (s *blacklistSchema) ToStorage(data aegis.Model) map[string]any {
+func (s *blacklistSchema) ToStorage(data limen.Model) map[string]any {
 	entry := data.(*BlacklistEntry)
 	return map[string]any{
 		s.GetJTIField():       entry.JTI,
@@ -121,7 +121,7 @@ func (s *blacklistSchema) ToStorage(data aegis.Model) map[string]any {
 	}
 }
 
-func (s *blacklistSchema) FromStorage(data map[string]any) aegis.Model {
+func (s *blacklistSchema) FromStorage(data map[string]any) limen.Model {
 	return &BlacklistEntry{
 		JTI:       data[s.GetJTIField()].(string),
 		ExpiresAt: data[s.GetExpiresAtField()].(time.Time),
@@ -133,39 +133,39 @@ func (s *blacklistSchema) FromStorage(data map[string]any) aegis.Model {
 // Schema Definitions (used in GetSchemas)
 // ============================================================================
 
-func buildRefreshTokenTableDef(schemaConfig *aegis.SchemaConfig, schema *refreshTokenSchema) *aegis.SchemaDefinition {
-	return aegis.NewSchemaDefinitionForTable(
-		aegis.SchemaName(RefreshTokenSchemaTableName),
+func buildRefreshTokenTableDef(schemaConfig *limen.SchemaConfig, schema *refreshTokenSchema) *limen.SchemaDefinition {
+	return limen.NewSchemaDefinitionForTable(
+		limen.SchemaName(RefreshTokenSchemaTableName),
 		RefreshTokenSchemaTableName,
 		schema,
-		aegis.WithSchemaIDField(schemaConfig),
-		aegis.WithSchemaField(string(RefreshTokenSchemaTokenField), aegis.ColumnTypeString),
-		aegis.WithSchemaField(string(RefreshTokenSchemaUserIDField), schemaConfig.GetIDColumnType()),
-		aegis.WithSchemaField(string(RefreshTokenSchemaJWTIDField), aegis.ColumnTypeString),
-		aegis.WithSchemaField(string(RefreshTokenSchemaFamilyField), aegis.ColumnTypeString),
-		aegis.WithSchemaField(string(RefreshTokenSchemaExpiresAtField), aegis.ColumnTypeTime),
-		aegis.WithSchemaField(string(RefreshTokenSchemaCreatedAtField), aegis.ColumnTypeTime, aegis.WithDefaultValue(string(aegis.DatabaseDefaultValueNow))),
-		aegis.WithSchemaUniqueIndex("idx_jwt_refresh_tokens_token", []aegis.SchemaField{RefreshTokenSchemaTokenField}),
-		aegis.WithSchemaIndex("idx_jwt_refresh_tokens_user_id", []aegis.SchemaField{RefreshTokenSchemaUserIDField}),
-		aegis.WithSchemaIndex("idx_jwt_refresh_tokens_family", []aegis.SchemaField{RefreshTokenSchemaFamilyField}),
-		aegis.WithSchemaForeignKey(aegis.ForeignKeyDefinition{
+		limen.WithSchemaIDField(schemaConfig),
+		limen.WithSchemaField(string(RefreshTokenSchemaTokenField), limen.ColumnTypeString),
+		limen.WithSchemaField(string(RefreshTokenSchemaUserIDField), schemaConfig.GetIDColumnType()),
+		limen.WithSchemaField(string(RefreshTokenSchemaJWTIDField), limen.ColumnTypeString),
+		limen.WithSchemaField(string(RefreshTokenSchemaFamilyField), limen.ColumnTypeString),
+		limen.WithSchemaField(string(RefreshTokenSchemaExpiresAtField), limen.ColumnTypeTime),
+		limen.WithSchemaField(string(RefreshTokenSchemaCreatedAtField), limen.ColumnTypeTime, limen.WithDefaultValue(string(limen.DatabaseDefaultValueNow))),
+		limen.WithSchemaUniqueIndex("idx_jwt_refresh_tokens_token", []limen.SchemaField{RefreshTokenSchemaTokenField}),
+		limen.WithSchemaIndex("idx_jwt_refresh_tokens_user_id", []limen.SchemaField{RefreshTokenSchemaUserIDField}),
+		limen.WithSchemaIndex("idx_jwt_refresh_tokens_family", []limen.SchemaField{RefreshTokenSchemaFamilyField}),
+		limen.WithSchemaForeignKey(limen.ForeignKeyDefinition{
 			Name:             "fk_jwt_refresh_tokens_users_user_id",
 			Column:           RefreshTokenSchemaUserIDField,
-			ReferencedSchema: aegis.CoreSchemaUsers,
-			ReferencedField:  aegis.SchemaIDField,
-			OnDelete:         aegis.FKActionCascade,
-			OnUpdate:         aegis.FKActionCascade,
+			ReferencedSchema: limen.CoreSchemaUsers,
+			ReferencedField:  limen.SchemaIDField,
+			OnDelete:         limen.FKActionCascade,
+			OnUpdate:         limen.FKActionCascade,
 		}),
 	)
 }
 
-func buildBlacklistTableDef(schema *blacklistSchema) *aegis.SchemaDefinition {
-	return aegis.NewSchemaDefinitionForTable(
-		aegis.SchemaName(BlacklistSchemaTableName),
+func buildBlacklistTableDef(schema *blacklistSchema) *limen.SchemaDefinition {
+	return limen.NewSchemaDefinitionForTable(
+		limen.SchemaName(BlacklistSchemaTableName),
 		BlacklistSchemaTableName,
 		schema,
-		aegis.WithSchemaField(string(BlacklistSchemaJTIField), aegis.ColumnTypeString, aegis.WithPrimaryKey(true)),
-		aegis.WithSchemaField(string(BlacklistSchemaExpiresAtField), aegis.ColumnTypeTime),
-		aegis.WithSchemaIndex("idx_jwt_blacklist_expires_at", []aegis.SchemaField{BlacklistSchemaExpiresAtField}),
+		limen.WithSchemaField(string(BlacklistSchemaJTIField), limen.ColumnTypeString, limen.WithPrimaryKey(true)),
+		limen.WithSchemaField(string(BlacklistSchemaExpiresAtField), limen.ColumnTypeTime),
+		limen.WithSchemaIndex("idx_jwt_blacklist_expires_at", []limen.SchemaField{BlacklistSchemaExpiresAtField}),
 	)
 }

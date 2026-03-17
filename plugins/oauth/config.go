@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type ConfigOption func(*config)
@@ -17,7 +17,7 @@ type config struct {
 	disableTokensEncryption     bool
 	encryptTokens               func(secret []byte, tokens *OAuthTokens) (*OAuthTokens, error)
 	decryptTokens               func(secret []byte, tokens *OAuthTokens) (*OAuthTokens, error)
-	mapProfileToUser            func(info *aegis.OAuthAccountProfile) map[string]any
+	mapProfileToUser            func(info *limen.OAuthAccountProfile) map[string]any
 	getUserInfo                 func(ctx context.Context, provider string, token *TokenResponse) (*ProviderUserInfo, error)
 	cookieName                  string
 	cookieTTL                   time.Duration
@@ -83,7 +83,7 @@ func WithDisableTokensEncryption() ConfigOption {
 }
 
 // WithMapProfileToUser sets the function to map the OAuth profile to a user additional fields.
-func WithMapProfileToUser(mapProfileToUser func(info *aegis.OAuthAccountProfile) map[string]any) ConfigOption {
+func WithMapProfileToUser(mapProfileToUser func(info *limen.OAuthAccountProfile) map[string]any) ConfigOption {
 	return func(c *config) {
 		c.mapProfileToUser = mapProfileToUser
 	}

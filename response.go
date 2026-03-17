@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"encoding/json"
@@ -92,7 +92,7 @@ func (rs Responder) JSON(w http.ResponseWriter, r *http.Request, status int, pay
 }
 
 func (rs Responder) Error(w http.ResponseWriter, r *http.Request, err error) error {
-	ae := ToAegisError(err)
+	ae := ToLimenError(err)
 	if tryDeferResponse(w, ae.Status(), ae, true) {
 		return nil
 	}
@@ -118,7 +118,7 @@ func (rs Responder) Error(w http.ResponseWriter, r *http.Request, err error) err
 	return json.NewEncoder(w).Encode(out)
 }
 
-func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core *AegisCore, result *AuthenticationResult, sessionResult *SessionResult) error {
+func (rs Responder) SessionResponse(w http.ResponseWriter, r *http.Request, core *LimenCore, result *AuthenticationResult, sessionResult *SessionResult) error {
 	// Store auth result for hooks to access
 	if rw, ok := w.(*responseWriter); ok {
 		rw.authResult = result

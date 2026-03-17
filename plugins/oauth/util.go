@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // BuildAuthCodeURL builds the OAuth2 authorization URL using the provider's config.
@@ -147,9 +147,9 @@ func generateRandomString() string {
 	return hex.EncodeToString(randomBytes)
 }
 
-func newAccountFromOAuthProfile(userID any, profile *aegis.OAuthAccountProfile, tokens *OAuthTokens) *aegis.Account {
+func newAccountFromOAuthProfile(userID any, profile *limen.OAuthAccountProfile, tokens *OAuthTokens) *limen.Account {
 	now := time.Now()
-	return &aegis.Account{
+	return &limen.Account{
 		UserID:               userID,
 		Provider:             profile.Provider,
 		ProviderAccountID:    profile.ProviderAccountID,

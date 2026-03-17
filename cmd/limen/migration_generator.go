@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type DatabaseDriver string
@@ -19,14 +19,14 @@ type sqlMigrationGenerator struct {
 	useAutoIncrementIDs bool
 }
 
-func newSQLMigrationGenerator(driver Driver, config *aegis.CliConfig) (*sqlMigrationGenerator, error) {
+func newSQLMigrationGenerator(driver Driver, config *limen.CliConfig) (*sqlMigrationGenerator, error) {
 	return &sqlMigrationGenerator{
 		driver:              driver,
 		useAutoIncrementIDs: config.UseAutoIncrementID,
 	}, nil
 }
 
-func (s *sqlMigrationGenerator) generateUpMigration(schema *aegis.SchemaDefinition, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateUpMigration(schema *limen.SchemaDefinition, diff *schemaDiff) (string, error) {
 	if diff != nil && diff.HasChanges() {
 		return s.generateMigrationForExistingTable(schema.GetTableName(), diff)
 	}
@@ -34,14 +34,14 @@ func (s *sqlMigrationGenerator) generateUpMigration(schema *aegis.SchemaDefiniti
 	return s.generateCreateTable(schema)
 }
 
-func (s *sqlMigrationGenerator) generateDownMigration(schema *aegis.SchemaDefinition, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateDownMigration(schema *limen.SchemaDefinition, diff *schemaDiff) (string, error) {
 	if diff != nil && diff.HasChanges() {
 		return s.generateAlterDownMigration(schema.GetTableName(), diff)
 	}
 	return fmt.Sprintf("DROP TABLE IF EXISTS %s;", schema.GetTableName()), nil
 }
 
-func (s *sqlMigrationGenerator) generateCreateTable(schema *aegis.SchemaDefinition) (string, error) {
+func (s *sqlMigrationGenerator) generateCreateTable(schema *limen.SchemaDefinition) (string, error) {
 	var buf strings.Builder
 
 	fmt.Fprintf(&buf, "CREATE TABLE IF NOT EXISTS %s (\n", schema.GetTableName())
@@ -78,7 +78,7 @@ func (s *sqlMigrationGenerator) generateCreateTable(schema *aegis.SchemaDefiniti
 	return buf.String(), nil
 }
 
-func (s *sqlMigrationGenerator) generateMigrationForExistingTable(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateMigrationForExistingTable(tableName limen.SchemaTableName, diff *schemaDiff) (string, error) {
 	var buf strings.Builder
 	statements := []string{}
 
@@ -102,7 +102,7 @@ func (s *sqlMigrationGenerator) generateMigrationForExistingTable(tableName aegi
 	return buf.String(), nil
 }
 
-func (s *sqlMigrationGenerator) generateAlterDownMigration(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateAlterDownMigration(tableName limen.SchemaTableName, diff *schemaDiff) (string, error) {
 	var buf strings.Builder
 	statements := []string{}
 
@@ -127,7 +127,7 @@ func (s *sqlMigrationGenerator) generateAlterDownMigration(tableName aegis.Schem
 	return buf.String(), nil
 }
 
-func (s *sqlMigrationGenerator) generateUpAlterTableStatement(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateUpAlterTableStatement(tableName limen.SchemaTableName, diff *schemaDiff) (string, error) {
 	if len(diff.AddedColumns) == 0 && len(diff.AddedForeignKeys) == 0 {
 		return "", nil
 	}
@@ -153,7 +153,7 @@ func (s *sqlMigrationGenerator) generateUpAlterTableStatement(tableName aegis.Sc
 	return buf.String(), nil
 }
 
-func (s *sqlMigrationGenerator) generateDownAlterTableStatement(tableName aegis.SchemaTableName, diff *schemaDiff) (string, error) {
+func (s *sqlMigrationGenerator) generateDownAlterTableStatement(tableName limen.SchemaTableName, diff *schemaDiff) (string, error) {
 	if len(diff.AddedColumns) == 0 && len(diff.AddedForeignKeys) == 0 {
 		return "", nil
 	}
@@ -180,10 +180,10 @@ func (s *sqlMigrationGenerator) generateDownAlterTableStatement(tableName aegis.
 	return buf.String(), nil
 }
 
-func (s *sqlMigrationGenerator) generateColumnDefinition(field *aegis.ColumnDefinition) string {
+func (s *sqlMigrationGenerator) generateColumnDefinition(field *limen.ColumnDefinition) string {
 	parts := []string{field.Name}
 
-	isAutoIncrement := field.LogicalField == aegis.SchemaIDField && s.useAutoIncrementIDs
+	isAutoIncrement := field.LogicalField == limen.SchemaIDField && s.useAutoIncrementIDs
 
 	sqlType := s.driver.MapGoTypeToSQL(field.Type, isAutoIncrement)
 	parts = append(parts, sqlType)
@@ -201,7 +201,7 @@ func (s *sqlMigrationGenerator) generateColumnDefinition(field *aegis.ColumnDefi
 	if field.DefaultValue != "" {
 		defaultValue := field.DefaultValue
 		if checkForSpecialSyntaxPatterns(defaultValue) {
-			defaultValue = strings.TrimPrefix(s.driver.FormatDefaultValue(defaultValue), aegis.DatabaseDefaultValuePrefix)
+			defaultValue = strings.TrimPrefix(s.driver.FormatDefaultValue(defaultValue), limen.DatabaseDefaultValuePrefix)
 		}
 		parts = append(parts, fmt.Sprintf("DEFAULT %s", defaultValue))
 	}
@@ -209,7 +209,7 @@ func (s *sqlMigrationGenerator) generateColumnDefinition(field *aegis.ColumnDefi
 	return strings.Join(parts, " ")
 }
 
-func (s *sqlMigrationGenerator) generateForeignKeyStatement(fk *aegis.ForeignKeyDefinition, alterTable bool) string {
+func (s *sqlMigrationGenerator) generateForeignKeyStatement(fk *limen.ForeignKeyDefinition, alterTable bool) string {
 	var buf strings.Builder
 
 	if alterTable {
@@ -231,7 +231,7 @@ func (s *sqlMigrationGenerator) generateForeignKeyStatement(fk *aegis.ForeignKey
 	return buf.String()
 }
 
-func (s *sqlMigrationGenerator) generateCreateIndexStatement(idx *aegis.IndexDefinition, tableName aegis.SchemaTableName) string {
+func (s *sqlMigrationGenerator) generateCreateIndexStatement(idx *limen.IndexDefinition, tableName limen.SchemaTableName) string {
 	if idx.Unique {
 		return fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (%s);",
 			idx.Name, tableName, joinCustomStringSlice(idx.Columns, ", "))

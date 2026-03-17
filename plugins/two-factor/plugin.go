@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type challengePayload struct {
@@ -17,9 +17,9 @@ type challengePayload struct {
 }
 
 type twoFactorPlugin struct {
-	core            *aegis.AegisCore
-	httpCore        *aegis.AegisHTTPCore
-	cookies         *aegis.CookieManager
+	core            *limen.LimenCore
+	httpCore        *limen.LimenHTTPCore
+	cookies         *limen.CookieManager
 	twoFactorSchema *twoFactorSchema
 	userSchema      *userWithTwoFactorSchema
 	config          *config
@@ -28,8 +28,8 @@ type twoFactorPlugin struct {
 	backupCodes     *backupCodes
 }
 
-func (t *twoFactorPlugin) Name() aegis.PluginName {
-	return aegis.PluginTwoFactor
+func (t *twoFactorPlugin) Name() limen.PluginName {
+	return limen.PluginTwoFactor
 }
 
 func New(opts ...ConfigOption) *twoFactorPlugin {
@@ -49,7 +49,7 @@ func New(opts ...ConfigOption) *twoFactorPlugin {
 	}
 }
 
-func (t *twoFactorPlugin) Initialize(core *aegis.AegisCore) error {
+func (t *twoFactorPlugin) Initialize(core *limen.LimenCore) error {
 	t.core = core
 	t.cookies = core.Cookies()
 	if len(t.config.secret) == 0 {
@@ -68,14 +68,14 @@ func (t *twoFactorPlugin) Initialize(core *aegis.AegisCore) error {
 	return nil
 }
 
-func (t *twoFactorPlugin) PluginHTTPConfig() aegis.PluginHTTPConfig {
-	return aegis.PluginHTTPConfig{
+func (t *twoFactorPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
+	return limen.PluginHTTPConfig{
 		BasePath:   "/two-factor",
-		Middleware: []aegis.Middleware{},
-		Hooks: &aegis.Hooks{
-			After: []*aegis.Hook{
+		Middleware: []limen.Middleware{},
+		Hooks: &limen.Hooks{
+			After: []*limen.Hook{
 				{
-					PathMatcher: func(ctx *aegis.HookContext) bool {
+					PathMatcher: func(ctx *limen.HookContext) bool {
 						return ctx.RouteID() == "signin"
 					},
 					Run: t.handleSigninHook,
@@ -85,7 +85,7 @@ func (t *twoFactorPlugin) PluginHTTPConfig() aegis.PluginHTTPConfig {
 	}
 }
 
-func (t *twoFactorPlugin) handleSigninHook(ctx *aegis.HookContext) bool {
+func (t *twoFactorPlugin) handleSigninHook(ctx *limen.HookContext) bool {
 	original := ctx.GetResponse()
 	if original == nil || original.IsError || original.StatusCode != http.StatusOK {
 		return true
@@ -118,7 +118,7 @@ func (t *twoFactorPlugin) handleSigninHook(ctx *aegis.HookContext) bool {
 	return true
 }
 
-func (t *twoFactorPlugin) revokeSessionFromResponse(ctx *aegis.HookContext) {
+func (t *twoFactorPlugin) revokeSessionFromResponse(ctx *limen.HookContext) {
 	if t.httpCore == nil {
 		return
 	}
@@ -128,7 +128,7 @@ func (t *twoFactorPlugin) revokeSessionFromResponse(ctx *aegis.HookContext) {
 		return
 	}
 
-	sessionToken := aegis.ExtractCookieValue(ctx.Response().Header(), sessionCookieName)
+	sessionToken := limen.ExtractCookieValue(ctx.Response().Header(), sessionCookieName)
 	if sessionToken != "" {
 		_ = t.core.SessionManager.RevokeSession(ctx.Request().Context(), sessionToken)
 	}
@@ -136,7 +136,7 @@ func (t *twoFactorPlugin) revokeSessionFromResponse(ctx *aegis.HookContext) {
 	t.httpCore.Cookies().ClearSessionCookie(ctx.Response())
 }
 
-func (t *twoFactorPlugin) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+func (t *twoFactorPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	t.httpCore = httpCore
 	handlers := newTwoFactorHandlers(t, httpCore.Responder, httpCore)
 
@@ -154,46 +154,46 @@ func (t *twoFactorPlugin) RegisterRoutes(httpCore *aegis.AegisHTTPCore, routeBui
 	}
 }
 
-func (t *twoFactorPlugin) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
+func (t *twoFactorPlugin) GetSchemas(schema *limen.SchemaConfig) []limen.SchemaIntrospector {
 	twoFactorSchema := newDefaultTwoFactorSchema()
 	userWithTwoFactorSchema := newDefaultSchemaUserTwoFactor(schema.User)
 	t.userSchema = userWithTwoFactorSchema
 	t.twoFactorSchema = twoFactorSchema
 
-	userWithTwoFactorExtension := aegis.NewSchemaDefinitionForExtension(
-		aegis.CoreSchemaUsers,
+	userWithTwoFactorExtension := limen.NewSchemaDefinitionForExtension(
+		limen.CoreSchemaUsers,
 		userWithTwoFactorSchema,
-		aegis.WithSchemaField(string(UserWithTwoFactorSchemaEnabledField), aegis.ColumnTypeBool, aegis.WithDefaultValue("false"), aegis.WithNullable(false)),
+		limen.WithSchemaField(string(UserWithTwoFactorSchemaEnabledField), limen.ColumnTypeBool, limen.WithDefaultValue("false"), limen.WithNullable(false)),
 	)
 
-	twoFactorTable := aegis.NewSchemaDefinitionForTable(
-		aegis.SchemaName(TwoFactorSchemaTableName),
+	twoFactorTable := limen.NewSchemaDefinitionForTable(
+		limen.SchemaName(TwoFactorSchemaTableName),
 		TwoFactorSchemaTableName,
 		twoFactorSchema,
-		aegis.WithSchemaIDField(schema),
-		aegis.WithSchemaField(string(TwoFactorSchemaUserIDField), schema.GetIDColumnType()),
-		aegis.WithSchemaField(string(TwoFactorSchemaSecretField), aegis.ColumnTypeString, aegis.WithNullable(true)),
-		aegis.WithSchemaField(string(TwoFactorSchemaBackupCodesField), aegis.ColumnTypeText, aegis.WithNullable(true)),
-		aegis.WithSchemaForeignKey(aegis.ForeignKeyDefinition{
+		limen.WithSchemaIDField(schema),
+		limen.WithSchemaField(string(TwoFactorSchemaUserIDField), schema.GetIDColumnType()),
+		limen.WithSchemaField(string(TwoFactorSchemaSecretField), limen.ColumnTypeString, limen.WithNullable(true)),
+		limen.WithSchemaField(string(TwoFactorSchemaBackupCodesField), limen.ColumnTypeText, limen.WithNullable(true)),
+		limen.WithSchemaForeignKey(limen.ForeignKeyDefinition{
 			Name:             "fk_two_factors_users_user_id",
 			Column:           TwoFactorSchemaUserIDField,
-			ReferencedSchema: aegis.CoreSchemaUsers,
-			ReferencedField:  aegis.SchemaIDField,
-			OnDelete:         aegis.FKActionRestrict,
-			OnUpdate:         aegis.FKActionCascade,
+			ReferencedSchema: limen.CoreSchemaUsers,
+			ReferencedField:  limen.SchemaIDField,
+			OnDelete:         limen.FKActionRestrict,
+			OnUpdate:         limen.FKActionCascade,
 		}),
-		aegis.WithSchemaUniqueIndex("idx_two_factors_user_id", []aegis.SchemaField{TwoFactorSchemaUserIDField}),
+		limen.WithSchemaUniqueIndex("idx_two_factors_user_id", []limen.SchemaField{TwoFactorSchemaUserIDField}),
 	)
 
-	return []aegis.SchemaIntrospector{
+	return []limen.SchemaIntrospector{
 		userWithTwoFactorExtension,
 		twoFactorTable,
 	}
 }
 
 func (t *twoFactorPlugin) FindTwoFactorByUserID(ctx context.Context, userID any) (*TwoFactor, error) {
-	twoFactor, err := t.core.FindOne(ctx, t.twoFactorSchema, []aegis.Where{
-		aegis.Eq(t.twoFactorSchema.GetUserIDField(), userID),
+	twoFactor, err := t.core.FindOne(ctx, t.twoFactorSchema, []limen.Where{
+		limen.Eq(t.twoFactorSchema.GetUserIDField(), userID),
 	}, nil)
 	if err != nil {
 		return nil, err
@@ -211,17 +211,17 @@ func (t *twoFactorPlugin) CreateTwoFactor(ctx context.Context, userID any, encry
 }
 
 func (t *twoFactorPlugin) DeleteTwoFactor(ctx context.Context, userID any) error {
-	return t.core.Delete(ctx, t.twoFactorSchema, []aegis.Where{
-		aegis.Eq(t.twoFactorSchema.GetUserIDField(), userID),
+	return t.core.Delete(ctx, t.twoFactorSchema, []limen.Where{
+		limen.Eq(t.twoFactorSchema.GetUserIDField(), userID),
 	})
 }
 
 func (t *twoFactorPlugin) encrypt(value string) (string, error) {
-	return aegis.EncryptXChaCha(value, t.config.secret, nil)
+	return limen.EncryptXChaCha(value, t.config.secret, nil)
 }
 
 func (t *twoFactorPlugin) decrypt(secret string) (string, error) {
-	return aegis.DecryptXChaCha(secret, t.config.secret, nil)
+	return limen.DecryptXChaCha(secret, t.config.secret, nil)
 }
 
 func (t *twoFactorPlugin) generateChallengeToken(userID any) (string, error) {
@@ -261,7 +261,7 @@ func (t *twoFactorPlugin) verifyChallengeToken(token string) (*challengePayload,
 	return &payload, nil
 }
 
-func (t *twoFactorPlugin) setChallengeCookie(ctx *aegis.HookContext, token string) {
+func (t *twoFactorPlugin) setChallengeCookie(ctx *limen.HookContext, token string) {
 	t.cookies.SetOnHookCtx(ctx, t.config.cookieName, token, int(t.config.cookieExpiration.Seconds()))
 }
 

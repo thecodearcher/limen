@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 func (o *oauthPlugin) getProviderConfig(provider Provider) (*oauth2.Config, []oauth2.AuthCodeOption) {
@@ -26,7 +26,7 @@ func (o *oauthPlugin) constructProviderRedirectURL(provider Provider, config *oa
 	if config.RedirectURL != "" {
 		return config.RedirectURL
 	}
-	return o.core.GetBaseURLWithPluginPath(aegis.PluginOAuth, fmt.Sprintf("%s/callback", provider.Name()))
+	return o.core.GetBaseURLWithPluginPath(limen.PluginOAuth, fmt.Sprintf("%s/callback", provider.Name()))
 }
 
 func (o *oauthPlugin) buildAuthorizationURL(ctx context.Context, provider Provider, stateToken, verifier string) (string, error) {
@@ -58,11 +58,11 @@ func (o *oauthPlugin) validateRedirectURLs(request *OAuthAuthorizeURLData) (stri
 	}
 
 	if !o.httpCore.IsTrustedOrigin(redirectURI) {
-		return "", "", aegis.NewAegisError("redirect_uri is not trusted", http.StatusForbidden, nil)
+		return "", "", limen.NewLimenError("redirect_uri is not trusted", http.StatusForbidden, nil)
 	}
 
 	if request.ErrorRedirectURI != "" && !o.httpCore.IsTrustedOrigin(request.ErrorRedirectURI) {
-		return "", "", aegis.NewAegisError("error_redirect_uri is not trusted", http.StatusForbidden, nil)
+		return "", "", limen.NewLimenError("error_redirect_uri is not trusted", http.StatusForbidden, nil)
 	}
 
 	return redirectURI, request.ErrorRedirectURI, nil
@@ -70,7 +70,7 @@ func (o *oauthPlugin) validateRedirectURLs(request *OAuthAuthorizeURLData) (stri
 
 func (o *oauthPlugin) resolveStateData(ctx context.Context, state, cookieNonce string) (map[string]any, error) {
 	if state == "" || cookieNonce == "" {
-		return nil, aegis.NewAegisError("state and cookie nonce are required", http.StatusBadRequest, nil)
+		return nil, limen.NewLimenError("state and cookie nonce are required", http.StatusBadRequest, nil)
 	}
 	return o.stateStore.Validate(ctx, state, cookieNonce)
 }
@@ -117,14 +117,14 @@ func (o *oauthPlugin) ExchangeAuthorizationCodeForTokens(ctx context.Context, pr
 
 	token, err := o.exchangeCodeForTokens(ctx, provider, code, codeVerifier)
 	if err != nil {
-		return nil, aegis.NewAegisError(err.Error(), http.StatusBadRequest, err)
+		return nil, limen.NewLimenError(err.Error(), http.StatusBadRequest, err)
 	}
 
 	return token, nil
 }
 
 // GetUserInfoWithTokens fetches the user info from the provider using the access token.
-func (o *oauthPlugin) GetUserInfoWithTokens(ctx context.Context, provider Provider, token *TokenResponse) (*aegis.OAuthAccountProfile, error) {
+func (o *oauthPlugin) GetUserInfoWithTokens(ctx context.Context, provider Provider, token *TokenResponse) (*limen.OAuthAccountProfile, error) {
 	var userInfo *ProviderUserInfo
 	var err error
 
@@ -139,11 +139,11 @@ func (o *oauthPlugin) GetUserInfoWithTokens(ctx context.Context, provider Provid
 	}
 
 	if userInfo == nil {
-		return nil, aegis.NewAegisError("provider user info not found", http.StatusUnauthorized, nil)
+		return nil, limen.NewLimenError("provider user info not found", http.StatusUnauthorized, nil)
 	}
 
 	if userInfo.Email == "" || userInfo.ID == "" {
-		return nil, aegis.NewAegisError("provider user email or id not found", http.StatusBadRequest, nil)
+		return nil, limen.NewLimenError("provider user email or id not found", http.StatusBadRequest, nil)
 	}
 
 	var expiresAt *time.Time
@@ -151,7 +151,7 @@ func (o *oauthPlugin) GetUserInfoWithTokens(ctx context.Context, provider Provid
 		expiresAt = &token.ExpiresAt
 	}
 
-	return &aegis.OAuthAccountProfile{
+	return &limen.OAuthAccountProfile{
 		Provider:             provider.Name(),
 		ProviderAccountID:    userInfo.ID,
 		AccessToken:          token.AccessToken,
@@ -167,7 +167,7 @@ func (o *oauthPlugin) GetUserInfoWithTokens(ctx context.Context, provider Provid
 	}, nil
 }
 
-func (o *oauthPlugin) HandleOAuthCallback(ctx context.Context, providerName, code, state, cookieNonce string, callbackErr *CallbackError) (*aegis.OAuthAccountProfile, map[string]any, error) {
+func (o *oauthPlugin) HandleOAuthCallback(ctx context.Context, providerName, code, state, cookieNonce string, callbackErr *CallbackError) (*limen.OAuthAccountProfile, map[string]any, error) {
 	provider, ok := o.providers[providerName]
 	if !ok {
 		return nil, nil, ErrProviderNotFound
@@ -179,11 +179,11 @@ func (o *oauthPlugin) HandleOAuthCallback(ctx context.Context, providerName, cod
 	}
 
 	if callbackErr != nil {
-		return nil, stateData, callbackErr.ToAegisError()
+		return nil, stateData, callbackErr.ToLimenError()
 	}
 
 	if code == "" {
-		return nil, stateData, aegis.NewAegisError("authorization code is required", http.StatusBadRequest, nil)
+		return nil, stateData, limen.NewLimenError("authorization code is required", http.StatusBadRequest, nil)
 	}
 
 	token, err := o.ExchangeAuthorizationCodeForTokens(ctx, provider, stateData, code)
@@ -200,7 +200,7 @@ func (o *oauthPlugin) HandleOAuthCallback(ctx context.Context, providerName, cod
 }
 
 // AuthenticateWithProvider runs the full OAuth callback flow
-func (o *oauthPlugin) AuthenticateWithProvider(ctx context.Context, providerName, code, state, cookieNonce string, callbackErr *CallbackError) (*aegis.AuthenticationResult, map[string]any, error) {
+func (o *oauthPlugin) AuthenticateWithProvider(ctx context.Context, providerName, code, state, cookieNonce string, callbackErr *CallbackError) (*limen.AuthenticationResult, map[string]any, error) {
 	userInfo, stateData, err := o.HandleOAuthCallback(ctx, providerName, code, state, cookieNonce, callbackErr)
 	if err != nil {
 		return nil, stateData, err

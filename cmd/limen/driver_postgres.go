@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type postgresDriver struct {
@@ -116,54 +116,54 @@ func (d *postgresDriver) IntrospectForeignKeysQuery(tableName string) (string, [
 	`, []any{schema, tableName}
 }
 
-func (d *postgresDriver) MapGoTypeToSQL(goType aegis.ColumnType, isAutoIncrement bool) string {
+func (d *postgresDriver) MapGoTypeToSQL(goType limen.ColumnType, isAutoIncrement bool) string {
 	if isAutoIncrement {
 		switch goType {
-		case aegis.ColumnTypeInt, aegis.ColumnTypeInt32:
+		case limen.ColumnTypeInt, limen.ColumnTypeInt32:
 			return "SERIAL"
-		case aegis.ColumnTypeInt64:
+		case limen.ColumnTypeInt64:
 			return "BIGSERIAL"
 		}
 	}
 
 	switch goType {
-	case aegis.ColumnTypeInt, aegis.ColumnTypeInt32:
+	case limen.ColumnTypeInt, limen.ColumnTypeInt32:
 		return "INTEGER"
-	case aegis.ColumnTypeInt64:
+	case limen.ColumnTypeInt64:
 		return "BIGINT"
-	case aegis.ColumnTypeBool:
+	case limen.ColumnTypeBool:
 		return "BOOLEAN"
-	case aegis.ColumnTypeString:
+	case limen.ColumnTypeString:
 		return "VARCHAR(255)"
-	case aegis.ColumnTypeTime:
+	case limen.ColumnTypeTime:
 		return "TIMESTAMPTZ"
-	case aegis.ColumnTypeUUID:
+	case limen.ColumnTypeUUID:
 		return "UUID"
-	case aegis.ColumnTypeMapStringAny:
+	case limen.ColumnTypeMapStringAny:
 		return "JSONB"
 	default:
 		return "TEXT"
 	}
 }
 
-func (d *postgresDriver) MapSQLTypeToGoType(dataType string) aegis.ColumnType {
+func (d *postgresDriver) MapSQLTypeToGoType(dataType string) limen.ColumnType {
 	switch dataType {
 	case "uuid":
-		return aegis.ColumnTypeUUID
+		return limen.ColumnTypeUUID
 	case "bool", "boolean":
-		return aegis.ColumnTypeBool
+		return limen.ColumnTypeBool
 	case "int4", "integer":
-		return aegis.ColumnTypeInt32
+		return limen.ColumnTypeInt32
 	case "int8", "bigint":
-		return aegis.ColumnTypeInt64
+		return limen.ColumnTypeInt64
 	case "timestamp", "timestamptz":
-		return aegis.ColumnTypeTime
+		return limen.ColumnTypeTime
 	case "jsonb", "json":
-		return aegis.ColumnTypeMapStringAny
+		return limen.ColumnTypeMapStringAny
 	case "varchar", "text", "char":
-		return aegis.ColumnTypeString
+		return limen.ColumnTypeString
 	default:
-		return aegis.ColumnTypeString
+		return limen.ColumnTypeString
 	}
 }
 
@@ -173,9 +173,9 @@ func (d *postgresDriver) GetAutoIncrementSuffix() string {
 
 func (d *postgresDriver) FormatDefaultValue(defaultValue string) string {
 	switch defaultValue {
-	case string(aegis.DatabaseDefaultValueNow):
+	case string(limen.DatabaseDefaultValueNow):
 		return "CURRENT_TIMESTAMP"
-	case string(aegis.DatabaseDefaultValueUUID):
+	case string(limen.DatabaseDefaultValueUUID):
 		return "gen_random_uuid()"
 	}
 	return defaultValue

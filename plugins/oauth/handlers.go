@@ -3,15 +3,15 @@ package oauth
 import (
 	"net/http"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type oauthHandlers struct {
 	plugin    *oauthPlugin
-	responder *aegis.Responder
+	responder *limen.Responder
 }
 
-func newOAuthHandlers(plugin *oauthPlugin, httpCore *aegis.AegisHTTPCore) *oauthHandlers {
+func newOAuthHandlers(plugin *oauthPlugin, httpCore *limen.LimenHTTPCore) *oauthHandlers {
 	return &oauthHandlers{
 		plugin:    plugin,
 		responder: httpCore.Responder,
@@ -19,7 +19,7 @@ func newOAuthHandlers(plugin *oauthPlugin, httpCore *aegis.AegisHTTPCore) *oauth
 }
 
 func (h *oauthHandlers) SignInWithOAuth(w http.ResponseWriter, r *http.Request) {
-	providerName := aegis.GetParam(r, "provider")
+	providerName := limen.GetParam(r, "provider")
 
 	request := &OAuthAuthorizeURLData{
 		RedirectURI:      r.URL.Query().Get("redirect_uri"),
@@ -36,7 +36,7 @@ func (h *oauthHandlers) SignInWithOAuth(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
-	providerName := aegis.GetParam(r, "provider")
+	providerName := limen.GetParam(r, "provider")
 	code := r.URL.Query().Get("code")
 	state := r.URL.Query().Get("state")
 	callbackErr := callbackErrorFromQuery(r.URL.Query())
@@ -55,7 +55,7 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var sessionResult *aegis.SessionResult
+	var sessionResult *limen.SessionResult
 	if stateData[linkUserIdKey] == nil {
 		sessionResult, err = h.plugin.core.CreateSession(r.Context(), r, w, result)
 		if err != nil {
@@ -69,13 +69,13 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 
 // LinkAccountWithOAuth initiates the OAuth flow for linking a provider to the current user's account.
 func (h *oauthHandlers) LinkAccountWithOAuth(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	providerName := aegis.GetParam(r, "provider")
+	providerName := limen.GetParam(r, "provider")
 	data := map[string]any{
 		linkUserIdKey: session.User.ID,
 	}
@@ -96,7 +96,7 @@ func (h *oauthHandlers) LinkAccountWithOAuth(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *oauthHandlers) ListAccounts(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
@@ -108,17 +108,17 @@ func (h *oauthHandlers) ListAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusOK, aegis.SerializeAll(h.plugin.accountSchema, accounts))
+	h.responder.JSON(w, r, http.StatusOK, limen.SerializeAll(h.plugin.accountSchema, accounts))
 }
 
 func (h *oauthHandlers) UnlinkAccount(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	providerName := aegis.GetParam(r, "provider")
+	providerName := limen.GetParam(r, "provider")
 
 	err = h.plugin.UnlinkAccount(r.Context(), session.User, providerName)
 	if err != nil {
@@ -130,13 +130,13 @@ func (h *oauthHandlers) UnlinkAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *oauthHandlers) GetTokens(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	providerName := aegis.GetParam(r, "provider")
+	providerName := limen.GetParam(r, "provider")
 
 	tokens, err := h.plugin.GetAccessToken(r.Context(), session.User.ID, providerName)
 	if err != nil {
@@ -148,13 +148,13 @@ func (h *oauthHandlers) GetTokens(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *oauthHandlers) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	providerName := aegis.GetParam(r, "provider")
+	providerName := limen.GetParam(r, "provider")
 
 	tokens, err := h.plugin.RefreshAccessToken(r.Context(), session.User.ID, providerName)
 	if err != nil {
@@ -165,7 +165,7 @@ func (h *oauthHandlers) RefreshAccessToken(w http.ResponseWriter, r *http.Reques
 	h.responder.JSON(w, r, http.StatusOK, tokens)
 }
 
-func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *aegis.AuthenticationResult, sessionResult *aegis.SessionResult, err error) {
+func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Request, stateData map[string]any, authResult *limen.AuthenticationResult, sessionResult *limen.SessionResult, err error) {
 	if (h.plugin.config.disableRedirect && err != nil) || stateData == nil {
 		h.responder.Error(w, r, err)
 		return
@@ -194,7 +194,7 @@ func (h *oauthHandlers) handleCallbackResponse(w http.ResponseWriter, r *http.Re
 // those are forwarded as separate params per RFC 6749. Otherwise the error
 // message is placed in a single "error" param.
 func (h *oauthHandlers) buildErrorRedirectURL(redirectURI string, err error) string {
-	ae := aegis.ToAegisError(err)
+	ae := limen.ToLimenError(err)
 	if details, ok := ae.Details().(map[string]string); ok {
 		code := details["code"]
 		if code != "" {

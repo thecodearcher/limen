@@ -1,4 +1,4 @@
-module github.com/thecodearcher/aegis
+module github.com/thecodearcher/limen
 
 go 1.24.0
 

@@ -1,6 +1,6 @@
 package credentialpassword
 
-import "github.com/thecodearcher/aegis"
+import "github.com/thecodearcher/limen"
 
 const (
 	defaultMinPasswordLength        = 4
@@ -20,5 +20,5 @@ const (
 )
 
 const (
-	CredentialPasswordUserSchemaUsernameField aegis.SchemaField = "username"
+	CredentialPasswordUserSchemaUsernameField limen.SchemaField = "username"
 )

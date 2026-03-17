@@ -1,11 +1,11 @@
-package aegis
+package limen
 
 import (
 	"fmt"
 	"os"
 )
 
-// Config is the main configuration struct for the aegis library
+// Config is the main configuration struct for the limen library
 type Config struct {
 	BaseURL        string
 	Database       DatabaseAdapter
@@ -52,7 +52,7 @@ func (c *Config) validate() error {
 	}
 
 	if c.CacheKeyPrefix == "" {
-		c.CacheKeyPrefix = "aegis"
+		c.CacheKeyPrefix = "limen"
 	}
 
 	if c.Schema == nil {

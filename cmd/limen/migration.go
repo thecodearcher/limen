@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type Migration struct {
@@ -14,7 +14,7 @@ type Migration struct {
 	DownSQL string // SQL to rollback the migration
 }
 
-func generateMigrations(db *sql.DB, driver Driver, config *aegis.CliConfig) ([]Migration, error) {
+func generateMigrations(db *sql.DB, driver Driver, config *limen.CliConfig) ([]Migration, error) {
 	migrations := make([]Migration, 0, len(config.Schemas))
 	timestamp := time.Now().Format("20060102150405")
 
@@ -70,7 +70,7 @@ func generateMigrations(db *sql.DB, driver Driver, config *aegis.CliConfig) ([]M
 	return migrations, nil
 }
 
-func generateDiffForTable(introspector *schemaIntrospector, schema *aegis.SchemaDefinition) (*schemaDiff, error) {
+func generateDiffForTable(introspector *schemaIntrospector, schema *limen.SchemaDefinition) (*schemaDiff, error) {
 	existingSchema, err := introspector.introspectTable(schema.GetTableName())
 	if err != nil {
 		return nil, err

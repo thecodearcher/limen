@@ -1,11 +1,11 @@
-module github.com/thecodearcher/aegis/plugins/two-factor
+module github.com/thecodearcher/limen/plugins/two-factor
 
 go 1.24.0
 
 require (
 	github.com/pquerna/otp v1.4.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
-	github.com/thecodearcher/aegis v0.0.0
+	github.com/thecodearcher/limen v0.0.0
 )
 
 require (

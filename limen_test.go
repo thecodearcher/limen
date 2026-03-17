@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"testing"
@@ -39,19 +39,19 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			aegis, err := New(tt.config)
+			limen, err := New(tt.config)
 
 			if tt.wantErr {
 				assert.Error(t, err, "New() expected error but got none")
 				if tt.errMsg != "" {
 					assert.Contains(t, err.Error(), tt.errMsg, "Error message should contain expected text")
 				}
-				assert.Nil(t, aegis, "Expected nil Aegis instance when error occurs")
+				assert.Nil(t, limen, "Expected nil Limen instance when error occurs")
 			} else {
 				assert.NoError(t, err, "New() unexpected error")
-				assert.NotNil(t, aegis, "Expected Aegis instance but got nil")
-				// Verify that the aegis instance was created successfully
-				assert.NotNil(t, aegis)
+				assert.NotNil(t, limen, "Expected Limen instance but got nil")
+				// Verify that the limen instance was created successfully
+				assert.NotNil(t, limen)
 			}
 		})
 	}

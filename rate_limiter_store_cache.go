@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -12,7 +12,7 @@ type cacheRateLimiterStore struct {
 	prefix string
 }
 
-func newRateLimiterCacheStore(core *AegisCore) *cacheRateLimiterStore {
+func newRateLimiterCacheStore(core *LimenCore) *cacheRateLimiterStore {
 	return &cacheRateLimiterStore{
 		cache:  core.CacheStore(),
 		prefix: core.CacheKeyPrefix(),

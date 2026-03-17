@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // CallbackError represents a structured OAuth error returned by the authorization
@@ -22,10 +22,10 @@ func (e *CallbackError) Error() string {
 	return e.Code
 }
 
-// ToAegisError converts the provider callback error into an AegisError that
+// ToLimenError converts the provider callback error into an LimenError that
 // carries the structured OAuth fields in its Details so the handler layer can
 // forward them in redirects or JSON responses.
-func (e *CallbackError) ToAegisError() *aegis.AegisError {
+func (e *CallbackError) ToLimenError() *limen.LimenError {
 	details := map[string]string{
 		"code":              e.Code,
 		"error_description": e.Description,
@@ -34,7 +34,7 @@ func (e *CallbackError) ToAegisError() *aegis.AegisError {
 	if msg == "" {
 		msg = e.Code
 	}
-	return aegis.NewAegisError(msg, http.StatusBadRequest, details)
+	return limen.NewLimenError(msg, http.StatusBadRequest, details)
 }
 
 // callbackErrorFromQuery extracts an OAuth error from callback query parameters.

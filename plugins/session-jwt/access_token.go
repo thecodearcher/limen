@@ -8,25 +8,25 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
-// AegisClaims is the JWT claims structure used by the session-jwt plugin.
+// LimenClaims is the JWT claims structure used by the session-jwt plugin.
 // Core user fields are embedded so that ValidateSession can reconstruct a
 // User without hitting the database.
-type AegisClaims struct {
+type LimenClaims struct {
 	jwt.RegisteredClaims
 	Email         string         `json:"email,omitempty"`
 	EmailVerified bool           `json:"email_verified,omitempty"`
 	Custom        map[string]any `json:"custom,omitempty"`
 }
 
-func (p *sessionJWTPlugin) GenerateAccessToken(user *aegis.User) (string, string, error) {
+func (p *sessionJWTPlugin) GenerateAccessToken(user *limen.User) (string, string, error) {
 	now := time.Now()
 	expiresAt := now.Add(p.config.accessTokenDuration)
 	jti := generateJTI()
 
-	claims := AegisClaims{
+	claims := LimenClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   p.config.subjectEncoder(user),
 			ID:        jti,
@@ -54,7 +54,7 @@ func (p *sessionJWTPlugin) GenerateAccessToken(user *aegis.User) (string, string
 	return signed, jti, nil
 }
 
-func (p *sessionJWTPlugin) VerifyAccessToken(tokenString string) (*AegisClaims, error) {
+func (p *sessionJWTPlugin) VerifyAccessToken(tokenString string) (*LimenClaims, error) {
 	keyFunc := func(token *jwt.Token) (any, error) {
 		return p.config.verificationKey, nil
 	}
@@ -66,12 +66,12 @@ func (p *sessionJWTPlugin) VerifyAccessToken(tokenString string) (*AegisClaims, 
 		jwt.WithAudience(p.config.audience...),
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &AegisClaims{}, keyFunc, opts...)
+	token, err := jwt.ParseWithClaims(tokenString, &LimenClaims{}, keyFunc, opts...)
 	if err != nil {
 		return nil, ErrInvalidAccessToken
 	}
 
-	claims, ok := token.Claims.(*AegisClaims)
+	claims, ok := token.Claims.(*LimenClaims)
 	if !ok || !token.Valid {
 		return nil, ErrInvalidAccessToken
 	}
@@ -79,7 +79,7 @@ func (p *sessionJWTPlugin) VerifyAccessToken(tokenString string) (*AegisClaims, 
 	return claims, nil
 }
 
-func (p *sessionJWTPlugin) RefreshAccessToken(r *http.Request) (*aegis.SessionResult, *aegis.User, error) {
+func (p *sessionJWTPlugin) RefreshAccessToken(r *http.Request) (*limen.SessionResult, *limen.User, error) {
 	if !p.config.refreshTokenEnabled {
 		return nil, nil, ErrRefreshTokensDisabled
 	}
@@ -91,7 +91,7 @@ func (p *sessionJWTPlugin) RefreshAccessToken(r *http.Request) (*aegis.SessionRe
 	return p.performRefresh(r.Context(), rawToken, family)
 }
 
-func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken string, family string) (*aegis.SessionResult, *aegis.User, error) {
+func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken string, family string) (*limen.SessionResult, *limen.User, error) {
 	rt, err := p.FindRefreshTokenByToken(ctx, rawRefreshToken)
 	if err != nil {
 		if family == "" {
@@ -138,7 +138,7 @@ func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken s
 // expiry. Used by RevokeSession so that expired tokens can still have their
 // JTI extracted for blacklisting / refresh token cleanup.
 // Returns nil when the token is structurally invalid or the signature fails.
-func (p *sessionJWTPlugin) parseAccessTokenLenient(tokenString string) *AegisClaims {
+func (p *sessionJWTPlugin) parseAccessTokenLenient(tokenString string) *LimenClaims {
 	keyFunc := func(token *jwt.Token) (any, error) {
 		return p.config.verificationKey, nil
 	}
@@ -147,12 +147,12 @@ func (p *sessionJWTPlugin) parseAccessTokenLenient(tokenString string) *AegisCla
 		jwt.WithValidMethods([]string{p.config.signingMethod.Alg()}),
 	}
 
-	token, _ := jwt.ParseWithClaims(tokenString, &AegisClaims{}, keyFunc, opts...)
+	token, _ := jwt.ParseWithClaims(tokenString, &LimenClaims{}, keyFunc, opts...)
 	if token == nil {
 		return nil
 	}
 
-	claims, ok := token.Claims.(*AegisClaims)
+	claims, ok := token.Claims.(*LimenClaims)
 	if !ok {
 		return nil
 	}

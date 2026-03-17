@@ -6,16 +6,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
-// jwtSessionManager implements aegis.SessionManager using JWTs as access
+// jwtSessionManager implements limen.SessionManager using JWTs as access
 // tokens and opaque refresh tokens stored in the database.
 type jwtSessionManager struct {
 	plugin *sessionJWTPlugin
 }
 
-func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, auth *aegis.AuthenticationResult, shortSession bool) (*aegis.SessionResult, error) {
+func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, auth *limen.AuthenticationResult, shortSession bool) (*limen.SessionResult, error) {
 	p := m.plugin
 
 	signed, jti, err := p.GenerateAccessToken(auth.User)
@@ -43,10 +43,10 @@ func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, 
 	return p.buildSessionResult(signed, rt), nil
 }
 
-func (m *jwtSessionManager) ValidateSession(ctx context.Context, r *http.Request) (*aegis.ValidatedSession, error) {
+func (m *jwtSessionManager) ValidateSession(ctx context.Context, r *http.Request) (*limen.ValidatedSession, error) {
 	tokenString, err := m.plugin.extractToken(r)
 	if err != nil {
-		return nil, aegis.ErrSessionNotFound
+		return nil, limen.ErrSessionNotFound
 	}
 
 	claims, err := m.plugin.VerifyAccessToken(tokenString)
@@ -63,17 +63,17 @@ func (m *jwtSessionManager) ValidateSession(ctx context.Context, r *http.Request
 		return nil, err
 	}
 
-	var user *aegis.User
+	var user *limen.User
 	if m.plugin.config.refreshUser {
 		user, err = m.plugin.fetchUser(ctx, resolved)
 		if err != nil {
-			return nil, aegis.ErrSessionNotFound
+			return nil, limen.ErrSessionNotFound
 		}
 	} else {
 		user = m.plugin.claimsToUser(claims, resolved)
 	}
 
-	return &aegis.ValidatedSession{
+	return &limen.ValidatedSession{
 		User:    user,
 		Session: m.plugin.claimsToSession(claims, tokenString, resolved),
 	}, nil
@@ -109,15 +109,15 @@ func (m *jwtSessionManager) RevokeAllSessions(ctx context.Context, userID any) e
 	return p.DeleteRefreshTokensByUserID(ctx, userID)
 }
 
-func (p *sessionJWTPlugin) fetchUser(ctx context.Context, resolved any) (*aegis.User, error) {
-	if user, ok := resolved.(*aegis.User); ok {
+func (p *sessionJWTPlugin) fetchUser(ctx context.Context, resolved any) (*limen.User, error) {
+	if user, ok := resolved.(*limen.User); ok {
 		return user, nil
 	}
 	return p.core.DBAction.FindUserByID(ctx, resolved)
 }
 
-func (p *sessionJWTPlugin) buildSessionResult(jwtString string, rt *RefreshToken) *aegis.SessionResult {
-	result := &aegis.SessionResult{Token: jwtString}
+func (p *sessionJWTPlugin) buildSessionResult(jwtString string, rt *RefreshToken) *limen.SessionResult {
+	result := &limen.SessionResult{Token: jwtString}
 	if rt != nil {
 		result.RefreshToken = encodeRefreshTokenValue(rt.Token, rt.Family)
 	}
@@ -125,14 +125,14 @@ func (p *sessionJWTPlugin) buildSessionResult(jwtString string, rt *RefreshToken
 }
 
 func (p *sessionJWTPlugin) deleteRefreshTokensByJTI(ctx context.Context, jwtID string) error {
-	return p.core.Delete(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetJWTIDField(), jwtID),
+	return p.core.Delete(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetJWTIDField(), jwtID),
 	})
 }
 
 func (p *sessionJWTPlugin) findRefreshTokensByUserID(ctx context.Context, userID any) ([]*RefreshToken, error) {
-	models, err := p.core.FindMany(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetUserIDField(), userID),
+	models, err := p.core.FindMany(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetUserIDField(), userID),
 	})
 	if err != nil {
 		return nil, err
@@ -146,12 +146,12 @@ func (p *sessionJWTPlugin) findRefreshTokensByUserID(ctx context.Context, userID
 
 func (p *sessionJWTPlugin) updateRefreshTokenJWTID(ctx context.Context, token string, jwtID string) error {
 	rt := &RefreshToken{Token: token, JWTID: jwtID}
-	return p.core.Update(ctx, p.refreshTokenSchema, rt, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetTokenField(), token),
+	return p.core.Update(ctx, p.refreshTokenSchema, rt, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetTokenField(), token),
 	})
 }
 
-func (p *sessionJWTPlugin) claimsToSession(claims *AegisClaims, rawToken string, userID any) *aegis.Session {
+func (p *sessionJWTPlugin) claimsToSession(claims *LimenClaims, rawToken string, userID any) *limen.Session {
 	var issuedAt, expiresAt time.Time
 	if claims.IssuedAt != nil {
 		issuedAt = claims.IssuedAt.Time
@@ -160,7 +160,7 @@ func (p *sessionJWTPlugin) claimsToSession(claims *AegisClaims, rawToken string,
 		expiresAt = claims.ExpiresAt.Time
 	}
 
-	return &aegis.Session{
+	return &limen.Session{
 		ID:         claims.ID,
 		Token:      rawToken,
 		UserID:     userID,
@@ -171,21 +171,21 @@ func (p *sessionJWTPlugin) claimsToSession(claims *AegisClaims, rawToken string,
 	}
 }
 
-func (p *sessionJWTPlugin) claimsToUser(claims *AegisClaims, userID any) *aegis.User {
+func (p *sessionJWTPlugin) claimsToUser(claims *LimenClaims, userID any) *limen.User {
 	var emailVerifiedAt *time.Time
 	if claims.EmailVerified {
 		now := time.Now()
 		emailVerifiedAt = &now
 	}
 
-	return &aegis.User{
+	return &limen.User{
 		ID:              userID,
 		Email:           claims.Email,
 		EmailVerifiedAt: emailVerifiedAt,
 	}
 }
 
-func claimsMetadata(claims *AegisClaims) map[string]any {
+func claimsMetadata(claims *LimenClaims) map[string]any {
 	m := make(map[string]any)
 	if claims.Issuer != "" {
 		m["iss"] = claims.Issuer

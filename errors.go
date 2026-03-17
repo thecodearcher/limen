@@ -1,11 +1,11 @@
-package aegis
+package limen
 
 import (
 	"errors"
 	"net/http"
 )
 
-type AegisError struct {
+type LimenError struct {
 	message string
 	details any
 	status  int
@@ -38,31 +38,31 @@ var (
 	ErrVerificationTokenInvalid = errors.New("verification token is invalid")
 )
 
-func NewAegisError(message string, status int, details any) *AegisError {
-	return &AegisError{message: message, details: details, status: status}
+func NewLimenError(message string, status int, details any) *LimenError {
+	return &LimenError{message: message, details: details, status: status}
 }
 
-func (e *AegisError) Error() string {
+func (e *LimenError) Error() string {
 	return e.message
 }
 
-func (e *AegisError) Details() any {
+func (e *LimenError) Details() any {
 	return e.details
 }
 
-func (e *AegisError) Status() int {
+func (e *LimenError) Status() int {
 	return e.status
 }
 
-func ToAegisError(err error) *AegisError {
-	var aegisErr *AegisError
-	if errors.As(err, &aegisErr) {
-		return err.(*AegisError)
+func ToLimenError(err error) *LimenError {
+	var limenErr *LimenError
+	if errors.As(err, &limenErr) {
+		return err.(*LimenError)
 	}
 
 	if errors.Is(err, ErrRecordNotFound) {
-		return NewAegisError(err.Error(), http.StatusNotFound, err)
+		return NewLimenError(err.Error(), http.StatusNotFound, err)
 	}
 
-	return NewAegisError(err.Error(), http.StatusInternalServerError, err)
+	return NewLimenError(err.Error(), http.StatusInternalServerError, err)
 }

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type schemaIntrospector struct {
@@ -40,7 +40,7 @@ func (s *schemaIntrospector) getTables(tableNames []string) (map[string]bool, er
 	return result, nil
 }
 
-func (s *schemaIntrospector) introspectTable(tableName aegis.SchemaTableName) (*aegis.SchemaDefinition, error) {
+func (s *schemaIntrospector) introspectTable(tableName limen.SchemaTableName) (*limen.SchemaDefinition, error) {
 	columns, err := s.introspectColumns(tableName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to introspect columns: %w", err)
@@ -56,17 +56,17 @@ func (s *schemaIntrospector) introspectTable(tableName aegis.SchemaTableName) (*
 		return nil, fmt.Errorf("failed to introspect foreign keys: %w", err)
 	}
 
-	return &aegis.SchemaDefinition{
+	return &limen.SchemaDefinition{
 		TableName:   tableName,
 		Columns:     columns,
 		Indexes:     indexes,
 		ForeignKeys: foreignKeys,
-		SchemaName:  aegis.SchemaName(tableName),
+		SchemaName:  limen.SchemaName(tableName),
 	}, nil
 }
 
-func (s *schemaIntrospector) introspectColumns(tableName aegis.SchemaTableName) ([]aegis.ColumnDefinition, error) {
-	var columns []aegis.ColumnDefinition
+func (s *schemaIntrospector) introspectColumns(tableName limen.SchemaTableName) ([]limen.ColumnDefinition, error) {
+	var columns []limen.ColumnDefinition
 
 	query, args := s.driver.IntrospectColumnsQuery(string(tableName))
 	rows, err := s.db.Query(query, args...)
@@ -86,8 +86,8 @@ func (s *schemaIntrospector) introspectColumns(tableName aegis.SchemaTableName) 
 	return columns, nil
 }
 
-func (s *schemaIntrospector) introspectIndexes(tableName aegis.SchemaTableName) ([]aegis.IndexDefinition, error) {
-	var indexes []aegis.IndexDefinition
+func (s *schemaIntrospector) introspectIndexes(tableName limen.SchemaTableName) ([]limen.IndexDefinition, error) {
+	var indexes []limen.IndexDefinition
 
 	query, args := s.driver.IntrospectIndexesQuery(string(tableName))
 	rows, err := s.db.Query(query, args...)
@@ -107,8 +107,8 @@ func (s *schemaIntrospector) introspectIndexes(tableName aegis.SchemaTableName) 
 	return indexes, nil
 }
 
-func (s *schemaIntrospector) introspectForeignKeys(tableName aegis.SchemaTableName) ([]aegis.ForeignKeyDefinition, error) {
-	var foreignKeys []aegis.ForeignKeyDefinition
+func (s *schemaIntrospector) introspectForeignKeys(tableName limen.SchemaTableName) ([]limen.ForeignKeyDefinition, error) {
+	var foreignKeys []limen.ForeignKeyDefinition
 
 	query, args := s.driver.IntrospectForeignKeysQuery(string(tableName))
 	rows, err := s.db.Query(query, args...)

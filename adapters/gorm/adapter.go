@@ -7,10 +7,10 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
-// Adapter implements aegis.DatabaseAdapter using GORM
+// Adapter implements limen.DatabaseAdapter using GORM
 type Adapter struct {
 	db *gorm.DB // Regular DB connection
 	tx *gorm.DB // Transaction DB (nil when not in transaction)
@@ -30,7 +30,7 @@ func (a *Adapter) getDB() *gorm.DB {
 }
 
 // BeginTx starts a new transaction
-func (a *Adapter) BeginTx(ctx context.Context) (aegis.DatabaseTx, error) {
+func (a *Adapter) BeginTx(ctx context.Context) (limen.DatabaseTx, error) {
 	tx := a.db.WithContext(ctx).Begin()
 	if tx.Error != nil {
 		return nil, tx.Error
@@ -61,12 +61,12 @@ func (a *Adapter) Rollback() error {
 	return err
 }
 
-func (a *Adapter) Create(ctx context.Context, tableName aegis.SchemaTableName, data map[string]any) error {
+func (a *Adapter) Create(ctx context.Context, tableName limen.SchemaTableName, data map[string]any) error {
 	db := a.getDB()
 	return db.WithContext(ctx).Table(string(tableName)).Create(data).Error
 }
 
-func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, orderBy []aegis.OrderBy) (map[string]any, error) {
+func (a *Adapter) FindOne(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where, orderBy []limen.OrderBy) (map[string]any, error) {
 	var result map[string]any
 	db := a.getDB()
 	query := db.WithContext(ctx).Table(string(tableName))
@@ -81,7 +81,7 @@ func (a *Adapter) FindOne(ctx context.Context, tableName aegis.SchemaTableName, 
 	return result, a.formatError(err)
 }
 
-func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, options *aegis.QueryOptions) ([]map[string]any, error) {
+func (a *Adapter) FindMany(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where, options *limen.QueryOptions) ([]map[string]any, error) {
 	var results []map[string]any
 	db := a.getDB()
 	query := db.WithContext(ctx).Table(string(tableName))
@@ -104,21 +104,21 @@ func (a *Adapter) FindMany(ctx context.Context, tableName aegis.SchemaTableName,
 	return results, a.formatError(err)
 }
 
-func (a *Adapter) Update(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where, updates map[string]any) error {
+func (a *Adapter) Update(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where, updates map[string]any) error {
 	db := a.getDB()
 	query := db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	return query.Updates(updates).Error
 }
 
-func (a *Adapter) Delete(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) error {
+func (a *Adapter) Delete(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where) error {
 	db := a.getDB()
 	query := db.WithContext(ctx).Table(string(tableName))
 	query = a.applyConditions(query, conditions)
 	return query.Delete(nil).Error
 }
 
-func (a *Adapter) Exists(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (bool, error) {
+func (a *Adapter) Exists(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where) (bool, error) {
 	var count int64
 	db := a.getDB()
 	query := db.WithContext(ctx).Table(string(tableName))
@@ -127,7 +127,7 @@ func (a *Adapter) Exists(ctx context.Context, tableName aegis.SchemaTableName, c
 	return count > 0, err
 }
 
-func (a *Adapter) Count(ctx context.Context, tableName aegis.SchemaTableName, conditions []aegis.Where) (int64, error) {
+func (a *Adapter) Count(ctx context.Context, tableName limen.SchemaTableName, conditions []limen.Where) (int64, error) {
 	var count int64
 	db := a.getDB()
 	query := db.WithContext(ctx).Table(string(tableName))
@@ -136,7 +136,7 @@ func (a *Adapter) Count(ctx context.Context, tableName aegis.SchemaTableName, co
 	return count, err
 }
 
-func (a *Adapter) applyConditions(query *gorm.DB, conditions []aegis.Where) *gorm.DB {
+func (a *Adapter) applyConditions(query *gorm.DB, conditions []limen.Where) *gorm.DB {
 	if len(conditions) == 0 {
 		return query
 	}
@@ -149,7 +149,7 @@ func (a *Adapter) applyConditions(query *gorm.DB, conditions []aegis.Where) *gor
 		return query.Where(clause, args...)
 	}
 
-	groups := aegis.GroupConditionsByConnector(conditions)
+	groups := limen.GroupConditionsByConnector(conditions)
 	for _, group := range groups {
 		query = a.applyGroup(query, group)
 	}
@@ -157,44 +157,44 @@ func (a *Adapter) applyConditions(query *gorm.DB, conditions []aegis.Where) *gor
 }
 
 // applyGroup applies one group (single condition or OR of several) as one Where.
-func (a *Adapter) applyGroup(query *gorm.DB, group []aegis.Where) *gorm.DB {
+func (a *Adapter) applyGroup(query *gorm.DB, group []limen.Where) *gorm.DB {
 	if len(group) == 0 {
 		return query
 	}
-	clause, args := aegis.BuildGroupClause(group, a.buildWhereClause)
+	clause, args := limen.BuildGroupClause(group, a.buildWhereClause)
 	if clause == "" {
 		return query
 	}
 	return query.Where(clause, args...)
 }
 
-func (a *Adapter) buildWhereClause(condition aegis.Where) (string, []any) {
+func (a *Adapter) buildWhereClause(condition limen.Where) (string, []any) {
 	switch condition.Operator {
-	case aegis.OpEq:
+	case limen.OpEq:
 		return condition.Column + " = ?", []any{condition.Value}
-	case aegis.OpNe:
+	case limen.OpNe:
 		return condition.Column + " != ?", []any{condition.Value}
-	case aegis.OpLt:
+	case limen.OpLt:
 		return condition.Column + " < ?", []any{condition.Value}
-	case aegis.OpLte:
+	case limen.OpLte:
 		return condition.Column + " <= ?", []any{condition.Value}
-	case aegis.OpGt:
+	case limen.OpGt:
 		return condition.Column + " > ?", []any{condition.Value}
-	case aegis.OpGte:
+	case limen.OpGte:
 		return condition.Column + " >= ?", []any{condition.Value}
-	case aegis.OpIn:
+	case limen.OpIn:
 		return condition.Column + " IN ?", []any{condition.Value}
-	case aegis.OpNotIn:
+	case limen.OpNotIn:
 		return condition.Column + " NOT IN ?", []any{condition.Value}
-	case aegis.OpContains:
+	case limen.OpContains:
 		return condition.Column + " LIKE ?", []any{"%" + condition.Value.(string) + "%"}
-	case aegis.OpStartsWith:
+	case limen.OpStartsWith:
 		return condition.Column + " LIKE ?", []any{condition.Value.(string) + "%"}
-	case aegis.OpEndsWith:
+	case limen.OpEndsWith:
 		return condition.Column + " LIKE ?", []any{"%" + condition.Value.(string)}
-	case aegis.OpIsNull:
+	case limen.OpIsNull:
 		return condition.Column + " IS NULL", nil
-	case aegis.OpIsNotNull:
+	case limen.OpIsNotNull:
 		return condition.Column + " IS NOT NULL", nil
 	default:
 		return "", nil
@@ -203,7 +203,7 @@ func (a *Adapter) buildWhereClause(condition aegis.Where) (string, []any) {
 
 func (a *Adapter) formatError(err error) error {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return aegis.ErrRecordNotFound
+		return limen.ErrRecordNotFound
 	}
 	return err
 }

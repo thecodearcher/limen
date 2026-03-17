@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 func (r *RateLimitSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	tableName := RateLimitSchemaTableName

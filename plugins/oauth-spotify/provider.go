@@ -1,4 +1,4 @@
-// Package oauthspotify provides a Spotify OAuth provider for the Aegis OAuth plugin.
+// Package oauthspotify provides a Spotify OAuth provider for the Limen OAuth plugin.
 package oauthspotify
 
 import (
@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 var spotifyEndpoint = oauth2.Endpoint{

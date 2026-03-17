@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 func (s *SessionSchema) Introspect(config *SchemaConfig) SchemaIntrospector {
 	return &SchemaDefinition{

@@ -1,4 +1,4 @@
-// Package oauthtwitter provides a Twitter (X) OAuth 2.0 provider for the Aegis OAuth plugin.
+// Package oauthtwitter provides a Twitter (X) OAuth 2.0 provider for the Limen OAuth plugin.
 package oauthtwitter
 
 import (
@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 var twitterEndpoint = oauth2.Endpoint{

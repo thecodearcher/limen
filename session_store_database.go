@@ -1,15 +1,15 @@
-package aegis
+package limen
 
 import (
 	"context"
 )
 
 type databaseSessionStore struct {
-	core   *AegisCore
+	core   *LimenCore
 	schema *SessionSchema
 }
 
-func newDatabaseSessionStore(core *AegisCore) *databaseSessionStore {
+func newDatabaseSessionStore(core *LimenCore) *databaseSessionStore {
 	return &databaseSessionStore{
 		core:   core,
 		schema: core.Schema.Session,

@@ -1,15 +1,15 @@
-# [WIP] Aegis Project Structure
+# [WIP] Limen Project Structure
 
-This document describes the multi-module structure of the Aegis authentication library.
+This document describes the multi-module structure of the Limen authentication library.
 
 ## Overview
 
-Aegis follows a multi-module architecture where the core library and each adapter/plugin is a separate Go module. This allows users to import only what they need, keeping bundle sizes minimal.
+Limen follows a multi-module architecture where the core library and each adapter/plugin is a separate Go module. This allows users to import only what they need, keeping bundle sizes minimal.
 
 ## Directory Structure
 
 ```
-aegis/
+limen/
 ├── go.work                          # Go workspace file
 ├── go.mod                           # Core library module
 ├── *.go                             # Core library source files
@@ -61,7 +61,7 @@ aegis/
 │       └── main.go
 │
 ├── cmd/                             # CLI tools
-│   └── aegis/                       # Aegis CLI tool
+│   └── limen/                       # Limen CLI tool
 │       └── main.go
 │
 └── internal/                        # Internal packages (not exported)
@@ -72,7 +72,7 @@ aegis/
 
 ## Module Dependencies
 
-### Core Library (`github.com/thecodearcher/aegis`)
+### Core Library (`github.com/thecodearcher/limen`)
 
 - Contains core interfaces, types, and configuration
 - No external dependencies except standard library
@@ -80,16 +80,16 @@ aegis/
 
 ### Database Adapters
 
-- `github.com/thecodearcher/aegis/adapters/gorm` - Depends on GORM
-- `github.com/thecodearcher/aegis/adapters/ent` - Depends on Ent
-- `github.com/thecodearcher/aegis/adapters/sql` - Only standard library
+- `github.com/thecodearcher/limen/adapters/gorm` - Depends on GORM
+- `github.com/thecodearcher/limen/adapters/ent` - Depends on Ent
+- `github.com/thecodearcher/limen/adapters/sql` - Only standard library
 
 ### Authentication Plugins
 
-- `github.com/thecodearcher/aegis/plugins/email-password` - Depends on golang.org/x/crypto
-- `github.com/thecodearcher/aegis/plugins/oauth-google` - Depends on golang.org/x/oauth2
-- `github.com/thecodearcher/aegis/plugins/oauth-github` - Depends on golang.org/x/oauth2
-- `github.com/thecodearcher/aegis/plugins/two-factor` - Depends on TOTP libraries
+- `github.com/thecodearcher/limen/plugins/email-password` - Depends on golang.org/x/crypto
+- `github.com/thecodearcher/limen/plugins/oauth-google` - Depends on golang.org/x/oauth2
+- `github.com/thecodearcher/limen/plugins/oauth-github` - Depends on golang.org/x/oauth2
+- `github.com/thecodearcher/limen/plugins/two-factor` - Depends on TOTP libraries
 
 ## Usage Patterns
 
@@ -97,8 +97,8 @@ aegis/
 
 ```go
 import (
-    "github.com/thecodearcher/aegis"
-    "github.com/thecodearcher/aegis/adapters/sql"
+    "github.com/thecodearcher/limen"
+    "github.com/thecodearcher/limen/adapters/sql"
 )
 ```
 
@@ -106,9 +106,9 @@ import (
 
 ```go
 import (
-    "github.com/thecodearcher/aegis"
-    "github.com/thecodearcher/aegis/adapters/gorm"
-    "github.com/thecodearcher/aegis/plugins/email-password"
+    "github.com/thecodearcher/limen"
+    "github.com/thecodearcher/limen/adapters/gorm"
+    "github.com/thecodearcher/limen/plugins/email-password"
 )
 ```
 
@@ -116,11 +116,11 @@ import (
 
 ```go
 import (
-    "github.com/thecodearcher/aegis"
-    "github.com/thecodearcher/aegis/adapters/gorm"
-    "github.com/thecodearcher/aegis/plugins/email-password"
-    "github.com/thecodearcher/aegis/plugins/oauth-google"
-    "github.com/thecodearcher/aegis/plugins/two-factor"
+    "github.com/thecodearcher/limen"
+    "github.com/thecodearcher/limen/adapters/gorm"
+    "github.com/thecodearcher/limen/plugins/email-password"
+    "github.com/thecodearcher/limen/plugins/oauth-google"
+    "github.com/thecodearcher/limen/plugins/two-factor"
 )
 ```
 

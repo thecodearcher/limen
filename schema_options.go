@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 // --- Schema config (top-level) ---
 

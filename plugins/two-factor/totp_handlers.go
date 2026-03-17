@@ -3,20 +3,20 @@ package twofactor
 import (
 	"net/http"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type totpHandlers struct {
 	totp      *totp
-	responder *aegis.Responder
+	responder *limen.Responder
 }
 
-func newTOTPHandlers(totp *totp, responder *aegis.Responder) *totpHandlers {
+func newTOTPHandlers(totp *totp, responder *limen.Responder) *totpHandlers {
 	return &totpHandlers{totp: totp, responder: responder}
 }
 
 func (t *totpHandlers) GetSetupURI(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		t.responder.Error(w, r, err)
 		return
@@ -33,7 +33,7 @@ func (t *totpHandlers) GetSetupURI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *totpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, t.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, t.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("code", data["code"])
 	})
 
@@ -41,7 +41,7 @@ func (t *totpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		t.responder.Error(w, r, err)
 		return

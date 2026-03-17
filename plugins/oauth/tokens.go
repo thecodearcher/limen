@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // GetAccessToken retrieves and decrypts the stored OAuth tokens for a user's
@@ -67,7 +67,7 @@ func (o *oauthPlugin) RefreshAccessToken(ctx context.Context, userID any, provid
 		tokenResp.RefreshToken = tokens.RefreshToken
 	}
 
-	profile := &aegis.OAuthAccountProfile{
+	profile := &limen.OAuthAccountProfile{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		IDToken:      tokenResp.IDToken,
@@ -83,7 +83,7 @@ func (o *oauthPlugin) RefreshAccessToken(ctx context.Context, userID any, provid
 		expiresAt = &tokenResp.ExpiresAt
 	}
 
-	updated := &aegis.Account{
+	updated := &limen.Account{
 		AccessToken:          encrypted.AccessToken,
 		RefreshToken:         encrypted.RefreshToken,
 		IDToken:              encrypted.IDToken,
@@ -94,8 +94,8 @@ func (o *oauthPlugin) RefreshAccessToken(ctx context.Context, userID any, provid
 		updated.Scope = tokenResp.Scope
 	}
 
-	if err := o.core.Update(ctx, o.accountSchema, updated, []aegis.Where{
-		aegis.Eq(o.accountSchema.GetIDField(), account.ID),
+	if err := o.core.Update(ctx, o.accountSchema, updated, []limen.Where{
+		limen.Eq(o.accountSchema.GetIDField(), account.ID),
 	}); err != nil {
 		return nil, err
 	}

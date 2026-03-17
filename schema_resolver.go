@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 type SchemaFieldMap map[SchemaName]map[SchemaField]string
 

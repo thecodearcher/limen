@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // RefreshToken is the domain model stored in jwt_refresh_tokens.
@@ -56,8 +56,8 @@ func (p *sessionJWTPlugin) CreateRefreshToken(ctx context.Context, userID any, j
 }
 
 func (p *sessionJWTPlugin) FindRefreshTokenByToken(ctx context.Context, token string) (*RefreshToken, error) {
-	model, err := p.core.FindOne(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetTokenField(), token),
+	model, err := p.core.FindOne(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetTokenField(), token),
 	}, nil)
 	if err != nil {
 		return nil, ErrInvalidRefreshToken
@@ -66,26 +66,26 @@ func (p *sessionJWTPlugin) FindRefreshTokenByToken(ctx context.Context, token st
 }
 
 func (p *sessionJWTPlugin) DeleteRefreshToken(ctx context.Context, token string) error {
-	return p.core.Delete(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetTokenField(), token),
+	return p.core.Delete(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetTokenField(), token),
 	})
 }
 
 func (p *sessionJWTPlugin) DeleteRefreshTokenFamily(ctx context.Context, family string) error {
-	return p.core.Delete(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetFamilyField(), family),
+	return p.core.Delete(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetFamilyField(), family),
 	})
 }
 
 func (p *sessionJWTPlugin) DeleteRefreshTokensByUserID(ctx context.Context, userID any) error {
-	return p.core.Delete(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetUserIDField(), userID),
+	return p.core.Delete(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetUserIDField(), userID),
 	})
 }
 
 func (p *sessionJWTPlugin) FamilyHasActiveTokens(ctx context.Context, family string) (bool, error) {
-	return p.core.Exists(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Eq(p.refreshTokenSchema.GetFamilyField(), family),
+	return p.core.Exists(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Eq(p.refreshTokenSchema.GetFamilyField(), family),
 	})
 }
 
@@ -94,8 +94,8 @@ func (p *sessionJWTPlugin) FamilyHasActiveTokens(ctx context.Context, family str
 func (p *sessionJWTPlugin) RotateRefreshToken(ctx context.Context, old *RefreshToken, newJWTID string) (*RefreshToken, error) {
 	var newRT *RefreshToken
 	err := p.core.WithTransaction(ctx, func(txCtx context.Context) error {
-		if err := p.core.Delete(txCtx, p.refreshTokenSchema, []aegis.Where{
-			aegis.Eq(p.refreshTokenSchema.GetTokenField(), old.Token),
+		if err := p.core.Delete(txCtx, p.refreshTokenSchema, []limen.Where{
+			limen.Eq(p.refreshTokenSchema.GetTokenField(), old.Token),
 		}); err != nil {
 			return fmt.Errorf("session-jwt: failed to delete old refresh token: %w", err)
 		}
@@ -143,7 +143,7 @@ func (p *sessionJWTPlugin) PruneExpiredRefreshTokens(ctx context.Context) error 
 	if !p.config.refreshTokenEnabled {
 		return nil
 	}
-	return p.core.Delete(ctx, p.refreshTokenSchema, []aegis.Where{
-		aegis.Lt(p.refreshTokenSchema.GetExpiresAtField(), time.Now()),
+	return p.core.Delete(ctx, p.refreshTokenSchema, []limen.Where{
+		limen.Lt(p.refreshTokenSchema.GetExpiresAtField(), time.Now()),
 	})
 }

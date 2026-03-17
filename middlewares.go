@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -13,19 +13,19 @@ func GetCurrentSessionFromCtx(r *http.Request) (*ValidatedSession, error) {
 	if currentSession, ok := r.Context().Value(contextKeyActiveSession{}).(*ValidatedSession); ok && currentSession != nil {
 		return currentSession, nil
 	}
-	return nil, NewAegisError(ErrSessionNotFound.Error(), http.StatusUnauthorized, nil)
+	return nil, NewLimenError(ErrSessionNotFound.Error(), http.StatusUnauthorized, nil)
 }
 
 // MiddlewareRequireSession is a middleware that requires a session to be present in the request context.
 //
 // When a session is present, it is added to the request context and can be accessed using the GetCurrentSessionFromCtx() function.
-func (httpCore *AegisHTTPCore) MiddlewareRequireSession() Middleware {
+func (httpCore *LimenHTTPCore) MiddlewareRequireSession() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, err := httpCore.authInstance.GetSession(r)
 			if err != nil {
 				httpCore.Cookies().ClearSessionCookie(w)
-				httpCore.Responder.Error(w, r, NewAegisError(err.Error(), http.StatusUnauthorized, nil))
+				httpCore.Responder.Error(w, r, NewLimenError(err.Error(), http.StatusUnauthorized, nil))
 				return
 			}
 
@@ -46,7 +46,7 @@ func (httpCore *AegisHTTPCore) MiddlewareRequireSession() Middleware {
 	}
 }
 
-func (httpCore *AegisHTTPCore) middlewareCheckOrigin() Middleware {
+func (httpCore *LimenHTTPCore) middlewareCheckOrigin() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// allow non-mutating methods to pass through
@@ -64,12 +64,12 @@ func (httpCore *AegisHTTPCore) middlewareCheckOrigin() Middleware {
 				next.ServeHTTP(w, r)
 				return
 			}
-			httpCore.Responder.Error(w, r, NewAegisError("Origin not allowed", http.StatusForbidden, nil))
+			httpCore.Responder.Error(w, r, NewLimenError("Origin not allowed", http.StatusForbidden, nil))
 		})
 	}
 }
 
-func (httpCore *AegisHTTPCore) middlewareCSRFProtection() Middleware {
+func (httpCore *LimenHTTPCore) middlewareCSRFProtection() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip CSRF check for GET, HEAD, OPTIONS
@@ -83,7 +83,7 @@ func (httpCore *AegisHTTPCore) middlewareCSRFProtection() Middleware {
 
 			if route != nil && route.Metadata != nil && len(route.Metadata.AllowedContentTypes) > 0 {
 				if !slices.Contains(route.Metadata.AllowedContentTypes, contentType) {
-					httpCore.Responder.Error(w, r, NewAegisError("Content-Type not allowed", http.StatusUnsupportedMediaType, nil))
+					httpCore.Responder.Error(w, r, NewLimenError("Content-Type not allowed", http.StatusUnsupportedMediaType, nil))
 					return
 				}
 
@@ -102,7 +102,7 @@ func (httpCore *AegisHTTPCore) middlewareCSRFProtection() Middleware {
 				return
 			}
 
-			httpCore.Responder.Error(w, r, NewAegisError("Forbidden", http.StatusForbidden, nil))
+			httpCore.Responder.Error(w, r, NewLimenError("Forbidden", http.StatusForbidden, nil))
 		})
 	}
 }

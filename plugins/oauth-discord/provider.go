@@ -1,4 +1,4 @@
-// Package oauthdiscord provides a Discord OAuth provider for the Aegis OAuth plugin.
+// Package oauthdiscord provides a Discord OAuth provider for the Limen OAuth plugin.
 package oauthdiscord
 
 import (
@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 var discordEndpoint = oauth2.Endpoint{

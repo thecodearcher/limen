@@ -3,7 +3,7 @@ package oauthgeneric
 import (
 	"context"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 // ConfigOption configures the generic OAuth provider.

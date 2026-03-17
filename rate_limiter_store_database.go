@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 )
 
 type databaseRateLimiterStore struct {
-	core *AegisCore
+	core *LimenCore
 }
 
-func newDatabaseRateLimiterStore(core *AegisCore) RateLimiterStore {
+func newDatabaseRateLimiterStore(core *LimenCore) RateLimiterStore {
 	return &databaseRateLimiterStore{core: core}
 }
 

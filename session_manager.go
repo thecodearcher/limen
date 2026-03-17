@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -12,12 +12,12 @@ import (
 type opaqueSessionManager struct {
 	store      SessionStore
 	config     *sessionConfig
-	core       *AegisCore
+	core       *LimenCore
 	cookies    *CookieManager
 	cookieName string
 }
 
-func newOpaqueSessionManager(core *AegisCore, config *sessionConfig) *opaqueSessionManager {
+func newOpaqueSessionManager(core *LimenCore, config *sessionConfig) *opaqueSessionManager {
 	var cookieName string
 	if core.cookies != nil && core.config.HTTP.cookieConfig != nil {
 		cookieName = core.config.HTTP.cookieConfig.sessionCookieName
@@ -194,7 +194,7 @@ func (m *opaqueSessionManager) extractToken(request *http.Request) (string, erro
 	return "", ErrSessionNotFound
 }
 
-func determineStore(config *sessionConfig, core *AegisCore) SessionStore {
+func determineStore(config *sessionConfig, core *LimenCore) SessionStore {
 	if config.CustomStore != nil {
 		return config.CustomStore
 	}

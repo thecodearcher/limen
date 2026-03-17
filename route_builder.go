@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 // RouteBuilder provides a clean API for plugins to register routes.
 type RouteBuilder struct {
 	group *RouterGroup
-	core  *AegisHTTPCore
+	core  *LimenHTTPCore
 }
 
 // isRouteDisabled checks if a route ID is in the disabled list

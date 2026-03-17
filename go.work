@@ -4,7 +4,7 @@ use (
 	.
 	./adapters/gorm
 	./adapters/sql
-	./cmd/aegis
+	./cmd/limen
 	./examples/basic
 	./plugins/credential-password
 	./plugins/oauth
@@ -22,36 +22,36 @@ use (
 	./plugins/session-jwt
 )
 
-replace github.com/thecodearcher/aegis v0.0.0 => ./
+replace github.com/thecodearcher/limen v0.0.0 => ./
 
-replace github.com/thecodearcher/aegis/adapters/gorm v0.0.0 => ./adapters/gorm
+replace github.com/thecodearcher/limen/adapters/gorm v0.0.0 => ./adapters/gorm
 
-replace github.com/thecodearcher/aegis/adapters/sql v0.0.0 => ./adapters/sql
+replace github.com/thecodearcher/limen/adapters/sql v0.0.0 => ./adapters/sql
 
-replace github.com/thecodearcher/aegis/plugins/credential-password v0.0.0 => ./plugins/credential-password
+replace github.com/thecodearcher/limen/plugins/credential-password v0.0.0 => ./plugins/credential-password
 
-replace github.com/thecodearcher/aegis/plugins/oauth v0.0.0 => ./plugins/oauth
+replace github.com/thecodearcher/limen/plugins/oauth v0.0.0 => ./plugins/oauth
 
-replace github.com/thecodearcher/aegis/plugins/oauth-google v0.0.0 => ./plugins/oauth-google
+replace github.com/thecodearcher/limen/plugins/oauth-google v0.0.0 => ./plugins/oauth-google
 
-replace github.com/thecodearcher/aegis/plugins/oauth-github v0.0.0 => ./plugins/oauth-github
+replace github.com/thecodearcher/limen/plugins/oauth-github v0.0.0 => ./plugins/oauth-github
 
-replace github.com/thecodearcher/aegis/plugins/oauth-generic v0.0.0 => ./plugins/oauth-generic
+replace github.com/thecodearcher/limen/plugins/oauth-generic v0.0.0 => ./plugins/oauth-generic
 
-replace github.com/thecodearcher/aegis/plugins/oauth-discord v0.0.0 => ./plugins/oauth-discord
+replace github.com/thecodearcher/limen/plugins/oauth-discord v0.0.0 => ./plugins/oauth-discord
 
-replace github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0 => ./plugins/oauth-facebook
+replace github.com/thecodearcher/limen/plugins/oauth-facebook v0.0.0 => ./plugins/oauth-facebook
 
-replace github.com/thecodearcher/aegis/plugins/oauth-microsoft v0.0.0 => ./plugins/oauth-microsoft
+replace github.com/thecodearcher/limen/plugins/oauth-microsoft v0.0.0 => ./plugins/oauth-microsoft
 
-replace github.com/thecodearcher/aegis/plugins/oauth-spotify v0.0.0 => ./plugins/oauth-spotify
+replace github.com/thecodearcher/limen/plugins/oauth-spotify v0.0.0 => ./plugins/oauth-spotify
 
-replace github.com/thecodearcher/aegis/plugins/oauth-twitch v0.0.0 => ./plugins/oauth-twitch
+replace github.com/thecodearcher/limen/plugins/oauth-twitch v0.0.0 => ./plugins/oauth-twitch
 
-replace github.com/thecodearcher/aegis/plugins/oauth-twitter v0.0.0 => ./plugins/oauth-twitter
+replace github.com/thecodearcher/limen/plugins/oauth-twitter v0.0.0 => ./plugins/oauth-twitter
 
-replace github.com/thecodearcher/aegis/plugins/oauth-linkedin v0.0.0 => ./plugins/oauth-linkedin
+replace github.com/thecodearcher/limen/plugins/oauth-linkedin v0.0.0 => ./plugins/oauth-linkedin
 
-replace github.com/thecodearcher/aegis/plugins/two-factor v0.0.0 => ./plugins/two-factor
+replace github.com/thecodearcher/limen/plugins/two-factor v0.0.0 => ./plugins/two-factor
 
-replace github.com/thecodearcher/aegis/plugins/session-jwt v0.0.0 => ./plugins/session-jwt
+replace github.com/thecodearcher/limen/plugins/session-jwt v0.0.0 => ./plugins/session-jwt

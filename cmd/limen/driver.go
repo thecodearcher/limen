@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // Driver defines the interface for database driver-specific operations
@@ -14,8 +14,8 @@ type Driver interface {
 	IntrospectColumnsQuery(tableName string) (string, []any)
 	IntrospectIndexesQuery(tableName string) (string, []any)
 	IntrospectForeignKeysQuery(tableName string) (string, []any)
-	MapGoTypeToSQL(goType aegis.ColumnType, isAutoIncrement bool) string
-	MapSQLTypeToGoType(dataType string) aegis.ColumnType
+	MapGoTypeToSQL(goType limen.ColumnType, isAutoIncrement bool) string
+	MapSQLTypeToGoType(dataType string) limen.ColumnType
 	GetAutoIncrementSuffix() string
 	// FormatDefaultValue converts special default value syntax to database-specific SQL
 	// Special syntax patterns like "@now()" or "@uuid()" are converted to the appropriate
@@ -26,13 +26,13 @@ type Driver interface {
 	DropForeignKeySQL(tableName, constraintName string) string
 	// ParseColumnRow parses a row from IntrospectColumnsQuery into a ColumnDefinition
 	// The columns returned by the query should match the order expected by this method
-	ParseColumnRow(scan func(dest ...any) error) (aegis.ColumnDefinition, error)
+	ParseColumnRow(scan func(dest ...any) error) (limen.ColumnDefinition, error)
 
 	// ParseIndexRow parses a row from IntrospectIndexesQuery into an IndexDefinition
 	// The columns returned by the query should match the order expected by this method
-	ParseIndexRow(scan func(dest ...any) error) (aegis.IndexDefinition, error)
+	ParseIndexRow(scan func(dest ...any) error) (limen.IndexDefinition, error)
 
 	// ParseForeignKeyRow parses a row from IntrospectForeignKeysQuery into a ForeignKeyDefinition
 	// The columns returned by the query should match the order expected by this method
-	ParseForeignKeyRow(scan func(dest ...any) error) (aegis.ForeignKeyDefinition, error)
+	ParseForeignKeyRow(scan func(dest ...any) error) (limen.ForeignKeyDefinition, error)
 }

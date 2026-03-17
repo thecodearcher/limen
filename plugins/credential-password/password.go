@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // HashPassword hashes a password using the configured hashing function or the default Argon2id hasher.
@@ -34,7 +34,7 @@ func (p *credentialPasswordPlugin) ComparePassword(password string, hash *string
 
 // RequestPasswordReset generates a password reset token for the given email address.
 // Returns a Verification object containing the reset token on success.
-func (p *credentialPasswordPlugin) RequestPasswordReset(ctx context.Context, email string) (*aegis.Verification, error) {
+func (p *credentialPasswordPlugin) RequestPasswordReset(ctx context.Context, email string) (*limen.Verification, error) {
 	user, err := p.dbAction.FindUserByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrEmailNotFound
@@ -64,7 +64,7 @@ func (p *credentialPasswordPlugin) ResetPassword(ctx context.Context, token stri
 		return ErrResetTokenInvalid
 	}
 
-	action, identifier := aegis.ParseVerificationAction(verification.Subject)
+	action, identifier := limen.ParseVerificationAction(verification.Subject)
 	if action != PasswordResetAction {
 		return ErrResetTokenInvalid
 	}
@@ -79,8 +79,8 @@ func (p *credentialPasswordPlugin) ResetPassword(ctx context.Context, token stri
 	}
 
 	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
-		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: &hashedPassword}, []aegis.Where{
-			aegis.Eq(p.userSchema.GetEmailField(), identifier),
+		if err := p.dbAction.UpdateUser(ctx, &limen.User{Password: &hashedPassword}, []limen.Where{
+			limen.Eq(p.userSchema.GetEmailField(), identifier),
 		}); err != nil {
 			return fmt.Errorf("failed to update user password: %w", err)
 		}
@@ -106,7 +106,7 @@ func (p *credentialPasswordPlugin) ResetPassword(ctx context.Context, token stri
 // SetPassword sets a password for a user who doesn't have one (e.g., signed up via OAuth).
 //
 // Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
-func (p *credentialPasswordPlugin) SetPassword(ctx context.Context, user *aegis.User, newPassword string, revokeOtherSessions bool) error {
+func (p *credentialPasswordPlugin) SetPassword(ctx context.Context, user *limen.User, newPassword string, revokeOtherSessions bool) error {
 	if user.Password != nil {
 		return ErrPasswordAlreadySet
 	}
@@ -121,10 +121,10 @@ func (p *credentialPasswordPlugin) SetPassword(ctx context.Context, user *aegis.
 	}
 
 	return p.core.WithTransaction(ctx, func(ctx context.Context) error {
-		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: &hashedPassword}, []aegis.Where{
-			aegis.Eq(p.userSchema.GetIDField(), user.ID),
-			aegis.IsNull(p.userSchema.GetPasswordField()),
-			aegis.Eq(p.userSchema.GetPasswordField(), "").Or(),
+		if err := p.dbAction.UpdateUser(ctx, &limen.User{Password: &hashedPassword}, []limen.Where{
+			limen.Eq(p.userSchema.GetIDField(), user.ID),
+			limen.IsNull(p.userSchema.GetPasswordField()),
+			limen.Eq(p.userSchema.GetPasswordField(), "").Or(),
 		}); err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func (p *credentialPasswordPlugin) SetPassword(ctx context.Context, user *aegis.
 // UpdatePassword updates the password for the given user and revokes other sessions if requested.
 //
 // Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
-func (p *credentialPasswordPlugin) UpdatePassword(ctx context.Context, user *aegis.User, currentPassword string, newPassword string, revokeOtherSessions bool) error {
+func (p *credentialPasswordPlugin) UpdatePassword(ctx context.Context, user *limen.User, currentPassword string, newPassword string, revokeOtherSessions bool) error {
 	if err := p.validatePassword(newPassword); err != nil {
 		return err
 	}
@@ -158,8 +158,8 @@ func (p *credentialPasswordPlugin) UpdatePassword(ctx context.Context, user *aeg
 	}
 
 	return p.core.WithTransaction(ctx, func(ctx context.Context) error {
-		if err := p.dbAction.UpdateUser(ctx, &aegis.User{Password: &hashedPassword}, []aegis.Where{
-			aegis.Eq(p.userSchema.GetIDField(), user.ID),
+		if err := p.dbAction.UpdateUser(ctx, &limen.User{Password: &hashedPassword}, []limen.Where{
+			limen.Eq(p.userSchema.GetIDField(), user.ID),
 		}); err != nil {
 			return err
 		}

@@ -1,4 +1,4 @@
-// Package oauthtwitch provides a Twitch OAuth 2.0 / OpenID Connect provider for the Aegis OAuth plugin.
+// Package oauthtwitch provides a Twitch OAuth 2.0 / OpenID Connect provider for the Limen OAuth plugin.
 package oauthtwitch
 
 import (
@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 var twitchEndpoint = oauth2.Endpoint{

@@ -1,4 +1,4 @@
-module github.com/thecodearcher/aegis/examples/basic
+module github.com/thecodearcher/limen/examples/basic
 
 go 1.24.0
 
@@ -8,57 +8,57 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
-	github.com/thecodearcher/aegis v0.0.0
-	github.com/thecodearcher/aegis/adapters/gorm v0.0.0
-	github.com/thecodearcher/aegis/adapters/sql v0.0.0
-	github.com/thecodearcher/aegis/plugins/credential-password v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth-discord v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth-facebook v0.0.0-00010101000000-000000000000
-	github.com/thecodearcher/aegis/plugins/oauth-generic v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth-github v0.0.0-00010101000000-000000000000
-	github.com/thecodearcher/aegis/plugins/oauth-google v0.0.0-00010101000000-000000000000
-	github.com/thecodearcher/aegis/plugins/oauth-linkedin v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth-microsoft v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth-spotify v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth-twitch v0.0.0
-	github.com/thecodearcher/aegis/plugins/oauth-twitter v0.0.0
-	github.com/thecodearcher/aegis/plugins/two-factor v0.0.0
+	github.com/thecodearcher/limen v0.0.0
+	github.com/thecodearcher/limen/adapters/gorm v0.0.0
+	github.com/thecodearcher/limen/adapters/sql v0.0.0
+	github.com/thecodearcher/limen/plugins/credential-password v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-discord v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-facebook v0.0.0-00010101000000-000000000000
+	github.com/thecodearcher/limen/plugins/oauth-generic v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-github v0.0.0-00010101000000-000000000000
+	github.com/thecodearcher/limen/plugins/oauth-google v0.0.0-00010101000000-000000000000
+	github.com/thecodearcher/limen/plugins/oauth-linkedin v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-microsoft v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-spotify v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-twitch v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-twitter v0.0.0
+	github.com/thecodearcher/limen/plugins/two-factor v0.0.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.30.1
 )
 
-replace github.com/thecodearcher/aegis => ../../
+replace github.com/thecodearcher/limen => ../../
 
-replace github.com/thecodearcher/aegis/adapters/gorm => ../../adapters/gorm
+replace github.com/thecodearcher/limen/adapters/gorm => ../../adapters/gorm
 
-replace github.com/thecodearcher/aegis/adapters/sql => ../../adapters/sql
+replace github.com/thecodearcher/limen/adapters/sql => ../../adapters/sql
 
-replace github.com/thecodearcher/aegis/plugins/credential-password => ../../plugins/credential-password
+replace github.com/thecodearcher/limen/plugins/credential-password => ../../plugins/credential-password
 
-replace github.com/thecodearcher/aegis/plugins/two-factor => ../../plugins/two-factor
+replace github.com/thecodearcher/limen/plugins/two-factor => ../../plugins/two-factor
 
-replace github.com/thecodearcher/aegis/plugins/oauth => ../../plugins/oauth
+replace github.com/thecodearcher/limen/plugins/oauth => ../../plugins/oauth
 
-replace github.com/thecodearcher/aegis/plugins/oauth-google => ../../plugins/oauth-google
+replace github.com/thecodearcher/limen/plugins/oauth-google => ../../plugins/oauth-google
 
-replace github.com/thecodearcher/aegis/plugins/oauth-discord => ../../plugins/oauth-discord
+replace github.com/thecodearcher/limen/plugins/oauth-discord => ../../plugins/oauth-discord
 
-replace github.com/thecodearcher/aegis/plugins/oauth-generic => ../../plugins/oauth-generic
+replace github.com/thecodearcher/limen/plugins/oauth-generic => ../../plugins/oauth-generic
 
-replace github.com/thecodearcher/aegis/plugins/oauth-facebook => ../../plugins/oauth-facebook
+replace github.com/thecodearcher/limen/plugins/oauth-facebook => ../../plugins/oauth-facebook
 
-replace github.com/thecodearcher/aegis/plugins/oauth-github => ../../plugins/oauth-github
+replace github.com/thecodearcher/limen/plugins/oauth-github => ../../plugins/oauth-github
 
-replace github.com/thecodearcher/aegis/plugins/oauth-microsoft => ../../plugins/oauth-microsoft
+replace github.com/thecodearcher/limen/plugins/oauth-microsoft => ../../plugins/oauth-microsoft
 
-replace github.com/thecodearcher/aegis/plugins/oauth-spotify => ../../plugins/oauth-spotify
+replace github.com/thecodearcher/limen/plugins/oauth-spotify => ../../plugins/oauth-spotify
 
-replace github.com/thecodearcher/aegis/plugins/oauth-twitch => ../../plugins/oauth-twitch
+replace github.com/thecodearcher/limen/plugins/oauth-twitch => ../../plugins/oauth-twitch
 
-replace github.com/thecodearcher/aegis/plugins/oauth-twitter => ../../plugins/oauth-twitter
+replace github.com/thecodearcher/limen/plugins/oauth-twitter => ../../plugins/oauth-twitter
 
-replace github.com/thecodearcher/aegis/plugins/oauth-linkedin => ../../plugins/oauth-linkedin
+replace github.com/thecodearcher/limen/plugins/oauth-linkedin => ../../plugins/oauth-linkedin
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect

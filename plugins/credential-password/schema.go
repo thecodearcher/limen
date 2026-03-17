@@ -1,12 +1,12 @@
 package credentialpassword
 
 import (
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // CredentialPasswordUserSchema extends UserSchema with username-specific functionality.
 type CredentialPasswordUserSchema struct {
-	*aegis.UserSchema
+	*limen.UserSchema
 }
 
 // GetUsernameField returns the resolved username field column name.

@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type ConfigOption func(*config)
@@ -17,13 +17,13 @@ type config struct {
 	accessTokenDuration  time.Duration
 	refreshTokenDuration time.Duration
 	refreshTokenRotation bool
-	customClaims         func(user *aegis.User) map[string]any
+	customClaims         func(user *limen.User) map[string]any
 	issuer               string
 	audience             []string
 	blacklistEnabled     bool
-	blacklistStoreType   aegis.StoreType
+	blacklistStoreType   limen.StoreType
 	refreshTokenEnabled  bool
-	subjectEncoder       func(user *aegis.User) string
+	subjectEncoder       func(user *limen.User) string
 	subjectResolver      func(subject string) (any, error)
 	refreshUser          bool
 }
@@ -93,7 +93,7 @@ func WithRefreshTokenRotation(enabled bool) ConfigOption {
 }
 
 // WithCustomClaims registers a function that adds extra claims to every JWT.
-func WithCustomClaims(fn func(user *aegis.User) map[string]any) ConfigOption {
+func WithCustomClaims(fn func(user *limen.User) map[string]any) ConfigOption {
 	return func(c *config) {
 		c.customClaims = fn
 	}
@@ -126,7 +126,7 @@ func WithBlacklistEnabled(enabled bool) ConfigOption {
 // When set to StoreTypeCache, entries are stored in the shared CacheAdapter
 // with a TTL equal to the token's remaining lifetime.
 // Defaults to StoreTypeCache.
-func WithBlacklistStoreType(storeType aegis.StoreType) ConfigOption {
+func WithBlacklistStoreType(storeType limen.StoreType) ConfigOption {
 	return func(c *config) {
 		c.blacklistStoreType = storeType
 	}
@@ -143,14 +143,14 @@ func WithRefreshToken(enabled bool) ConfigOption {
 // user. By default the raw user.ID is used, which may expose internal
 // database identifiers. Use this to substitute a public UUID or other
 // opaque value.
-func WithSubject(fn func(user *aegis.User) string) ConfigOption {
+func WithSubject(fn func(user *limen.User) string) ConfigOption {
 	return func(c *config) {
 		c.subjectEncoder = fn
 	}
 }
 
 // WithSubjectResolver sets a function that converts a JWT "sub" claim
-// back to a user ID value or Return aegis.User which will be used to populate the User field on the ValidatedSession.
+// back to a user ID value or Return limen.User which will be used to populate the User field on the ValidatedSession.
 // Default: returns the subject string as-is.
 func WithSubjectResolver(fn func(subject string) (any, error)) ConfigOption {
 	return func(c *config) {

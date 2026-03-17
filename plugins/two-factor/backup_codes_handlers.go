@@ -3,20 +3,20 @@ package twofactor
 import (
 	"net/http"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type backupCodesHandlers struct {
 	backupCodes *backupCodes
-	responder   *aegis.Responder
+	responder   *limen.Responder
 }
 
-func newBackupCodesHandlers(backupCodes *backupCodes, responder *aegis.Responder) *backupCodesHandlers {
+func newBackupCodesHandlers(backupCodes *backupCodes, responder *limen.Responder) *backupCodesHandlers {
 	return &backupCodesHandlers{backupCodes: backupCodes, responder: responder}
 }
 
 func (b *backupCodesHandlers) UpdateBackupCodes(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		b.responder.Error(w, r, err)
 		return
@@ -31,7 +31,7 @@ func (b *backupCodesHandlers) UpdateBackupCodes(w http.ResponseWriter, r *http.R
 }
 
 func (b *backupCodesHandlers) GetBackupCodes(w http.ResponseWriter, r *http.Request) {
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		b.responder.Error(w, r, err)
 		return
@@ -45,13 +45,13 @@ func (b *backupCodesHandlers) GetBackupCodes(w http.ResponseWriter, r *http.Requ
 }
 
 func (b *backupCodesHandlers) VerifyBackupCode(w http.ResponseWriter, r *http.Request) {
-	body := aegis.ValidateJSON(w, r, b.responder, func(v *aegis.Validator, data map[string]any) *aegis.Validator {
+	body := limen.ValidateJSON(w, r, b.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
 		return v.RequiredString("code", data["code"])
 	})
 	if body == nil {
 		return
 	}
-	session, err := aegis.GetCurrentSessionFromCtx(r)
+	session, err := limen.GetCurrentSessionFromCtx(r)
 	if err != nil {
 		b.responder.Error(w, r, err)
 		return

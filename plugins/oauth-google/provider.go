@@ -1,4 +1,4 @@
-// Package oauthgoogle provides a Google OAuth provider for the Aegis OAuth plugin.
+// Package oauthgoogle provides a Google OAuth provider for the Limen OAuth plugin.
 package oauthgoogle
 
 import (
@@ -12,7 +12,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 // New creates a Google OAuth provider that implements oauth.Provider.

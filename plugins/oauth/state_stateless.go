@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type statelessStateStore struct {
@@ -33,7 +33,7 @@ func (s *statelessStateStore) Generate(_ context.Context, data map[string]any) (
 		return "", "", fmt.Errorf("oauth: failed to marshal state payload: %w", err)
 	}
 
-	cookieValue, err := aegis.EncryptXChaCha(string(plaintext), s.secret, nil)
+	cookieValue, err := limen.EncryptXChaCha(string(plaintext), s.secret, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("oauth: failed to encrypt state: %w", err)
 	}
@@ -46,7 +46,7 @@ func (s *statelessStateStore) Validate(_ context.Context, stateToken string, coo
 		return nil, ErrOAuthStateInvalid
 	}
 
-	plaintext, err := aegis.DecryptXChaCha(cookieValue, s.secret, nil)
+	plaintext, err := limen.DecryptXChaCha(cookieValue, s.secret, nil)
 	if err != nil {
 		return nil, ErrOAuthStateInvalid
 	}

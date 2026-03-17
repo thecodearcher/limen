@@ -1,9 +1,9 @@
-module github.com/thecodearcher/aegis/plugins/oauth
+module github.com/thecodearcher/limen/plugins/oauth
 
 go 1.24.0
 
 require (
-	github.com/thecodearcher/aegis v0.0.0
+	github.com/thecodearcher/limen v0.0.0
 	golang.org/x/oauth2 v0.35.0
 )
 
@@ -13,4 +13,4 @@ require (
 	golang.org/x/sys v0.41.0 // indirect
 )
 
-replace github.com/thecodearcher/aegis => ../..
+replace github.com/thecodearcher/limen => ../..

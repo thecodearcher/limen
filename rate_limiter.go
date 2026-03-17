@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -13,12 +13,12 @@ import (
 type rateLimiter struct {
 	config          *RateLimiterConfig
 	store           RateLimiterStore
-	httpCore        *AegisHTTPCore
+	httpCore        *LimenHTTPCore
 	rules           []*RateLimitRule
 	disableForPaths []*regexp.Regexp
 }
 
-func newRateLimiter(config *RateLimiterConfig, httpCore *AegisHTTPCore, rules map[string]*RateLimitRule) *rateLimiter {
+func newRateLimiter(config *RateLimiterConfig, httpCore *LimenHTTPCore, rules map[string]*RateLimitRule) *rateLimiter {
 	sortedRules := slices.Collect(maps.Values(rules))
 	sortRulesBySpecificity(sortedRules)
 
@@ -30,7 +30,7 @@ func newRateLimiter(config *RateLimiterConfig, httpCore *AegisHTTPCore, rules ma
 	}
 }
 
-func determineRateLimiterStore(config *RateLimiterConfig, core *AegisCore) RateLimiterStore {
+func determineRateLimiterStore(config *RateLimiterConfig, core *LimenCore) RateLimiterStore {
 	if config.CustomStore != nil {
 		return config.CustomStore
 	}
@@ -140,7 +140,7 @@ func (rl *rateLimiter) handle(next http.Handler) http.Handler {
 		remainingTime, err := rl.Check(r.Context(), key, rule)
 		if err != nil {
 			w.Header().Set("Retry-After", strconv.Itoa(int(remainingTime.Seconds())))
-			rl.httpCore.Responder.Error(w, r, NewAegisError("Too many requests. Please try again later.", http.StatusTooManyRequests, nil))
+			rl.httpCore.Responder.Error(w, r, NewLimenError("Too many requests. Please try again later.", http.StatusTooManyRequests, nil))
 			return
 		}
 

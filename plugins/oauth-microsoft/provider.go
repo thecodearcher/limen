@@ -1,4 +1,4 @@
-// Package oauthmicrosoft provides a Microsoft OAuth provider for the Aegis OAuth plugin.
+// Package oauthmicrosoft provides a Microsoft OAuth provider for the Limen OAuth plugin.
 package oauthmicrosoft
 
 import (
@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 const (

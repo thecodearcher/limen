@@ -4,20 +4,20 @@ import (
 	"os"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 func generateBackupCodes(count int, length int) []string {
 	backupCodes := make([]string, count)
 	for i := range count {
 		halfLength := length / 2
-		backupCodes[i] = aegis.GenerateRandomString(halfLength, aegis.CharSetAlphanumeric) + "-" + aegis.GenerateRandomString(halfLength, aegis.CharSetAlphanumeric)
+		backupCodes[i] = limen.GenerateRandomString(halfLength, limen.CharSetAlphanumeric) + "-" + limen.GenerateRandomString(halfLength, limen.CharSetAlphanumeric)
 	}
 	return backupCodes
 }
 
 func generateRandomOTP(digits TOTPDigits) string {
-	return aegis.GenerateRandomString(int(digits), aegis.CharSetNumeric)
+	return limen.GenerateRandomString(int(digits), limen.CharSetNumeric)
 }
 
 func getTOTPSecret() []byte {

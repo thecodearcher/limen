@@ -4,11 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 // API is the public interface for the two-factor authentication plugin.
-// Use the Use function to obtain a type-safe reference from an Aegis instance.
+// Use the Use function to obtain a type-safe reference from a Limen instance.
 type API interface {
 	InitiateTwoFactorSetup(ctx context.Context, user *UserWithTwoFactor, password string) (*TwoFactorSetupURI, error)
 
@@ -16,7 +16,7 @@ type API interface {
 
 	DisableTwoFactor(ctx context.Context, userID any, password string) error
 
-	VerifyLoginWithTwoFactor(r *http.Request, w http.ResponseWriter, code string, method TwoFactorMethod) (*aegis.AuthenticationResult, *aegis.SessionResult, error)
+	VerifyLoginWithTwoFactor(r *http.Request, w http.ResponseWriter, code string, method TwoFactorMethod) (*limen.AuthenticationResult, *limen.SessionResult, error)
 
 	FindTwoFactorByUserID(ctx context.Context, userID any) (*TwoFactor, error)
 }
@@ -24,6 +24,6 @@ type API interface {
 // Use returns a type-safe API for the two-factor plugin.
 // Panics if the plugin was not registered in Config.Plugins,
 // making it suitable for method chaining.
-func Use(a *aegis.Aegis) API {
-	return aegis.Use[API](a, aegis.PluginTwoFactor)
+func Use(a *limen.Limen) API {
+	return limen.Use[API](a, limen.PluginTwoFactor)
 }

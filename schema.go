@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 type SchemaDefinitionMap map[SchemaName]SchemaDefinition
 

@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type ConfigOption func(*config)
@@ -67,7 +67,7 @@ func WithResetTokenExpiration(resetTokenExpiration time.Duration) ConfigOption {
 }
 
 // WithGenerateResetToken sets the function to generate the reset token
-func WithGenerateResetToken(generateResetToken func(*aegis.User) (string, error)) ConfigOption {
+func WithGenerateResetToken(generateResetToken func(*limen.User) (string, error)) ConfigOption {
 	return func(c *config) {
 		c.generateResetToken = generateResetToken
 	}
@@ -102,7 +102,7 @@ func WithSendPasswordResetEmail(sendPasswordResetEmail func(email string, token 
 }
 
 // WithOnPasswordResetSuccess sets the function to call when the password reset is successful
-func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context, user *aegis.User)) ConfigOption {
+func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context, user *limen.User)) ConfigOption {
 	return func(c *config) {
 		c.onPasswordResetSuccess = onPasswordResetSuccess
 	}

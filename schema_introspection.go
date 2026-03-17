@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 // SchemaIntrospector provides introspection capabilities for a schema
 type SchemaIntrospector interface {

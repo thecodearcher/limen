@@ -78,7 +78,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/thecodearcher/aegis
+        - github.com/thecodearcher/limen
   exclusions:
     generated: lax
     paths:

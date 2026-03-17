@@ -1,4 +1,4 @@
-// Package oauthfacebook provides a Facebook OAuth provider for the Aegis OAuth plugin.
+// Package oauthfacebook provides a Facebook OAuth provider for the Limen OAuth plugin.
 package oauthfacebook
 
 import (
@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/oauth2"
 
-	"github.com/thecodearcher/aegis/plugins/oauth"
+	"github.com/thecodearcher/limen/plugins/oauth"
 )
 
 var facebookEndpoint = oauth2.Endpoint{

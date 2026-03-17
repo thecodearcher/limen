@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-type AegisCore struct {
+type LimenCore struct {
 	config         *Config
 	baseURL        string
 	fullBaseURL    string // baseURL + HTTP.basePath
@@ -21,7 +21,7 @@ type AegisCore struct {
 	secret         []byte
 }
 
-func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDefinition) error {
+func (a *LimenCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDefinition) error {
 	if a.schemaResolver == nil {
 		return fmt.Errorf("schema resolver must be instantiated before initializing schemas")
 	}
@@ -37,7 +37,7 @@ func (a *AegisCore) initializeSchemas(discoveredSchemas map[SchemaName]SchemaDef
 
 // GetPlugin retrieves a plugin by its name from the plugin registry.
 // Returns the plugin and true if found, or nil and false if not found.
-func (c *AegisCore) GetPlugin(name PluginName) (Plugin, bool) {
+func (c *LimenCore) GetPlugin(name PluginName) (Plugin, bool) {
 	plugin, ok := c.plugins[name]
 	return plugin, ok
 }
@@ -45,36 +45,36 @@ func (c *AegisCore) GetPlugin(name PluginName) (Plugin, bool) {
 // Cookies returns the shared CookieManager that plugins should use for
 // all cookie operations. The returned manager inherits security attributes
 // from the central cookie configuration.
-func (c *AegisCore) Cookies() *CookieManager {
+func (c *LimenCore) Cookies() *CookieManager {
 	return c.cookies
 }
 
 // CacheStore returns the global CacheAdapter instance.
 // Plugins should use this as a fallback when no per-feature store is configured.
-func (c *AegisCore) CacheStore() CacheAdapter {
+func (c *LimenCore) CacheStore() CacheAdapter {
 	return c.cacheStore
 }
 
 // CacheKeyPrefix returns the prefix used for all cache keys (sessions, rate limits).
-func (c *AegisCore) CacheKeyPrefix() string {
+func (c *LimenCore) CacheKeyPrefix() string {
 	return c.config.CacheKeyPrefix
 }
 
 // Secret returns the base signing secret.
 // Plugins that do not configure their own secret can use this for encryption/signing.
-func (c *AegisCore) Secret() []byte {
+func (c *LimenCore) Secret() []byte {
 	return c.secret
 }
 
-func (c *AegisCore) GetBaseURL() string {
+func (c *LimenCore) GetBaseURL() string {
 	return c.baseURL
 }
 
-func (c *AegisCore) GetFullBaseURL() string {
+func (c *LimenCore) GetFullBaseURL() string {
 	return c.fullBaseURL
 }
 
-func (c *AegisCore) GetBaseURLWithPluginPath(pluginName PluginName, pathToJoin string) string {
+func (c *LimenCore) GetBaseURLWithPluginPath(pluginName PluginName, pathToJoin string) string {
 	plugin, ok := c.GetPlugin(pluginName)
 	if !ok {
 		return ""
@@ -88,7 +88,7 @@ func (c *AegisCore) GetBaseURLWithPluginPath(pluginName PluginName, pathToJoin s
 // CreateSession creates a session for the auth result.
 // This should be called instead of SessionManager.CreateSession so that plugins
 // can pass options (e.g. remember_me) via SessionCreateOption.
-func (c *AegisCore) CreateSession(ctx context.Context, r *http.Request, w http.ResponseWriter, auth *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error) {
+func (c *LimenCore) CreateSession(ctx context.Context, r *http.Request, w http.ResponseWriter, auth *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error) {
 	createOpts := &SessionCreateOptions{ShortSession: false}
 	if c.cookies.checkIsShortSession(r) {
 		createOpts.ShortSession = true

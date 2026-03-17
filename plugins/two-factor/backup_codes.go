@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type backupCodes struct {
@@ -21,7 +21,7 @@ func newBackupCodes(plugin *twoFactorPlugin, config *backupCodesConfig) *backupC
 }
 
 // RegisterRoutes registers backup codes-specific routes
-func (b *backupCodes) registerRoutes(httpCore *aegis.AegisHTTPCore, routeBuilder *aegis.RouteBuilder) {
+func (b *backupCodes) registerRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	handlers := newBackupCodesHandlers(b, httpCore.Responder)
 	routeBuilder.ProtectedGET("/backup-codes", "get-backup-codes", handlers.GetBackupCodes)
 	routeBuilder.ProtectedPUT("/backup-codes", "update-backup-codes", handlers.UpdateBackupCodes)
@@ -62,8 +62,8 @@ func (b *backupCodes) UpdateBackupCodes(ctx context.Context, userID any) ([]stri
 		BackupCodes: encryptedBackupCodes,
 	}
 
-	err = b.plugin.core.Update(ctx, b.plugin.twoFactorSchema, updatedData, []aegis.Where{
-		aegis.Eq(b.plugin.twoFactorSchema.GetIDField(), twoFactor.ID),
+	err = b.plugin.core.Update(ctx, b.plugin.twoFactorSchema, updatedData, []limen.Where{
+		limen.Eq(b.plugin.twoFactorSchema.GetIDField(), twoFactor.ID),
 	})
 	if err != nil {
 		return nil, err
@@ -102,8 +102,8 @@ func (b *backupCodes) VerifyBackupCode(ctx context.Context, userID any, backupCo
 		BackupCodes: encryptedBackupCodes,
 	}
 
-	return b.plugin.core.Update(ctx, b.plugin.twoFactorSchema, updatedData, []aegis.Where{
-		aegis.Eq(b.plugin.twoFactorSchema.GetIDField(), twoFactor.ID),
+	return b.plugin.core.Update(ctx, b.plugin.twoFactorSchema, updatedData, []limen.Where{
+		limen.Eq(b.plugin.twoFactorSchema.GetIDField(), twoFactor.ID),
 	})
 }
 

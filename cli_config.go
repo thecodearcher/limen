@@ -1,4 +1,4 @@
-package aegis
+package limen
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ func (c *Config) prepareCLIConfig(schemas SchemaDefinitionMap) error {
 		return nil
 	}
 
-	outputPath := filepath.Join(".", ".aegis", "schemas.json")
+	outputPath := filepath.Join(".", ".limen", "schemas.json")
 
 	dir := filepath.Dir(outputPath)
 	if dir != "" && dir != "." {

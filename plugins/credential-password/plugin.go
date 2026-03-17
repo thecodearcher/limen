@@ -1,4 +1,4 @@
-// Package credentialpassword provides credential(email/username) and password authentication for the aegis library.
+// Package credentialpassword provides credential(email/username) and password authentication for the limen library.
 package credentialpassword
 
 import (
@@ -7,15 +7,15 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type credentialPasswordPlugin struct {
-	core               *aegis.AegisCore
+	core               *limen.LimenCore
 	config             *config
-	userSchema         *aegis.UserSchema
-	verificationSchema *aegis.VerificationSchema
-	dbAction           *aegis.DatabaseActionHelper
+	userSchema         *limen.UserSchema
+	verificationSchema *limen.VerificationSchema
+	dbAction           *limen.DatabaseActionHelper
 }
 
 // getUsernameField returns the resolved username field column name if username support is enabled.
@@ -38,11 +38,11 @@ type config struct {
 	requireEmailVerification    bool                                             // require email verification after sign up
 	emailVerificationExpiration time.Duration                                    // Custom expiration duration for the email verification
 	resetTokenExpiration        time.Duration                                    // Custom expiration duration for the reset token
-	generateResetToken          func(*aegis.User) (string, error)                // custom function to generate the reset token e.g generating TOTP code
+	generateResetToken          func(*limen.User) (string, error)                // custom function to generate the reset token e.g generating TOTP code
 	autoSignInOnSignUp          bool                                             // auto sign in the user after sign up
 	sendVerificationEmail       func(email string, token string)                 // function to send the email verification message
 	sendPasswordResetEmail      func(email string, token string)                 // function to send the password reset message
-	onPasswordResetSuccess      func(ctx context.Context, user *aegis.User)      // function to call when the password reset is successful
+	onPasswordResetSuccess      func(ctx context.Context, user *limen.User)      // function to call when the password reset is successful
 	enableUsername              bool                                             // enable username support (default: false)
 	usernameMinLength           int                                              // Minimum length of the username
 	usernameMaxLength           int                                              // Maximum length of the username
@@ -80,29 +80,29 @@ func New(opts ...ConfigOption) *credentialPasswordPlugin {
 	}
 }
 
-func (p *credentialPasswordPlugin) Name() aegis.PluginName {
-	return aegis.PluginCredentialPassword
+func (p *credentialPasswordPlugin) Name() limen.PluginName {
+	return limen.PluginCredentialPassword
 }
 
-func (p *credentialPasswordPlugin) GetSchemas(schema *aegis.SchemaConfig) []aegis.SchemaIntrospector {
+func (p *credentialPasswordPlugin) GetSchemas(schema *limen.SchemaConfig) []limen.SchemaIntrospector {
 	if !p.config.enableUsername {
-		return []aegis.SchemaIntrospector{}
+		return []limen.SchemaIntrospector{}
 	}
 
 	userWithUsername := &CredentialPasswordUserSchema{
 		UserSchema: schema.User,
 	}
-	extension := aegis.NewSchemaDefinitionForExtension(
-		aegis.CoreSchemaUsers,
+	extension := limen.NewSchemaDefinitionForExtension(
+		limen.CoreSchemaUsers,
 		userWithUsername,
-		aegis.WithSchemaField("username", aegis.ColumnTypeString, aegis.WithNullable(true)),
-		aegis.WithSchemaIndex("idx_users_username", []aegis.SchemaField{CredentialPasswordUserSchemaUsernameField}),
+		limen.WithSchemaField("username", limen.ColumnTypeString, limen.WithNullable(true)),
+		limen.WithSchemaIndex("idx_users_username", []limen.SchemaField{CredentialPasswordUserSchemaUsernameField}),
 	)
 
-	return []aegis.SchemaIntrospector{extension}
+	return []limen.SchemaIntrospector{extension}
 }
 
-func (p *credentialPasswordPlugin) Initialize(core *aegis.AegisCore) error {
+func (p *credentialPasswordPlugin) Initialize(core *limen.LimenCore) error {
 	p.core = core
 	p.userSchema = core.Schema.User
 	p.dbAction = core.DBAction

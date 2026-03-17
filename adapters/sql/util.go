@@ -18,7 +18,7 @@ var timeLayouts = []string{
 }
 
 // normalizeRow converts driver-specific types in place: []byte → string or time.Time (if it parses as a datetime).
-// Some drivers (e.g. MySQL text protocol) return []byte for string/date columns; aegis expects string or time.Time.
+// Some drivers (e.g. MySQL text protocol) return []byte for string/date columns; limen expects string or time.Time.
 func normalizeRow(m map[string]any) {
 	for k, v := range m {
 		switch x := v.(type) {

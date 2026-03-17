@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/thecodearcher/aegis"
+	"github.com/thecodearcher/limen"
 )
 
 type blacklistStore interface {
@@ -17,7 +17,7 @@ type blacklistStore interface {
 // cacheBlacklistStore stores blacklist entries in the shared CacheAdapter.
 // TTL-based expiry means Prune is a no-op.
 type cacheBlacklistStore struct {
-	cache  aegis.CacheAdapter
+	cache  limen.CacheAdapter
 	prefix string
 }
 
@@ -41,7 +41,7 @@ func (s *cacheBlacklistStore) Prune(_ context.Context) error {
 
 // dbBlacklistStore stores blacklist entries in the jwt_blacklist database table.
 type dbBlacklistStore struct {
-	core   *aegis.AegisCore
+	core   *limen.LimenCore
 	schema *blacklistSchema
 }
 
@@ -54,13 +54,13 @@ func (s *dbBlacklistStore) Add(ctx context.Context, jti string, expiresAt time.T
 }
 
 func (s *dbBlacklistStore) Has(ctx context.Context, jti string) (bool, error) {
-	return s.core.Exists(ctx, s.schema, []aegis.Where{
-		aegis.Eq(string(BlacklistSchemaJTIField), jti),
+	return s.core.Exists(ctx, s.schema, []limen.Where{
+		limen.Eq(string(BlacklistSchemaJTIField), jti),
 	})
 }
 
 func (s *dbBlacklistStore) Prune(ctx context.Context) error {
-	return s.core.Delete(ctx, s.schema, []aegis.Where{
-		aegis.Lt(s.schema.GetExpiresAtField(), time.Now()),
+	return s.core.Delete(ctx, s.schema, []limen.Where{
+		limen.Lt(s.schema.GetExpiresAtField(), time.Now()),
 	})
 }
