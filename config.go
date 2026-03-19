@@ -40,7 +40,7 @@ func (c *Config) validate() error {
 		c.Secret = secret
 	}
 	if len(secret) == 0 {
-		return fmt.Errorf("signing secret is required: set Config.SigningSecret, or AEGIS_SECRET environment variable")
+		return fmt.Errorf("signing secret is required: set Config.Secret, or AEGIS_SECRET environment variable")
 	}
 
 	if len(secret) != 32 {

@@ -39,7 +39,7 @@ func WithSigningMethod(method jwt.SigningMethod) ConfigOption {
 //
 // Accepted types per signing method family:
 //
-//	HMAC  (HS256, …)  — string. Falls back to Config.SigningSecret when unset.
+//	HMAC  (HS256, …)  — string. Falls back to Config.Secret when unset.
 //	RSA   (RS256, …)  — PEM string or *rsa.PrivateKey.
 //	ECDSA (ES256, …)  — PEM string or *ecdsa.PrivateKey.
 //	EdDSA             — PEM string or ed25519.PrivateKey.

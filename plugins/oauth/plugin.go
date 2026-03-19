@@ -45,7 +45,7 @@ func (o *oauthPlugin) Initialize(core *limen.LimenCore) error {
 	}
 
 	if len(o.config.secret) != 32 {
-		return fmt.Errorf("oauth: secret must be 32 bytes, got %d (set oauth.WithSecret or Config.SigningSecret)", len(o.config.secret))
+		return fmt.Errorf("oauth: secret must be 32 bytes, got %d (set oauth.WithSecret or Config.Secret)", len(o.config.secret))
 	}
 
 	if len(o.config.providers) == 0 {

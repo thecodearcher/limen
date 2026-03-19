@@ -58,7 +58,7 @@ func (t *twoFactorPlugin) Initialize(core *limen.LimenCore) error {
 		}
 	}
 	if len(t.config.secret) == 0 {
-		return fmt.Errorf("two-factor requires a secret: set twofactor.WithSecret, Config.SigningSecret, or AEGIS_TOTP_SECRET / AEGIS_SECRET")
+		return fmt.Errorf("two-factor requires a secret: set twofactor.WithSecret, Config.Secret, or AEGIS_TOTP_SECRET / AEGIS_SECRET")
 	}
 	t.totp = newDefaultTOTP(t, t.config.totp)
 	t.backupCodes = newBackupCodes(t, t.config.backupCodes)

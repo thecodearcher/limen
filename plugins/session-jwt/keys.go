@@ -69,7 +69,7 @@ func (c *config) resolveHMACKeys(coreSecret []byte) error {
 
 	if c.signingKey == nil {
 		if len(coreSecret) == 0 {
-			return fmt.Errorf("session-jwt: %s requires a signing key; use WithSigningKey or set Config.SigningSecret", alg)
+			return fmt.Errorf("session-jwt: %s requires a signing key; use WithSigningKey or set Config.Secret", alg)
 		}
 		c.signingKey = coreSecret
 		c.verificationKey = coreSecret
