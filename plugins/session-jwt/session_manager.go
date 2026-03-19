@@ -94,6 +94,25 @@ func (m *jwtSessionManager) RevokeSession(ctx context.Context, token string) err
 	return nil
 }
 
+func (m *jwtSessionManager) ListSessions(ctx context.Context, userID any) ([]limen.Session, error) {
+	tokens, err := m.plugin.findRefreshTokensByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]limen.Session, 0, len(tokens))
+	for _, rt := range tokens {
+		sessions = append(sessions, limen.Session{
+			ID:        rt.ID,
+			Token:     rt.Token,
+			UserID:    rt.UserID,
+			CreatedAt: rt.CreatedAt,
+			ExpiresAt: rt.ExpiresAt,
+		})
+	}
+	return sessions, nil
+}
+
 func (m *jwtSessionManager) RevokeAllSessions(ctx context.Context, userID any) error {
 	p := m.plugin
 

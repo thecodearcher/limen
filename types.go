@@ -44,6 +44,7 @@ type SessionManager interface {
 	ValidateSession(ctx context.Context, r *http.Request) (*ValidatedSession, error)
 	RevokeSession(ctx context.Context, token string) error
 	RevokeAllSessions(ctx context.Context, userID any) error
+	ListSessions(ctx context.Context, userID any) ([]Session, error)
 }
 
 // ValidatedSession is the result of a session validation.

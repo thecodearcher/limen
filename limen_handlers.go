@@ -29,7 +29,9 @@ func newLimenHandlers(httpCore *LimenHTTPCore, core *LimenCore) *limenHandlers {
 
 func (h *limenHandlers) RegisterRoutes(routeBuilder *RouteBuilder) {
 	routeBuilder.ProtectedGET("/me", "me", h.GetSession)
+	routeBuilder.ProtectedGET("/sessions", "list-sessions", h.ListSessions)
 	routeBuilder.ProtectedPOST("/signout", "signout", h.SignOut)
+	routeBuilder.ProtectedPOST("/revoke-sessions", "revoke-sessions", h.RevokeAllSessions)
 }
 
 func (h *limenHandlers) GetSession(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +43,38 @@ func (h *limenHandlers) GetSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.responder.SessionResponse(w, r, h.core, &AuthenticationResult{User: session.User}, nil)
+}
+
+func (h *limenHandlers) ListSessions(w http.ResponseWriter, r *http.Request) {
+	session, err := GetCurrentSessionFromCtx(r)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	sessions, err := h.core.SessionManager.ListSessions(r.Context(), session.User.ID)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, sessions)
+}
+
+func (h *limenHandlers) RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
+	session, err := GetCurrentSessionFromCtx(r)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	err = h.core.SessionManager.RevokeAllSessions(r.Context(), session.User.ID)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }
 
 func (h *limenHandlers) SignOut(w http.ResponseWriter, r *http.Request) {
@@ -58,5 +92,5 @@ func (h *limenHandlers) SignOut(w http.ResponseWriter, r *http.Request) {
 
 	h.core.Cookies().ClearSessionCookie(w)
 
-	h.responder.JSON(w, r, http.StatusOK, "OK")
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }

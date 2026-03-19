@@ -2,6 +2,7 @@
 package limen
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"maps"
@@ -116,6 +117,21 @@ func (a *Limen) Handler() http.Handler {
 
 func (a *Limen) GetSession(req *http.Request) (*ValidatedSession, error) {
 	return a.core.SessionManager.ValidateSession(req.Context(), req)
+}
+
+// RevokeSession revokes a single session identified by its token.
+func (a *Limen) RevokeSession(ctx context.Context, token string) error {
+	return a.core.SessionManager.RevokeSession(ctx, token)
+}
+
+// RevokeAllSessions revokes every session belonging to the given user.
+func (a *Limen) RevokeAllSessions(ctx context.Context, userID any) error {
+	return a.core.SessionManager.RevokeAllSessions(ctx, userID)
+}
+
+// ListSessions returns all active sessions for the given user.
+func (a *Limen) ListSessions(ctx context.Context, userID any) ([]Session, error) {
+	return a.core.SessionManager.ListSessions(ctx, userID)
 }
 
 // Use retrieves a registered plugin by name and returns it as type T.

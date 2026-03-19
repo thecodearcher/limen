@@ -128,6 +128,10 @@ func (m *opaqueSessionManager) RevokeAllSessions(ctx context.Context, userID any
 	return m.store.DeleteByUserID(ctx, userID)
 }
 
+func (m *opaqueSessionManager) ListSessions(ctx context.Context, userID any) ([]Session, error) {
+	return m.store.ListByUserID(ctx, userID)
+}
+
 func (m *opaqueSessionManager) extendSessionExpiration(ctx context.Context, session *Session) (*SessionResult, error) {
 	policy := m.resolveSessionPolicy(session)
 	now := time.Now()
