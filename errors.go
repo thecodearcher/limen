@@ -16,7 +16,7 @@ var (
 	ErrPluginNotFound          = errors.New("plugin not found")
 	ErrPluginAlreadyRegistered = errors.New("plugin already registered")
 	ErrInvalidConfiguration    = errors.New("invalid configuration")
-	ErrRecordNotFound          = errors.New("record not found")
+	ErrRecordNotFound          = NewLimenError("record not found", http.StatusNotFound, nil)
 	ErrEmptyText               = errors.New("text is empty and cannot be encrypted or decrypted")
 )
 
@@ -58,10 +58,6 @@ func ToLimenError(err error) *LimenError {
 	var limenErr *LimenError
 	if errors.As(err, &limenErr) {
 		return err.(*LimenError)
-	}
-
-	if errors.Is(err, ErrRecordNotFound) {
-		return NewLimenError(err.Error(), http.StatusNotFound, err)
 	}
 
 	return NewLimenError(err.Error(), http.StatusInternalServerError, err)

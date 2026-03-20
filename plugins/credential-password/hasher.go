@@ -154,9 +154,9 @@ func (p *passwordHasher) parseHash(hashString string) (*hashInfo, error) {
 
 // parseParams parses the parameters section of a hash string.
 func (p *passwordHasher) parseParams(paramsStr string, hashInfo *hashInfo) error {
-	paramPairs := strings.Split(paramsStr, ",")
+	paramPairs := strings.SplitSeq(paramsStr, ",")
 
-	for _, pair := range paramPairs {
+	for pair := range paramPairs {
 		keyValue := strings.SplitN(pair, "=", 2)
 		if len(keyValue) != 2 {
 			return errors.New("malformed parameter format")
