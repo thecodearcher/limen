@@ -3,7 +3,6 @@ package limen
 import (
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +16,8 @@ func TestNew(t *testing.T) {
 		{
 			name: "valid configuration",
 			config: &Config{
-				Database: NewMockDatabaseAdapter(gomock.NewController(t)),
+				Database: newTestMemoryAdapter(t),
+				Secret:   testSecret,
 			},
 			wantErr: false,
 		},
@@ -50,8 +50,6 @@ func TestNew(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "New() unexpected error")
 				assert.NotNil(t, limen, "Expected Limen instance but got nil")
-				// Verify that the limen instance was created successfully
-				assert.NotNil(t, limen)
 			}
 		})
 	}

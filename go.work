@@ -8,18 +8,18 @@ use (
 	./examples/basic
 	./plugins/credential-password
 	./plugins/oauth
-	./plugins/oauth-github
-	./plugins/oauth-google
-	./plugins/oauth-generic
 	./plugins/oauth-discord
 	./plugins/oauth-facebook
+	./plugins/oauth-generic
+	./plugins/oauth-github
+	./plugins/oauth-google
+	./plugins/oauth-linkedin
 	./plugins/oauth-microsoft
 	./plugins/oauth-spotify
 	./plugins/oauth-twitch
 	./plugins/oauth-twitter
-	./plugins/oauth-linkedin
-	./plugins/two-factor
 	./plugins/session-jwt
+	./plugins/two-factor
 )
 
 replace github.com/thecodearcher/limen v0.0.0 => ./

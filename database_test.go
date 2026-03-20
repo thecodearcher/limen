@@ -97,7 +97,6 @@ func TestQueryOptions(t *testing.T) {
 				Column:    "created_at",
 				Direction: OrderByDesc,
 			},
-			{},
 			{
 				Column:    "name",
 				Direction: OrderByAsc,

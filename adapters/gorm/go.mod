@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/thecodearcher/limen v0.0.0
 	gorm.io/gorm v1.30.1
+	gorm.io/driver/sqlite v1.6.0
 )
 
 require (
