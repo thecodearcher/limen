@@ -18,6 +18,7 @@ var (
 	ErrInvalidConfiguration    = errors.New("invalid configuration")
 	ErrRecordNotFound          = NewLimenError("record not found", http.StatusNotFound, nil)
 	ErrEmptyText               = errors.New("text is empty and cannot be encrypted or decrypted")
+	ErrMissingConditions       = errors.New("missing query conditions")
 )
 
 // Session-specific errors
@@ -57,7 +58,7 @@ func (e *LimenError) Status() int {
 func ToLimenError(err error) *LimenError {
 	var limenErr *LimenError
 	if errors.As(err, &limenErr) {
-		return err.(*LimenError)
+		return limenErr
 	}
 
 	return NewLimenError(err.Error(), http.StatusInternalServerError, err)

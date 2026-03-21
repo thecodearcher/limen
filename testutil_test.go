@@ -437,3 +437,44 @@ func seedSession(t *testing.T, l *Limen, userID any, email string) *SessionResul
 	require.NoError(t, err)
 	return result
 }
+
+// ---------------------------------------------------------------------------
+// Test plugin
+// ---------------------------------------------------------------------------
+
+func newTestPlugin(t *testing.T) Plugin {
+	t.Helper()
+	return &testPlugin{}
+}
+
+// newTestPlugin creates a new test plugin.
+type testPlugin struct {
+}
+
+func (p *testPlugin) Name() PluginName {
+	return "test"
+}
+
+func (p *testPlugin) Initialize(core *LimenCore) error {
+	return nil
+}
+
+func (p *testPlugin) PluginHTTPConfig() PluginHTTPConfig {
+	return PluginHTTPConfig{
+		BasePath: "/test",
+	}
+}
+
+func (p *testPlugin) GetSchemas(schema *SchemaConfig) []SchemaIntrospector {
+	return []SchemaIntrospector{}
+}
+
+func (p *testPlugin) RegisterRoutes(httpCore *LimenHTTPCore, routeBuilder *RouteBuilder) {
+	routeBuilder.AddRoute(MethodGET, "/test", RouteID("test"), func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}, nil, nil)
+}
+
+func (p *testPlugin) TestMethodOnPlugin() string {
+	return "test-method-on-plugin"
+}
