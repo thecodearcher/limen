@@ -1,6 +1,7 @@
 package credentialpassword
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
@@ -31,7 +32,6 @@ func TestValidatePassword(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := plugin.validatePassword(tt.password)
@@ -125,4 +125,27 @@ func TestValidateUsername_CustomRegex(t *testing.T) {
 
 	err = plugin.validateUsername("HasUpper")
 	assert.ErrorIs(t, err, ErrUsernameInvalidFormat)
+}
+
+func TestValidateUsername_CustomValidationFunc(t *testing.T) {
+	t.Parallel()
+
+	blocked := errors.New("username is blocked")
+	plugin := newTestPlugin(
+		WithUsernameSupport(true),
+		func(c *config) {
+			c.usernameValidationFunc = func(username string) error {
+				if username == "blocked" {
+					return blocked
+				}
+				return nil
+			}
+		},
+	)
+
+	err := plugin.validateUsername("allowed")
+	assert.NoError(t, err)
+
+	err = plugin.validateUsername("blocked")
+	assert.ErrorIs(t, err, blocked)
 }

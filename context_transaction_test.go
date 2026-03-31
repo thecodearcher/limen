@@ -23,7 +23,7 @@ type testTx struct {
 func (a *testTxAdapter) BeginTx(_ context.Context) (DatabaseTx, error) {
 	tx := &testTx{
 		parent:            a,
-		testMemoryAdapter: testMemoryAdapter{tables: make(map[SchemaTableName]*memTable)},
+		testMemoryAdapter: testMemoryAdapter{tables: make(map[SchemaTableName]*testMemTable)},
 	}
 	return tx, nil
 }
@@ -43,14 +43,14 @@ func newTestLimenWithTxAdapter(t *testing.T) (*Limen, *testTxAdapter) {
 
 	adapter := &testTxAdapter{
 		testMemoryAdapter: testMemoryAdapter{
-			tables: make(map[SchemaTableName]*memTable),
+			tables: make(map[SchemaTableName]*testMemTable),
 		},
 	}
 
 	l, err := New(&Config{
 		BaseURL:  "http://localhost:8080",
 		Database: adapter,
-		Secret:   testSecret,
+		Secret:   TestSecret,
 	})
 	require.NoError(t, err)
 	return l, adapter

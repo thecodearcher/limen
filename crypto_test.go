@@ -26,12 +26,12 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			encrypted, err := EncryptXChaCha(tt.plaintext, testSecret, tt.additionalData)
+			encrypted, err := EncryptXChaCha(tt.plaintext, TestSecret, tt.additionalData)
 			assert.NoError(t, err)
 			assert.NotEmpty(t, encrypted)
 			assert.NotEqual(t, tt.plaintext, encrypted)
 
-			decrypted, err := DecryptXChaCha(encrypted, testSecret, tt.additionalData)
+			decrypted, err := DecryptXChaCha(encrypted, TestSecret, tt.additionalData)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.plaintext, decrypted)
 		})
@@ -51,7 +51,7 @@ func TestEncryptXChaCha_Errors(t *testing.T) {
 		{
 			name:           "empty plaintext",
 			plaintext:      "",
-			secret:         testSecret,
+			secret:         TestSecret,
 			wantErrContain: "empty",
 		},
 		{
@@ -82,7 +82,7 @@ func TestEncryptXChaCha_Errors(t *testing.T) {
 func TestDecryptXChaCha_Errors(t *testing.T) {
 	t.Parallel()
 
-	validCiphertext, _ := EncryptXChaCha("test", testSecret, nil)
+	validCiphertext, _ := EncryptXChaCha("test", TestSecret, nil)
 	wrongKey := []byte("99999999999999999999999999999999")
 
 	tests := []struct {
@@ -92,14 +92,14 @@ func TestDecryptXChaCha_Errors(t *testing.T) {
 		additionalData []byte
 		wantErr        bool
 	}{
-		{name: "empty ciphertext", ciphertext: "", secret: testSecret, wantErr: true},
+		{name: "empty ciphertext", ciphertext: "", secret: TestSecret, wantErr: true},
 		{name: "wrong key", ciphertext: validCiphertext, secret: wrongKey, wantErr: true},
-		{name: "invalid base64", ciphertext: "not-base64!!!", secret: testSecret, wantErr: true},
-		{name: "tampered ciphertext", ciphertext: validCiphertext[:len(validCiphertext)-2] + "AA", secret: testSecret, wantErr: true},
+		{name: "invalid base64", ciphertext: "not-base64!!!", secret: TestSecret, wantErr: true},
+		{name: "tampered ciphertext", ciphertext: validCiphertext[:len(validCiphertext)-2] + "AA", secret: TestSecret, wantErr: true},
 		{name: "wrong additional data", ciphertext: func() string {
-			ct, _ := EncryptXChaCha("test", testSecret, []byte("aad1"))
+			ct, _ := EncryptXChaCha("test", TestSecret, []byte("aad1"))
 			return ct
-		}(), secret: testSecret, additionalData: []byte("aad2"), wantErr: true},
+		}(), secret: TestSecret, additionalData: []byte("aad2"), wantErr: true},
 		{name: "short key for decrypt", ciphertext: validCiphertext, secret: []byte("short"), wantErr: true},
 	}
 
@@ -121,10 +121,10 @@ func TestDecryptXChaCha_Errors(t *testing.T) {
 func TestEncryptProducesDifferentCiphertexts(t *testing.T) {
 	t.Parallel()
 
-	ct1, err := EncryptXChaCha("same input", testSecret, nil)
+	ct1, err := EncryptXChaCha("same input", TestSecret, nil)
 	assert.NoError(t, err)
 
-	ct2, err := EncryptXChaCha("same input", testSecret, nil)
+	ct2, err := EncryptXChaCha("same input", TestSecret, nil)
 	assert.NoError(t, err)
 
 	assert.NotEqual(t, ct1, ct2, "two encryptions of the same plaintext should produce different ciphertexts due to random nonce")

@@ -19,7 +19,7 @@ func newTestCookieManager(t *testing.T) *CookieManager {
 		partitioned:       false,
 		crossSubdomain:    &crossDomainConfig{enabled: false},
 	}
-	return newCookieManager(cfg, testSecret)
+	return newCookieManager(cfg, TestSecret)
 }
 
 func TestCookieManager_NewCookie_Attributes(t *testing.T) {
@@ -48,7 +48,7 @@ func TestCookieManager_NewCookie_CrossSubdomain(t *testing.T) {
 		sameSite:          http.SameSiteLaxMode,
 		crossSubdomain:    &crossDomainConfig{enabled: true, domain: ".example.com"},
 	}
-	cm := newCookieManager(cfg, testSecret)
+	cm := newCookieManager(cfg, TestSecret)
 	cookie := cm.NewCookie("test", "val", 100)
 
 	assert.Equal(t, ".example.com", cookie.Domain)

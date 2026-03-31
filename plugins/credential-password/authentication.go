@@ -2,7 +2,6 @@ package credentialpassword
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/thecodearcher/limen"
@@ -50,7 +49,7 @@ func (p *credentialPasswordPlugin) authenticateUser(user *limen.User, password s
 // Returns an error if username support is not enabled or if the user is not found.
 func (p *credentialPasswordPlugin) FindUserByUsername(ctx context.Context, username string) (*limen.User, error) {
 	if !p.config.enableUsername {
-		return nil, fmt.Errorf("username support is not enabled")
+		return nil, ErrUsernameNotEnabled
 	}
 
 	user, err := p.core.FindOne(ctx, p.userSchema, []limen.Where{
@@ -163,7 +162,7 @@ func (p *credentialPasswordPlugin) checkEmailExists(ctx context.Context, email s
 // Returns true if the username is available, false if it's already taken or invalid.
 func (p *credentialPasswordPlugin) CheckUsernameAvailability(ctx context.Context, username string) (bool, error) {
 	if !p.config.enableUsername {
-		return false, fmt.Errorf("username support is not enabled")
+		return false, ErrUsernameNotEnabled
 	}
 
 	trimmedUsername := strings.TrimSpace(username)

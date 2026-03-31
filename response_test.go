@@ -12,7 +12,7 @@ import (
 func newTestResponder(t *testing.T) *Responder {
 	t.Helper()
 	cfg := NewDefaultHTTPConfig()
-	cm := newCookieManager(cfg.cookieConfig, testSecret)
+	cm := newCookieManager(cfg.cookieConfig, TestSecret)
 	return newResponder(cfg, cm, false)
 }
 

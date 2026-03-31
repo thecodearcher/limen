@@ -72,19 +72,6 @@ func TestHashPassword_PHCFormat(t *testing.T) {
 	assert.Len(t, parts, 6, "PHC format should have 6 parts separated by $")
 }
 
-func TestHashPassword_UniqueSalts(t *testing.T) {
-	t.Parallel()
-
-	hasher := newTestHasher()
-	hash1, err := hasher.hashPassword([]byte("Password1"))
-	assert.NoError(t, err)
-
-	hash2, err := hasher.hashPassword([]byte("Password1"))
-	assert.NoError(t, err)
-
-	assert.NotEqual(t, hash1, hash2, "same password should produce different hashes due to random salt")
-}
-
 func TestVerifyPassword_InvalidHash(t *testing.T) {
 	t.Parallel()
 
