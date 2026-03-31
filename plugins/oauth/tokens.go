@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/thecodearcher/limen"
@@ -50,8 +49,6 @@ func (o *oauthPlugin) RefreshAccessToken(ctx context.Context, userID any, provid
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Printf("tokens: %+v\n", account.RefreshToken)
 
 	if tokens.RefreshToken == "" {
 		return nil, ErrNoRefreshToken

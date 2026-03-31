@@ -198,7 +198,6 @@ func (o *oauthPlugin) decryptToken(cipher string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("oauth: failed to decrypt token: %w", err)
 	}
-	fmt.Printf("decryptToken plain: %s\n", plain)
 	return plain, nil
 }
 
