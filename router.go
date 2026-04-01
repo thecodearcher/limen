@@ -73,8 +73,8 @@ type Router struct {
 
 type RouteMetadata struct {
 	AllowedContentTypes []string
-	// OriginalPattern is the original pattern of the route before any normalization or prefixing
-	OriginalPattern string
+	// originalPattern is the original pattern of the route before any normalization or prefixing
+	originalPattern string
 }
 
 // Route represents a single route with its handler and metadata
@@ -292,7 +292,7 @@ func (r *Router) writeFinalResponse(rw *responseWriter, req *http.Request) {
 func (r *Router) prepareHookContext(req *http.Request, w http.ResponseWriter, route *Route) *HookContext {
 	routePattern := ""
 	if route.Metadata != nil {
-		routePattern = route.Metadata.OriginalPattern
+		routePattern = route.Metadata.originalPattern
 	}
 	return &HookContext{
 		responder:        r.responder,
@@ -422,7 +422,7 @@ func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.H
 	if metadata == nil {
 		metadata = &RouteMetadata{}
 	}
-	metadata.OriginalPattern = pattern
+	metadata.originalPattern = pattern
 	g.router.AddRoute(method, fullPattern, handler, routeID, metadata, allMiddleware...)
 }
 
