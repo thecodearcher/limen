@@ -83,6 +83,9 @@ func (o *oauthPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 	o.httpCore = httpCore
 	routeBuilder.GET("/:provider/authorize", "oauth-authorize", handlers.SignInWithOAuth)
 	routeBuilder.GET("/:provider/callback", "oauth-callback", handlers.Callback)
+	routeBuilder.AddRoute(limen.MethodPOST, "/:provider/callback", "oauth-callback-post", handlers.FormPostCallback, &limen.RouteMetadata{
+		AllowedContentTypes: []string{"application/x-www-form-urlencoded"},
+	})
 	routeBuilder.ProtectedGET("/:provider/link", "oauth-link-authorize", handlers.LinkAccountWithOAuth)
 	routeBuilder.ProtectedGET("/accounts", "oauth-list-accounts", handlers.ListAccounts)
 	routeBuilder.ProtectedDELETE("/:provider/unlink", "oauth-unlink-account", handlers.UnlinkAccount)

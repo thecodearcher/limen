@@ -45,3 +45,20 @@ type TokenRefresher interface {
 type PKCEEnabledProvider interface {
 	PKCEEnabled() bool
 }
+
+// ResponseMode represents the OAuth 2.0 response_mode parameter that controls
+// how the authorization server returns result parameters to the client.
+type ResponseMode string
+
+const (
+	ResponseModeQuery    ResponseMode = "query"
+	ResponseModeFormPost ResponseMode = "form_post"
+)
+
+// ResponseModeProvider is optional. If a Provider implements it and returns a
+// non-default mode, the base module adds the response_mode parameter to the
+// authorization URL and registers a POST callback route to handle form_post
+// responses from the IdP.
+type ResponseModeProvider interface {
+	ResponseMode() ResponseMode
+}

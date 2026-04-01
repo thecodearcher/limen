@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/thecodearcher/limen"
 )
@@ -203,6 +204,25 @@ func (h *oauthHandlers) buildErrorRedirectURL(redirectURI string, err error) str
 	}
 
 	return appendOAuthErrorParams(redirectURI, ae.Error(), "")
+}
+
+// FormPostCallback handles OAuth callbacks delivered via response_mode=form_post.
+// The IdP POSTs code/state/error as application/x-www-form-urlencoded. Rather than
+// processing the POST directly (which lacks cookies), we extract
+// the form values and 303 redirect to the same path as a GET with query parameters.
+// The browser follows the redirect as a same-site navigation, attaching cookies normally.
+func (h *oauthHandlers) FormPostCallback(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	// Preserve all existing query params and merge all form-post params.
+	target := url.URL{
+		Path:     r.URL.Path,
+		RawQuery: r.Form.Encode(),
+	}
+	http.Redirect(w, r, target.String(), http.StatusSeeOther)
 }
 
 func (h *oauthHandlers) setStateCookie(w http.ResponseWriter, value string) {

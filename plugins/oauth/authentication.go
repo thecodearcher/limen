@@ -16,6 +16,12 @@ func (o *oauthPlugin) getProviderConfig(provider Provider) (*oauth2.Config, []oa
 		oauth2.SetAuthURLParam("response_type", "code"),
 	}
 
+	if rm, ok := provider.(ResponseModeProvider); ok {
+		if mode := rm.ResponseMode(); mode != "" && mode != ResponseModeQuery {
+			defaultOpts = append(defaultOpts, oauth2.SetAuthURLParam("response_mode", string(mode)))
+		}
+	}
+
 	config, authOpts := provider.OAuth2Config()
 	config.RedirectURL = o.constructProviderRedirectURL(provider, config)
 	opts := append(defaultOpts, authOpts...)

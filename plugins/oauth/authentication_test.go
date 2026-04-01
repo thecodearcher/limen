@@ -43,6 +43,14 @@ func (p *tokenExchangerProvider) ExchangeAuthorizationCode(_ context.Context, co
 	return p.token, nil
 }
 
+type responseModeProvider struct {
+	testProvider
+}
+
+func (p *responseModeProvider) ResponseMode() ResponseMode {
+	return ResponseModeFormPost
+}
+
 func TestGetAuthorizationURL(t *testing.T) {
 	t.Parallel()
 
@@ -104,6 +112,25 @@ func TestGetAuthorizationURL(t *testing.T) {
 		assert.Equal(t, "", customProvider.lastVerifier)
 		assert.NotEmpty(t, customProvider.lastState)
 		assert.Contains(t, customProvider.lastRedirectURI, "/oauth/custom-builder/callback")
+	})
+
+	t.Run("form_post provider includes response_mode param", func(t *testing.T) {
+		t.Parallel()
+
+		formPostProvider := &responseModeProvider{
+			testProvider: testProvider{name: "form-post"},
+		}
+		l, plugin := newTestOAuthPlugin(t, WithProvider(formPostProvider))
+		_ = l.Handler()
+
+		authURL, cookieValue, err := plugin.GetAuthorizationURL(context.Background(), "form-post", &OAuthAuthorizeURLData{})
+		require.NoError(t, err)
+		assert.NotEmpty(t, cookieValue)
+
+		parsed, parseErr := url.Parse(authURL)
+		require.NoError(t, parseErr)
+		assert.Equal(t, "form_post", parsed.Query().Get("response_mode"))
+		assert.Equal(t, "code", parsed.Query().Get("response_type"))
 	})
 
 	t.Run("returns state token in authorization URL", func(t *testing.T) {
