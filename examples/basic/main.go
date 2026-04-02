@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
@@ -366,7 +367,6 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 			limen.WithHTTPSessionCookieName("session"),
 			limen.WithHTTPCookieSecure(false),
 			limen.WithHTTPRateLimiter(limen.WithRateLimiterDisableForPaths("/me", "/signin/email")),
-		
 
 			limen.WithHTTPSessionTransformer(sessionTransformer),
 			limen.WithHTTPTrustedOrigins([]string{
