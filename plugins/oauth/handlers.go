@@ -50,7 +50,8 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 
 	h.clearStateCookie(w)
 
-	result, stateData, err := h.plugin.AuthenticateWithProvider(r.Context(), providerName, code, state, cookieValue, callbackErr)
+	ctx := ContextWithCallbackParams(r.Context(), r.URL.Query())
+	result, stateData, err := h.plugin.AuthenticateWithProvider(ctx, providerName, code, state, cookieValue, callbackErr)
 	if err != nil {
 		h.handleCallbackResponse(w, r, stateData, nil, nil, err)
 		return
@@ -222,7 +223,7 @@ func (h *oauthHandlers) FormPostCallback(w http.ResponseWriter, r *http.Request)
 		Path:     r.URL.Path,
 		RawQuery: r.Form.Encode(),
 	}
-	http.Redirect(w, r, target.String(), http.StatusSeeOther)
+	h.responder.Redirect(w, r, target.String(), http.StatusSeeOther)
 }
 
 func (h *oauthHandlers) setStateCookie(w http.ResponseWriter, value string) {

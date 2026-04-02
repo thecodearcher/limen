@@ -8,6 +8,7 @@ use (
 	./examples/basic
 	./plugins/credential-password
 	./plugins/oauth
+	./plugins/oauth-apple
 	./plugins/oauth-discord
 	./plugins/oauth-facebook
 	./plugins/oauth-generic
@@ -37,6 +38,8 @@ replace github.com/thecodearcher/limen/plugins/oauth-google v0.0.0 => ./plugins/
 replace github.com/thecodearcher/limen/plugins/oauth-github v0.0.0 => ./plugins/oauth-github
 
 replace github.com/thecodearcher/limen/plugins/oauth-generic v0.0.0 => ./plugins/oauth-generic
+
+replace github.com/thecodearcher/limen/plugins/oauth-apple v0.0.0 => ./plugins/oauth-apple
 
 replace github.com/thecodearcher/limen/plugins/oauth-discord v0.0.0 => ./plugins/oauth-discord
 

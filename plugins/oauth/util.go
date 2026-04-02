@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -15,6 +16,21 @@ import (
 
 	"github.com/thecodearcher/limen"
 )
+
+type callbackParamsContextKey struct{}
+
+// ContextWithCallbackParams returns a child context carrying the raw callback
+// query parameters. Providers can retrieve them via CallbackParams inside
+// GetUserInfo to access IdP-specific extras (e.g. Apple's first-login user payload).
+func ContextWithCallbackParams(ctx context.Context, params url.Values) context.Context {
+	return context.WithValue(ctx, callbackParamsContextKey{}, params)
+}
+
+// CallbackParams retrieves the callback query parameters stored in ctx, or nil.
+func CallbackParams(ctx context.Context) url.Values {
+	v, _ := ctx.Value(callbackParamsContextKey{}).(url.Values)
+	return v
+}
 
 // BuildAuthCodeURL builds the OAuth2 authorization URL using the provider's config.
 // state and verifier are required for CSRF and PKCE; authOpts add provider-specific params (e.g. AccessTypeOffline).
