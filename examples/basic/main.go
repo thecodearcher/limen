@@ -525,6 +525,29 @@ func main() {
 	// }),
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOriginFunc: func(origin string) bool {
+			return strings.HasPrefix(origin, "http://localhost:") ||
+				strings.HasPrefix(origin, "https://localhost:") ||
+				strings.HasSuffix(origin, ".ngrok-free.app") ||
+				strings.HasSuffix(origin, "appleid.apple.com") ||
+				strings.HasSuffix(origin, ".limenauth.dev")
+		},
+		AllowMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+			http.MethodHead,
+			http.MethodOptions,
+		},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
+		ExposeHeaders:    []string{"Set-Auth-Token", "Set-Refresh-Token"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	r.POST("/", func(c *gin.Context) {
 		// session, err := auth.GetSession(c.Request)
 		// if err != nil {
