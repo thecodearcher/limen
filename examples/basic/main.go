@@ -207,10 +207,7 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 
 // buildConfig builds the limen configuration
 func buildConfig(db limen.DatabaseAdapter) *limen.Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Failed to load .env file: %v", err)
-	}
+
 	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
@@ -236,7 +233,8 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 	fmt.Printf("Google Client ID: %s\n", googleClientID)
 
 	return &limen.Config{
-		BaseURL:  "http://localhost:8080",
+		BaseURL: os.Getenv("BASE_URL"),
+		// BaseURL:  "https://bat-concise-chamois.ngrok-free.app",
 		Database: db,
 		Secret:   []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
 		Plugins: []limen.Plugin{
@@ -449,15 +447,23 @@ func (l *slogger) LogQuery(ctx context.Context, query string, args any, duration
 
 // Example showing basic usage of the limen library
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Printf("Failed to load .env file: %v", err)
+	}
 	fmt.Println(pkg.SomeShi())
 	fmt.Println("Limen Authentication Library - Basic Example")
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		"localhost",
-		"root",
-		"root",
-		"limen",
-		"5432",
-	)
+	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+	// 	"localhost",
+	// 	"root",
+	// 	"root",
+	// 	"limen",
+	// 	"5432",
+	// )
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		log.Fatalf("DATABASE_URL is not set")
+	}
 
 	gormdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
 
