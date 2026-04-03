@@ -36,11 +36,11 @@ func (c *Config) validate() error {
 
 	secret := c.Secret
 	if len(secret) == 0 {
-		secret = []byte(os.Getenv("AEGIS_SECRET"))
+		secret = []byte(os.Getenv("LIMEN_SECRET"))
 		c.Secret = secret
 	}
 	if len(secret) == 0 {
-		return fmt.Errorf("signing secret is required: set Config.Secret, or AEGIS_SECRET environment variable")
+		return fmt.Errorf("signing secret is required: set Config.Secret, or LIMEN_SECRET environment variable")
 	}
 
 	if len(secret) != 32 {

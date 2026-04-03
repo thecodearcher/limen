@@ -21,8 +21,8 @@ func generateRandomOTP(digits TOTPDigits) string {
 }
 
 func getTOTPSecret() []byte {
-	totpSecret := os.Getenv("AEGIS_TOTP_SECRET")
-	secret := os.Getenv("AEGIS_SECRET")
+	totpSecret := os.Getenv("LIMEN_TOTP_SECRET")
+	secret := os.Getenv("LIMEN_SECRET")
 	if totpSecret == "" && secret == "" {
 		return nil
 	}
