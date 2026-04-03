@@ -145,7 +145,7 @@ func (t *twoFactorPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBui
 	routeBuilder.ProtectedPOST("/initiate-setup", "two-factor-initiate-setup", handlers.InitiateTwoFactorSetup)
 	routeBuilder.ProtectedPOST("/finalize-setup", "two-factor-finalize-setup", handlers.FinalizeTwoFactorSetup)
 	routeBuilder.ProtectedPOST("/disable", "two-factor-disable", handlers.Disable)
-	routeBuilder.POST("/verify-login", "two-factor-verify-login", handlers.VerifyLoginWithTwoFactor)
+	routeBuilder.POST("/verify", "two-factor-verify", handlers.VerifyLoginWithTwoFactor)
 
 	t.totp.registerRoutes(httpCore, routeBuilder)
 	t.backupCodes.registerRoutes(httpCore, routeBuilder)
