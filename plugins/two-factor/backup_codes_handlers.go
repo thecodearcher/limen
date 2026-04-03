@@ -43,22 +43,3 @@ func (b *backupCodesHandlers) GetBackupCodes(w http.ResponseWriter, r *http.Requ
 	}
 	b.responder.JSON(w, r, http.StatusOK, backupCodes)
 }
-
-func (b *backupCodesHandlers) VerifyBackupCode(w http.ResponseWriter, r *http.Request) {
-	body := limen.ValidateJSON(w, r, b.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
-		return v.RequiredString("code", data["code"])
-	})
-	if body == nil {
-		return
-	}
-	session, err := limen.GetCurrentSessionFromCtx(r)
-	if err != nil {
-		b.responder.Error(w, r, err)
-		return
-	}
-	if err := b.backupCodes.VerifyBackupCode(r.Context(), session.User.ID, body["code"].(string)); err != nil {
-		b.responder.Error(w, r, err)
-		return
-	}
-	b.responder.JSON(w, r, http.StatusOK, "backup code verified successfully")
-}

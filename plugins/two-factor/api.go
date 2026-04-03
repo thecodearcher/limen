@@ -19,6 +19,12 @@ type API interface {
 	VerifyLoginWithTwoFactor(r *http.Request, w http.ResponseWriter, code string, method TwoFactorMethod) (*limen.AuthenticationResult, *limen.SessionResult, error)
 
 	FindTwoFactorByUserID(ctx context.Context, userID any) (*TwoFactor, error)
+
+	TOTP() *totp
+
+	OTP() *otp
+
+	BackupCodes() *backupCodes
 }
 
 // Use returns a type-safe API for the two-factor plugin.

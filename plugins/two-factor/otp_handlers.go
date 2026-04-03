@@ -37,29 +37,3 @@ func (o *otpHandlers) SendCode(w http.ResponseWriter, r *http.Request) {
 		"message": "An OTP code will be sent to your email if it is associated with an account",
 	})
 }
-
-func (o *otpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
-	body := limen.ValidateJSON(w, r, o.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
-		return v.RequiredString("code", data["code"])
-	})
-
-	if body == nil {
-		return
-	}
-
-	session, err := limen.GetCurrentSessionFromCtx(r)
-	if err != nil {
-		o.responder.Error(w, r, err)
-		return
-	}
-
-	err = o.otp.Verify(r.Context(), session.User.ID, body["code"].(string))
-	if err != nil {
-		o.responder.Error(w, r, err)
-		return
-	}
-
-	o.responder.JSON(w, r, http.StatusOK, map[string]any{
-		"message": "OTP code verified successfully",
-	})
-}

@@ -31,28 +31,3 @@ func (t *totpHandlers) GetSetupURI(w http.ResponseWriter, r *http.Request) {
 
 	t.responder.JSON(w, r, http.StatusOK, result)
 }
-
-func (t *totpHandlers) VerifyCode(w http.ResponseWriter, r *http.Request) {
-	body := limen.ValidateJSON(w, r, t.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
-		return v.RequiredString("code", data["code"])
-	})
-
-	if body == nil {
-		return
-	}
-
-	session, err := limen.GetCurrentSessionFromCtx(r)
-	if err != nil {
-		t.responder.Error(w, r, err)
-		return
-	}
-
-	if err := t.totp.VerifyCode(r.Context(), session.User.ID, body["code"].(string)); err != nil {
-		t.responder.Error(w, r, err)
-		return
-	}
-
-	t.responder.JSON(w, r, http.StatusOK, map[string]any{
-		"valid": true,
-	})
-}

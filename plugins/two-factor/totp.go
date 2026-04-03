@@ -34,7 +34,6 @@ func newDefaultTOTP(plugin *twoFactorPlugin, config *totpConfig) *totp {
 func (t *totp) registerRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	handlers := newTOTPHandlers(t, httpCore.Responder)
 	routeBuilder.ProtectedGET("/totp/uri", "totp-uri", handlers.GetSetupURI)
-	routeBuilder.ProtectedPOST("/totp/verify", "totp-verify", handlers.VerifyCode)
 }
 
 func (t *totp) GetSetupURI(ctx context.Context, user *UserWithTwoFactor) (*TwoFactorSetupURI, error) {

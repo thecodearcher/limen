@@ -22,7 +22,6 @@ func newDefaultOTP(plugin *twoFactorPlugin, config *otpConfig) *otp {
 func (o *otp) registerRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	handlers := newOTPHandlers(o, httpCore.Responder)
 	routeBuilder.POST("/otp/send", "otp-send", handlers.SendCode)
-	routeBuilder.ProtectedPOST("/otp/verify", "otp-verify", handlers.VerifyCode)
 }
 
 // SendOTPCode generates and sends an OTP code to the user

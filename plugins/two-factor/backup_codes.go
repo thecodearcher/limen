@@ -25,7 +25,6 @@ func (b *backupCodes) registerRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 	handlers := newBackupCodesHandlers(b, httpCore.Responder)
 	routeBuilder.ProtectedGET("/backup-codes", "get-backup-codes", handlers.GetBackupCodes)
 	routeBuilder.ProtectedPUT("/backup-codes", "update-backup-codes", handlers.UpdateBackupCodes)
-	routeBuilder.ProtectedPOST("/backup-codes/verify", "verify-backup-code", handlers.VerifyBackupCode)
 }
 
 func (b *backupCodes) GenerateBackupCodes() []string {

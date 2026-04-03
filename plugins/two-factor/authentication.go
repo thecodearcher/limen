@@ -91,6 +91,26 @@ func (t *twoFactorPlugin) DisableTwoFactor(ctx context.Context, userID any, pass
 	})
 }
 
+// rotateSession revokes the current session (and optionally all other sessions)
+// then immediately issues a new session for the same user so the client stays signed in.
+func (t *twoFactorPlugin) rotateSession(r *http.Request, w http.ResponseWriter, session *limen.ValidatedSession) (*limen.AuthenticationResult, *limen.SessionResult, error) {
+	ctx := r.Context()
+
+	if t.config.revokeOtherSessionsOnStateChange {
+		_ = t.core.SessionManager.RevokeAllSessions(ctx, session.User.ID)
+	} else {
+		_ = t.core.SessionManager.RevokeSession(ctx, session.Session.Token)
+	}
+
+	authResult := &limen.AuthenticationResult{User: session.User}
+	sessionResult, err := t.core.CreateSession(ctx, r, w, authResult)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return authResult, sessionResult, nil
+}
+
 func (t *twoFactorPlugin) checkPassword(user *limen.User, password string) error {
 	plugin, ok := t.core.GetPlugin(limen.PluginCredentialPassword)
 	if !ok {

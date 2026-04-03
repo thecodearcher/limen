@@ -34,11 +34,12 @@ func (t *twoFactorPlugin) Name() limen.PluginName {
 
 func New(opts ...ConfigOption) *twoFactorPlugin {
 	config := &config{
-		secret:           getTOTPSecret(),
-		totp:             NewDefaultTOTPConfig(),
-		otp:              NewDefaultOTPConfig(),
-		cookieExpiration: defaultChallengeExpiration,
-		cookieName:       defaultChallengeCookieName,
+		secret:                           getTOTPSecret(),
+		totp:                             NewDefaultTOTPConfig(),
+		otp:                              NewDefaultOTPConfig(),
+		cookieExpiration:                 defaultChallengeExpiration,
+		cookieName:                       defaultChallengeCookieName,
+		revokeOtherSessionsOnStateChange: true,
 	}
 	for _, opt := range opts {
 		opt(config)
@@ -214,6 +215,18 @@ func (t *twoFactorPlugin) DeleteTwoFactor(ctx context.Context, userID any) error
 	return t.core.Delete(ctx, t.twoFactorSchema, []limen.Where{
 		limen.Eq(t.twoFactorSchema.GetUserIDField(), userID),
 	})
+}
+
+func (t *twoFactorPlugin) TOTP() *totp {
+	return t.totp
+}
+
+func (t *twoFactorPlugin) OTP() *otp {
+	return t.otp
+}
+
+func (t *twoFactorPlugin) BackupCodes() *backupCodes {
+	return t.backupCodes
 }
 
 func (t *twoFactorPlugin) encrypt(value string) (string, error) {

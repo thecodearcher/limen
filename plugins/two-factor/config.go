@@ -8,12 +8,13 @@ import (
 type ConfigOption func(*config)
 
 type config struct {
-	secret           []byte
-	totp             *totpConfig
-	otp              *otpConfig
-	backupCodes      *backupCodesConfig
-	cookieExpiration time.Duration
-	cookieName       string
+	secret                           []byte
+	totp                             *totpConfig
+	otp                              *otpConfig
+	backupCodes                      *backupCodesConfig
+	cookieExpiration                 time.Duration
+	cookieName                       string
+	revokeOtherSessionsOnStateChange bool
 }
 
 // WithSecret sets the 32-byte secret used for encrypting TOTP secrets and backup codes at rest.
@@ -169,6 +170,14 @@ func WithBackupCodesLength(length int) BackupCodesOption {
 func WithBackupCodesCustomGenerator(generator func() []string) BackupCodesOption {
 	return func(c *backupCodesConfig) {
 		c.customGenerator = generator
+	}
+}
+
+// WithRevokeOtherSessionsOnStateChange controls whether enabling or disabling
+// 2FA revokes all other active sessions for the user. Default is true.
+func WithRevokeOtherSessionsOnStateChange(revoke bool) ConfigOption {
+	return func(c *config) {
+		c.revokeOtherSessionsOnStateChange = revoke
 	}
 }
 

@@ -54,16 +54,20 @@ func TestLooksLikeBackupCode(t *testing.T) {
 	}
 }
 
+func newTestBackupCodes(t *testing.T) *backupCodes {
+	t.Helper()
+	plugin := &twoFactorPlugin{
+		config: &config{secret: []byte("01234567890123456789012345678901")},
+	}
+	return newBackupCodes(plugin, NewDefaultBackupCodesConfig())
+}
+
 func TestBackupCodes_EncryptDecryptRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	secret := []byte("01234567890123456789012345678901")
-	plugin := &twoFactorPlugin{
-		config: &config{secret: secret},
-	}
-	bc := newBackupCodes(plugin, NewDefaultBackupCodesConfig())
-
+	bc := newTestBackupCodes(t)
 	codes := []string{"abc-def", "ghi-jkl", "mno-pqr"}
+
 	encrypted, err := bc.encryptBackupCodes(codes)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, encrypted)
@@ -76,12 +80,7 @@ func TestBackupCodes_EncryptDecryptRoundTrip(t *testing.T) {
 func TestBackupCodes_CheckAndExpireBackupCode(t *testing.T) {
 	t.Parallel()
 
-	secret := []byte("01234567890123456789012345678901")
-	plugin := &twoFactorPlugin{
-		config: &config{secret: secret},
-	}
-	bc := newBackupCodes(plugin, NewDefaultBackupCodesConfig())
-
+	bc := newTestBackupCodes(t)
 	codes := []string{"abc-def", "ghi-jkl", "mno-pqr"}
 
 	encrypted, valid := bc.checkAndExpireBackupCode(codes, "ghi-jkl")
@@ -97,12 +96,7 @@ func TestBackupCodes_CheckAndExpireBackupCode(t *testing.T) {
 func TestBackupCodes_CheckAndExpire_InvalidCode(t *testing.T) {
 	t.Parallel()
 
-	secret := []byte("01234567890123456789012345678901")
-	plugin := &twoFactorPlugin{
-		config: &config{secret: secret},
-	}
-	bc := newBackupCodes(plugin, NewDefaultBackupCodesConfig())
-
+	bc := newTestBackupCodes(t)
 	codes := []string{"abc-def", "ghi-jkl"}
 
 	_, valid := bc.checkAndExpireBackupCode(codes, "invalid-code")
