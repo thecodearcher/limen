@@ -32,7 +32,6 @@ func (p *credentialPasswordPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
 			limen.NewRateLimitRule("/signin/credential", 5, 10*time.Second),
 			limen.NewRateLimitRule("/signup/credential", 5, 10*time.Second),
 			limen.NewRateLimitRule("/passwords/request-reset", 5, 10*time.Minute),
-			limen.NewRateLimitRule("/verify-email", 5, 10*time.Minute),
 			limen.NewRateLimitRule("/passwords/reset", 5, 10*time.Minute),
 			limen.NewRateLimitRule("/passwords/change", 5, 10*time.Minute),
 			limen.NewRateLimitRule("/passwords", 5, 10*time.Minute),
@@ -49,10 +48,8 @@ func (p *credentialPasswordPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore,
 func routes(e *credentialPasswordHandlers) {
 	e.builder.POST("/signin/credential", "signin", e.SignInWithCredentialAndPassword)
 	e.builder.POST("/signup/credential", "signup", e.SignUpWithCredentialAndPassword)
-	e.builder.POST("/verify-email", "verify-email", e.VerifyEmail)
 	e.builder.POST("/passwords/request-reset", "passwords-request-reset", e.RequestPasswordReset)
 	e.builder.POST("/passwords/reset", "passwords-reset", e.ResetPassword)
-	e.builder.ProtectedPOST("/email-verifications", "email-verifications", e.RequestEmailVerification)
 	e.builder.ProtectedPOST("/passwords/change", "passwords-change", e.ChangePassword)
 	e.builder.ProtectedPUT("/passwords", "passwords-set", e.SetPassword)
 	e.builder.POST("/usernames/check", "usernames-check", e.CheckUsernameAvailability)
@@ -147,45 +144,6 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 	}
 
 	p.responder.SessionResponse(w, r, p.plugin.core, result, sessionResult)
-}
-
-// VerifyEmail handles email verification using a verification token.
-func (p *credentialPasswordHandlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	body := limen.ValidateJSON(w, r, p.responder, func(v *limen.Validator, data map[string]any) *limen.Validator {
-		return v.RequiredString("token", data["token"])
-	})
-
-	if body == nil {
-		return
-	}
-
-	err := p.plugin.VerifyEmail(r.Context(), body["token"].(string))
-	if err != nil {
-		p.responder.Error(w, r, err)
-		return
-	}
-
-	p.responder.JSON(w, r, http.StatusOK, "email verified successfully")
-}
-
-// RequestEmailVerification handles requests for email verification.
-func (p *credentialPasswordHandlers) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
-	session, err := limen.GetCurrentSessionFromCtx(r)
-	if err != nil {
-		p.responder.Error(w, r, err)
-		return
-	}
-
-	_, err = p.plugin.RequestEmailVerification(r.Context(), &limen.User{
-		Email: session.User.Email,
-	}, true)
-
-	if err != nil {
-		p.responder.Error(w, r, err)
-		return
-	}
-
-	p.responder.JSON(w, r, http.StatusOK, "email verification requested successfully")
 }
 
 // RequestPasswordReset handles password reset requests.

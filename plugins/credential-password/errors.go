@@ -19,7 +19,6 @@ var (
 	ErrPasswordRequiresSymbols   = limen.NewLimenError("password requires symbols", http.StatusUnprocessableEntity, nil)
 	ErrResetTokenInvalid         = limen.NewLimenError("invalid or expired token. Please request a new one.", http.StatusBadRequest, nil)
 	ErrInvalidCurrentPassword    = limen.NewLimenError("current password is invalid", http.StatusUnauthorized, nil)
-	ErrEmailAlreadyVerified      = limen.NewLimenError("email already verified", http.StatusConflict, nil)
 	ErrUsernameAlreadyExists     = limen.NewLimenError("username already exists", http.StatusConflict, nil)
 	ErrUsernameRequired          = limen.NewLimenError("username is required", http.StatusUnprocessableEntity, nil)
 	ErrUsernameTooShort          = limen.NewLimenError("username is too short", http.StatusUnprocessableEntity, nil)

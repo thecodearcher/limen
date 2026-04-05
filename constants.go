@@ -51,6 +51,11 @@ type SchemaField string
 // SchemaTableName represents the actual database table name
 type SchemaTableName string
 
+// Verification Action Names
+const (
+	EmailVerificationAction = "email_verification"
+)
+
 // Core Schema Names
 const (
 	// CoreSchemaUsers is the name of the users core schema

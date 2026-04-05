@@ -134,6 +134,19 @@ func (a *Limen) ListSessions(ctx context.Context, userID any) ([]Session, error)
 	return a.core.SessionManager.ListSessions(ctx, userID)
 }
 
+// RequestEmailVerification creates a verification token for the user and
+// optionally sends the verification email. Returns ErrEmailAlreadyVerified
+// when the address is already confirmed.
+func (a *Limen) RequestEmailVerification(ctx context.Context, user *User, shouldSendEmail bool) (*Verification, error) {
+	return a.core.RequestEmailVerification(ctx, user, shouldSendEmail)
+}
+
+// VerifyEmail validates the token, marks the email as verified, and deletes
+// the consumed token.
+func (a *Limen) VerifyEmail(ctx context.Context, token string) error {
+	return a.core.VerifyEmail(ctx, token)
+}
+
 // Use retrieves a registered plugin by name and returns it as type T.
 // It panics if the plugin is not registered or does not implement T.
 //

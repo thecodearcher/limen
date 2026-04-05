@@ -80,20 +80,6 @@ func WithAutoSignInOnSignUp(autoSignInOnSignUp bool) ConfigOption {
 	}
 }
 
-// WithSendVerificationEmail sets the function to send the email verification message
-func WithSendVerificationEmail(sendVerificationEmail func(email string, token string)) ConfigOption {
-	return func(c *config) {
-		c.sendVerificationEmail = sendVerificationEmail
-	}
-}
-
-// WithRequireEmailVerification sets whether to require email verification after sign up
-func WithRequireEmailVerification(requireEmailVerification bool) ConfigOption {
-	return func(c *config) {
-		c.requireEmailVerification = requireEmailVerification
-	}
-}
-
 // WithSendPasswordResetEmail sets the function to send the password reset message
 func WithSendPasswordResetEmail(sendPasswordResetEmail func(email string, token string)) ConfigOption {
 	return func(c *config) {
@@ -105,13 +91,6 @@ func WithSendPasswordResetEmail(sendPasswordResetEmail func(email string, token 
 func WithOnPasswordResetSuccess(onPasswordResetSuccess func(ctx context.Context, user *limen.User)) ConfigOption {
 	return func(c *config) {
 		c.onPasswordResetSuccess = onPasswordResetSuccess
-	}
-}
-
-// WithEmailVerificationExpiration sets the expiration duration for the email verification
-func WithEmailVerificationExpiration(emailVerificationExpiration time.Duration) ConfigOption {
-	return func(c *config) {
-		c.emailVerificationExpiration = emailVerificationExpiration
 	}
 }
 

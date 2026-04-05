@@ -2,6 +2,8 @@ package credentialpassword
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/thecodearcher/limen"
@@ -40,7 +42,7 @@ func (p *credentialPasswordPlugin) RequestPasswordReset(ctx context.Context, ema
 		return nil, ErrEmailNotFound
 	}
 
-	token, err := p.generateVerificationToken(user)
+	token, err := p.generateResetToken(user)
 	if err != nil {
 		return nil, err
 	}
@@ -168,4 +170,17 @@ func (p *credentialPasswordPlugin) UpdatePassword(ctx context.Context, user *lim
 		}
 		return nil
 	})
+}
+
+func (p *credentialPasswordPlugin) generateResetToken(user *limen.User) (string, error) {
+	if p.config.generateResetToken != nil {
+		return p.config.generateResetToken(user)
+	}
+
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("failed to generate reset token: %w", err)
+	}
+
+	return base64.RawURLEncoding.EncodeToString(tokenBytes), nil
 }

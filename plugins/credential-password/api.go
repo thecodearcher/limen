@@ -26,10 +26,6 @@ type API interface {
 	// SetPassword sets a password for a user who doesn't have one (e.g., signed up via OAuth).
 	SetPassword(ctx context.Context, user *limen.User, newPassword string, revokeOtherSessions bool) error
 
-	RequestEmailVerification(ctx context.Context, user *limen.User, shouldSendEmail bool) (*limen.Verification, error)
-
-	VerifyEmail(ctx context.Context, token string) error
-
 	FindUserByUsername(ctx context.Context, username string) (*limen.User, error)
 
 	CheckUsernameAvailability(ctx context.Context, username string) (bool, error)

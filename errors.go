@@ -39,6 +39,12 @@ var (
 	ErrVerificationTokenInvalid = errors.New("verification token is invalid")
 )
 
+// Email verification errors
+var (
+	ErrEmailAlreadyVerified          = NewLimenError("email already verified", http.StatusConflict, nil)
+	ErrEmailVerificationTokenInvalid = NewLimenError("invalid or expired email verification token", http.StatusBadRequest, nil)
+)
+
 func NewLimenError(message string, status int, details any) *LimenError {
 	return &LimenError{message: message, details: details, status: status}
 }

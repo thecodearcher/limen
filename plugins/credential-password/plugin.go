@@ -28,47 +28,42 @@ func (p *credentialPasswordPlugin) getUsernameField() string {
 
 // Config defines the configuration for the credential password plugin.
 type config struct {
-	passwordMinLength           int                                              // Minimum length of the password
-	passwordRequireUppercase    bool                                             // Require uppercase letters in the password
-	passwordRequireNumbers      bool                                             // Require numbers in the password
-	passwordRequireSymbols      bool                                             // Require symbols in the password
-	hashFn                      func(password string) (string, error)            // Custom function to hash the password
-	compareFn                   func(password string, hash string) (bool, error) // Custom function to compare the password and the hash
-	passwordHasherConfig        passwordHasherConfig                             // Custom Argon2id configuration for the password hasher
-	requireEmailVerification    bool                                             // require email verification after sign up
-	emailVerificationExpiration time.Duration                                    // Custom expiration duration for the email verification
-	resetTokenExpiration        time.Duration                                    // Custom expiration duration for the reset token
-	generateResetToken          func(*limen.User) (string, error)                // custom function to generate the reset token e.g generating TOTP code
-	autoSignInOnSignUp          bool                                             // auto sign in the user after sign up
-	sendVerificationEmail       func(email string, token string)                 // function to send the email verification message
-	sendPasswordResetEmail      func(email string, token string)                 // function to send the password reset message
-	onPasswordResetSuccess      func(ctx context.Context, user *limen.User)      // function to call when the password reset is successful
-	enableUsername              bool                                             // enable username support (default: false)
-	usernameMinLength           int                                              // Minimum length of the username
-	usernameMaxLength           int                                              // Maximum length of the username
-	usernameValidationRegex     *regexp.Regexp                                   // Custom regex pattern for username validation
-	usernameRequiredOnSignup    bool                                             // require username during sign up
-	usernameValidationFunc      func(username string) error                      // custom function to validate the username
+	passwordMinLength        int                                              // Minimum length of the password
+	passwordRequireUppercase bool                                             // Require uppercase letters in the password
+	passwordRequireNumbers   bool                                             // Require numbers in the password
+	passwordRequireSymbols   bool                                             // Require symbols in the password
+	hashFn                   func(password string) (string, error)            // Custom function to hash the password
+	compareFn                func(password string, hash string) (bool, error) // Custom function to compare the password and the hash
+	passwordHasherConfig     passwordHasherConfig                             // Custom Argon2id configuration for the password hasher
+	resetTokenExpiration     time.Duration                                    // Custom expiration duration for the reset token
+	generateResetToken       func(*limen.User) (string, error)                // custom function to generate the reset token e.g generating TOTP code
+	autoSignInOnSignUp       bool                                             // auto sign in the user after sign up
+	sendPasswordResetEmail   func(email string, token string)                 // function to send the password reset message
+	onPasswordResetSuccess   func(ctx context.Context, user *limen.User)      // function to call when the password reset is successful
+	enableUsername           bool                                             // enable username support (default: false)
+	usernameMinLength        int                                              // Minimum length of the username
+	usernameMaxLength        int                                              // Maximum length of the username
+	usernameValidationRegex  *regexp.Regexp                                   // Custom regex pattern for username validation
+	usernameRequiredOnSignup bool                                             // require username during sign up
+	usernameValidationFunc   func(username string) error                      // custom function to validate the username
 }
 
 // New returns a new config with the default values.
 // ConfigOptions can be provided to customize the configuration.
 func New(opts ...ConfigOption) *credentialPasswordPlugin {
 	config := &config{
-		passwordMinLength:           defaultMinPasswordLength,
-		passwordRequireUppercase:    defaultPasswordRequireUppercase,
-		passwordRequireNumbers:      defaultPasswordRequireNumbers,
-		passwordRequireSymbols:      defaultPasswordRequireSymbols,
-		passwordHasherConfig:        DefaultPasswordHasherConfig(),
-		resetTokenExpiration:        30 * time.Minute,
-		autoSignInOnSignUp:          true,
-		requireEmailVerification:    false,
-		emailVerificationExpiration: 24 * time.Hour,
-		enableUsername:              false,
-		usernameMinLength:           defaultMinUsernameLength,
-		usernameMaxLength:           defaultMaxUsernameLength,
-		usernameValidationRegex:     regexp.MustCompile(`^[a-zA-Z0-9_-]+$`), // alphanumeric, underscore, hyphen
-		usernameRequiredOnSignup:    false,
+		passwordMinLength:        defaultMinPasswordLength,
+		passwordRequireUppercase: defaultPasswordRequireUppercase,
+		passwordRequireNumbers:   defaultPasswordRequireNumbers,
+		passwordRequireSymbols:   defaultPasswordRequireSymbols,
+		passwordHasherConfig:     DefaultPasswordHasherConfig(),
+		resetTokenExpiration:     30 * time.Minute,
+		autoSignInOnSignUp:       true,
+		enableUsername:           false,
+		usernameMinLength:        defaultMinUsernameLength,
+		usernameMaxLength:        defaultMaxUsernameLength,
+		usernameValidationRegex:  regexp.MustCompile(`^[a-zA-Z0-9_-]+$`), // alphanumeric, underscore, hyphen
+		usernameRequiredOnSignup: false,
 	}
 
 	for _, opt := range opts {

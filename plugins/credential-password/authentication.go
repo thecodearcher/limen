@@ -110,8 +110,8 @@ func (p *credentialPasswordPlugin) SignUpWithCredentialAndPassword(ctx context.C
 			return err
 		}
 
-		if p.config.requireEmailVerification {
-			if verification, err = p.CreateEmailVerification(ctx, user); err != nil {
+		if p.core.EmailVerificationEnabled() {
+			if verification, err = p.core.CreateEmailVerification(ctx, user); err != nil {
 				return err
 			}
 		}
@@ -127,8 +127,8 @@ func (p *credentialPasswordPlugin) SignUpWithCredentialAndPassword(ctx context.C
 		return nil, err
 	}
 
-	if verification != nil {
-		p.SendVerificationEmail(ctx, user, verification)
+	if p.core.EmailVerificationEnabled() && verification != nil {
+		p.core.SendEmailVerificationMail(user, verification)
 	}
 
 	return &limen.AuthenticationResult{User: user}, nil

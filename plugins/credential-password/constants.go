@@ -15,8 +15,7 @@ const (
 )
 
 const (
-	PasswordResetAction     = "password_reset"
-	EmailVerificationAction = "email_verification"
+	PasswordResetAction = "password_reset"
 )
 
 const (
