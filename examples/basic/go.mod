@@ -15,6 +15,7 @@ require (
 	github.com/thecodearcher/limen/adapters/sql v0.0.0
 	github.com/thecodearcher/limen/plugins/credential-password v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-apple v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-discord v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-facebook v0.0.0-00010101000000-000000000000
 	github.com/thecodearcher/limen/plugins/oauth-generic v0.0.0
@@ -41,6 +42,8 @@ replace github.com/thecodearcher/limen/plugins/credential-password => ../../plug
 replace github.com/thecodearcher/limen/plugins/two-factor => ../../plugins/two-factor
 
 replace github.com/thecodearcher/limen/plugins/oauth => ../../plugins/oauth
+
+replace github.com/thecodearcher/limen/plugins/oauth-apple => ../../plugins/oauth-apple
 
 replace github.com/thecodearcher/limen/plugins/oauth-google => ../../plugins/oauth-google
 

@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +15,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
 	"github.com/joho/godotenv"
@@ -29,6 +33,7 @@ import (
 	"github.com/thecodearcher/limen/examples/basic/pkg"
 	credentialpassword "github.com/thecodearcher/limen/plugins/credential-password"
 	"github.com/thecodearcher/limen/plugins/oauth"
+	oauthapple "github.com/thecodearcher/limen/plugins/oauth-apple"
 	oauthdiscord "github.com/thecodearcher/limen/plugins/oauth-discord"
 	oauthfacebook "github.com/thecodearcher/limen/plugins/oauth-facebook"
 	oauthgeneric "github.com/thecodearcher/limen/plugins/oauth-generic"
@@ -99,9 +104,45 @@ func oidcMapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
 	}, nil
 }
 
+// generateAppleClientSecret builds the ES256-signed JWT that Apple requires as
+// the client_secret for token exchange. It reads the .p8 private key from PEM,
+// signs claims {iss=teamID, sub=clientID, aud=appleid.apple.com} with a 6-month
+// expiry, and sets the kid header to keyID.
+func generateAppleClientSecret(teamID, keyID, clientID, privateKeyPEM string) (string, error) {
+	block, _ := pem.Decode([]byte(privateKeyPEM))
+	if block == nil {
+		return "", fmt.Errorf("apple: failed to decode PEM block from private key")
+	}
+	parsed, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("apple: parse private key: %w", err)
+	}
+	ecKey, ok := parsed.(*ecdsa.PrivateKey)
+	if !ok {
+		return "", fmt.Errorf("apple: private key is not ECDSA")
+	}
+
+	now := time.Now()
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.RegisteredClaims{
+		Issuer:    teamID,
+		Subject:   clientID,
+		Audience:  jwt.ClaimStrings{"https://appleid.apple.com"},
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(180 * 24 * time.Hour)),
+	})
+	token.Header["kid"] = keyID
+
+	return token.SignedString(ecKey)
+}
+
 // buildOAuthOptions returns OAuth plugin options, including generic Discord and Keycloak (discovery) providers when credentials are set.
-func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, spotifyClientID, spotifyClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
+func buildOAuthOptions(appleClientID, appleClientSecret, googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, spotifyClientID, spotifyClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
 	opts := []oauth.ConfigOption{
+		oauth.WithProvider(oauthapple.New(
+			oauthapple.WithClientID(appleClientID),
+			oauthapple.WithClientSecret(appleClientSecret),
+			// oauthapple.WithRedirectURL("https://bat-concise-chamois.ngrok-free.app/api/auth/oauth/apple/callback"),
+		)),
 		oauth.WithProvider(oauthgoogle.New(
 			oauthgoogle.WithClientID(googleClientID),
 			oauthgoogle.WithClientSecret(googleClientSecret),
@@ -168,6 +209,8 @@ func buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githu
 	opts = append(opts, oauth.WithMapProfileToUser(func(info *limen.OAuthAccountProfile) map[string]any {
 		fmt.Printf("Mapping OAuth profile to user additional fields: %+v\n", info)
 		switch info.Provider {
+		case "apple":
+			return map[string]any{"first_name": info.Name, "last_name": ""}
 		case "google":
 			firstName, _ := info.Raw["given_name"].(string)
 			lastName, _ := info.Raw["family_name"].(string)
@@ -211,6 +254,22 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 
 	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	appleClientID := os.Getenv("APPLE_CLIENT_ID")
+	appleClientSecret := os.Getenv("APPLE_CLIENT_SECRET")
+	if appleClientSecret == "" {
+		teamID := os.Getenv("APPLE_TEAM_ID")
+		keyID := os.Getenv("APPLE_KEY_ID")
+		privateKey := os.Getenv("APPLE_PRIVATE_KEY")
+		if teamID != "" && keyID != "" && privateKey != "" {
+			secret, err := generateAppleClientSecret(teamID, keyID, appleClientID, privateKey)
+			if err != nil {
+				log.Fatalf("Failed to generate Apple client secret: %v", err)
+			}
+			appleClientSecret = secret
+			fmt.Println("Generated Apple client_secret from private key")
+			fmt.Printf("Apple client_secret: %s\n", appleClientSecret)
+		}
+	}
 	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
 	githubClientSecret := os.Getenv("GITHUB_CLIENT_SECRET")
 	facebookClientID := os.Getenv("FACEBOOK_CLIENT_ID")
@@ -234,10 +293,17 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 	fmt.Printf("Google Client ID: %s\n", googleClientID)
 
 	return &limen.Config{
-		BaseURL: os.Getenv("BASE_URL"),
+		// BaseURL: os.Getenv("BASE_URL"),
+		BaseURL: "http://localhost:8080",
 		// BaseURL:  "https://bat-concise-chamois.ngrok-free.app",
 		Database: db,
 		Secret:   []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
+		EmailVerification: limen.DefaultEmailVerification(
+			limen.WithSendEmailVerificationMail(func(email string, token string) {
+				fmt.Printf("Sending verification email to %s\n", email)
+				fmt.Printf("Verification token: %s\n", token)
+			}),
+		),
 		Plugins: []limen.Plugin{
 			// sessionjwt.New(
 			// // sessionjwt.WithRefreshToken(false),
@@ -250,12 +316,6 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 			// ),
 
 			credentialpassword.New(
-				credentialpassword.WithRequireEmailVerification(true),
-				credentialpassword.WithSendVerificationEmail(func(email string, token string) {
-					fmt.Printf("Sending verification email to %s\n", email)
-					fmt.Printf("Verification token: %s\n", token)
-
-				}),
 				credentialpassword.WithSendPasswordResetEmail(func(email string, token string) {
 					fmt.Printf("Sending password reset email to %s\n", email)
 					fmt.Printf("Password reset token: %s\n", token)
@@ -264,10 +324,10 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(false),
 			),
-			oauth.New(buildOAuthOptions(googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, spotifyClientID, spotifyClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
+			oauth.New(buildOAuthOptions(appleClientID, appleClientSecret, googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, spotifyClientID, spotifyClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret)...),
 			twofactor.New(
 				// twofactor.WithCookieExpiration(2*time.Minute),
-				twofactor.WithSecret("limen_2fa_totp_secret_1234567890"),
+				// twofactor.WithSecret("limen_2fa_totp_secret_1234567890"),
 				twofactor.WithTOTP(
 					twofactor.WithTOTPIssuer("Limen"),
 				),
@@ -365,7 +425,9 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 		HTTP: limen.NewDefaultHTTPConfig(
 			limen.WithHTTPBasePath("/api/auth"),
 			limen.WithHTTPSessionCookieName("session"),
-			limen.WithHTTPCookieSecure(false),
+			// limen.WithHTTPCookieCrossSubdomainEnabled(".limen.dev"),
+			// limen.WithHTTPCookieCrossDomainEnabled(),
+			// limen.WithHTTPCookieSecure(false),
 			limen.WithHTTPRateLimiter(limen.WithRateLimiterDisableForPaths("/me", "/signin/email")),
 
 			limen.WithHTTPSessionTransformer(sessionTransformer),
@@ -380,6 +442,11 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 				// "*.example.com",
 				"https://*.example.com",
 				"http://*.dev.example.com",
+				"https://appleid.apple.com",
+				"https://bat-concise-chamois.ngrok-free.app",
+				"*.limenauth.dev",
+				"limen.dev",
+				"app.limen.dev",
 			}),
 			limen.WithHTTPHooks(&limen.Hooks{
 				Before: []*limen.Hook{
@@ -532,12 +599,14 @@ func main() {
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
+		AllowPrivateNetwork: true,
 		AllowOriginFunc: func(origin string) bool {
-			return strings.HasPrefix(origin, "http://localhost:") ||
+			return strings.HasPrefix(origin, "http://localhost") ||
 				strings.HasPrefix(origin, "https://localhost:") ||
 				strings.HasSuffix(origin, ".ngrok-free.app") ||
 				strings.HasSuffix(origin, "appleid.apple.com") ||
-				strings.HasSuffix(origin, ".limenauth.dev")
+				strings.HasSuffix(origin, ".limenauth.dev") ||
+				strings.HasSuffix(origin, "limen.dev")
 		},
 		AllowMethods: []string{
 			http.MethodGet,
