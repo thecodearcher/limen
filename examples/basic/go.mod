@@ -17,10 +17,10 @@ require (
 	github.com/thecodearcher/limen/plugins/oauth v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-apple v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-discord v0.0.0
-	github.com/thecodearcher/limen/plugins/oauth-facebook v0.0.0-00010101000000-000000000000
+	github.com/thecodearcher/limen/plugins/oauth-facebook v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-generic v0.0.0
-	github.com/thecodearcher/limen/plugins/oauth-github v0.0.0-00010101000000-000000000000
-	github.com/thecodearcher/limen/plugins/oauth-google v0.0.0-00010101000000-000000000000
+	github.com/thecodearcher/limen/plugins/oauth-github v0.0.0
+	github.com/thecodearcher/limen/plugins/oauth-google v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-linkedin v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-microsoft v0.0.0
 	github.com/thecodearcher/limen/plugins/oauth-spotify v0.0.0
@@ -31,39 +31,6 @@ require (
 	gorm.io/gorm v1.30.1
 )
 
-replace github.com/thecodearcher/limen => ../../
-
-replace github.com/thecodearcher/limen/adapters/gorm => ../../adapters/gorm
-
-replace github.com/thecodearcher/limen/adapters/sql => ../../adapters/sql
-
-replace github.com/thecodearcher/limen/plugins/credential-password => ../../plugins/credential-password
-
-replace github.com/thecodearcher/limen/plugins/two-factor => ../../plugins/two-factor
-
-replace github.com/thecodearcher/limen/plugins/oauth => ../../plugins/oauth
-
-replace github.com/thecodearcher/limen/plugins/oauth-apple => ../../plugins/oauth-apple
-
-replace github.com/thecodearcher/limen/plugins/oauth-google => ../../plugins/oauth-google
-
-replace github.com/thecodearcher/limen/plugins/oauth-discord => ../../plugins/oauth-discord
-
-replace github.com/thecodearcher/limen/plugins/oauth-generic => ../../plugins/oauth-generic
-
-replace github.com/thecodearcher/limen/plugins/oauth-facebook => ../../plugins/oauth-facebook
-
-replace github.com/thecodearcher/limen/plugins/oauth-github => ../../plugins/oauth-github
-
-replace github.com/thecodearcher/limen/plugins/oauth-microsoft => ../../plugins/oauth-microsoft
-
-replace github.com/thecodearcher/limen/plugins/oauth-spotify => ../../plugins/oauth-spotify
-
-replace github.com/thecodearcher/limen/plugins/oauth-twitch => ../../plugins/oauth-twitch
-
-replace github.com/thecodearcher/limen/plugins/oauth-twitter => ../../plugins/oauth-twitter
-
-replace github.com/thecodearcher/limen/plugins/oauth-linkedin => ../../plugins/oauth-linkedin
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
