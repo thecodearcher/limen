@@ -172,7 +172,7 @@ func (a *testMemoryAdapter) Count(_ context.Context, tableName SchemaTableName, 
 
 // testDerefPointer flattens pointer types that ToStorage produces (*string,
 // *time.Time) into plain values so FromStorage type assertions match real SQL
-// driver behaviour.
+// driver behavior.
 func testDerefPointer(v any) any {
 	switch p := v.(type) {
 	case *string:
@@ -400,7 +400,7 @@ func SeedTestUser(t *testing.T, l *Limen, email string) *User {
 // SessionResult. The user must already exist.
 func SeedTestSession(t *testing.T, l *Limen, userID any, email string) *SessionResult {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/signin", nil)
+	req := httptest.NewRequest(http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: email}}
 	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, false)
 	if err != nil {

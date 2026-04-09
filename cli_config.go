@@ -2,7 +2,7 @@ package limen
 
 import (
 	"bytes"
-	"crypto/md5"
+	"crypto/md5" // #nosec G501 -- MD5 only for config fingerprint in calculateHash, not for crypto auth.
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,8 +15,10 @@ type CliConfig struct {
 	UseAutoIncrementID bool                `json:"useAutoIncrementID"`
 }
 
-// calculateHash computes MD5 hash of the given bytes and returns hex string
+// calculateHash computes MD5 hash of the given bytes and returns hex string.
+// Used only for deterministic config/schema file fingerprints, not for security.
 func calculateHash(data []byte) string {
+	// #nosec G401 -- MD5 for content fingerprinting of CLI config output, not authentication
 	return fmt.Sprintf("%x", md5.Sum(data))
 }
 

@@ -30,14 +30,14 @@ func (core *LimenCore) WithTransaction(ctx context.Context, fn func(ctx context.
 
 	defer func() {
 		if v := recover(); v != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			panic(v)
 		}
 	}()
 
 	txCtx := context.WithValue(ctx, contextKeyTransaction{}, tx)
 	if err := fn(txCtx); err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 

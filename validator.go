@@ -86,16 +86,16 @@ func (v *Validator) RequiredString(field string, value any) *Validator {
 	return v
 }
 
-func (v *Validator) MinLength(field, value string, min int) *Validator {
-	if len(value) < min {
-		v.errors.Add(field, fmt.Sprintf("must be at least %d characters", min), true)
+func (v *Validator) MinLength(field, value string, minLen int) *Validator {
+	if len(value) < minLen {
+		v.errors.Add(field, fmt.Sprintf("must be at least %d characters", minLen), true)
 	}
 	return v
 }
 
-func (v *Validator) MaxLength(field, value string, max int) *Validator {
-	if len(value) > max {
-		v.errors.Add(field, fmt.Sprintf("must be at most %d characters", max), true)
+func (v *Validator) MaxLength(field, value string, maxLen int) *Validator {
+	if len(value) > maxLen {
+		v.errors.Add(field, fmt.Sprintf("must be at most %d characters", maxLen), true)
 	}
 	return v
 }

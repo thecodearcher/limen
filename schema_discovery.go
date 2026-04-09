@@ -181,7 +181,6 @@ func resolveForeignKeys(schemas map[SchemaName]SchemaDefinition) error {
 				return fmt.Errorf("schema %s has foreign key with unknown local column %s", schemaName, fk.Column)
 			}
 			fk.Column = SchemaField(resolvedColumn.Name)
-
 		}
 
 		schemas[schemaName] = schema

@@ -8,6 +8,7 @@ import (
 	"maps"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -64,7 +65,6 @@ type RadixNode struct {
 // - HEAD -> GET fallback
 type Router struct {
 	root             *RadixNode
-	exactRoutes      map[string]http.HandlerFunc
 	globalMiddleware []Middleware
 	beforeHooks      []Hook
 	afterHooks       []Hook
@@ -221,12 +221,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // wrapHandler applies global middleware, route-specific middleware to a handler
 // and applies hooks to the request and response and this is where the request body is parsed and stored in the request context
 func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware, route *Route) http.HandlerFunc {
-	allMiddleware := append(r.globalMiddleware, routeMiddleware...)
-	wrapped := r.applyMiddleware(allMiddleware, http.HandlerFunc(handler))
+	allMiddleware := slices.Concat(r.globalMiddleware, routeMiddleware)
+	wrapped := r.applyMiddleware(allMiddleware, handler)
 	hasAfterHooks := len(r.afterHooks) > 0
 
 	return func(w http.ResponseWriter, req *http.Request) {
-		req, _ = parseAndStoreBody(req)
+		req = parseAndStoreBody(req)
 
 		hookCtx := r.prepareHookContext(req, w, route)
 		if !r.runBeforeHooks(hookCtx) {
@@ -417,7 +417,7 @@ func (r *Router) splitPath(pathStr string) []string {
 // AddRoute adds a route to the group with the group's prefix prepended.
 // Middleware is applied in order: router global middleware, group middleware, then route-specific middleware.
 func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
-	allMiddleware := append(g.middleware, middleware...)
+	allMiddleware := slices.Concat(g.middleware, middleware)
 	fullPattern := g.prefix + NormalizePath(pattern)
 	if metadata == nil {
 		metadata = &RouteMetadata{}

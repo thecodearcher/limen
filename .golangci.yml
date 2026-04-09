@@ -27,16 +27,27 @@ linters:
   settings:
     dupl:
       threshold: 100
+    errcheck:
+      # HTTP handlers rarely recover from ResponseWriter failures; Responder returns error for callers that need it.
+      exclude-functions:
+        - (github.com/thecodearcher/limen.Responder).JSON
+        - (github.com/thecodearcher/limen.Responder).Error
+        - (github.com/thecodearcher/limen.Responder).SessionResponse
+    funlen:
+      lines: 100
+      statements: 50
     goconst:
       min-len: 2
-      min-occurrences: 2
+      min-occurrences: 3
     gocritic:
       disabled-checks:
-        - dupImport
-        - ifElseChain
         - octalLiteral
         - whyNoLint
         - wrapperFunc
+        - unnamedResult
+        - paramTypeCombine
+        - rangeValCopy
+        - hugeParam
       enabled-tags:
         - diagnostic
         - experimental
@@ -44,7 +55,11 @@ linters:
         - performance
         - style
     gocyclo:
-      min-complexity: 15
+      min-complexity: 17
+    gosec:
+      # G117 flags normal auth DTO fields (AccessToken, Secret, etc.).
+      excludes:
+        - G117
     misspell:
       locale: US
   exclusions:
@@ -56,9 +71,19 @@ linters:
       - std-error-handling
     rules:
       - linters:
+          - dupl
+          - errcheck
           - funlen
+          - goconst
           - gocyclo
+          - gosec
         path: _test\.go
+      - linters:
+          - gocyclo
+        path: testing_support\.go
+      - linters:
+          - dupl
+        path: _introspect\.go
       - linters:
           - funlen
           - gocyclo

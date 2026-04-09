@@ -192,17 +192,17 @@ func NotIn(column string, values []any) Where {
 }
 
 // Contains creates a contains substring condition
-func Contains(column string, value string) Where {
+func Contains(column, value string) Where {
 	return Where{Column: column, Operator: OpContains, Value: value, Connector: ConnectorAnd}
 }
 
 // StartsWith creates a starts-with condition
-func StartsWith(column string, value string) Where {
+func StartsWith(column, value string) Where {
 	return Where{Column: column, Operator: OpStartsWith, Value: value, Connector: ConnectorAnd}
 }
 
 // EndsWith creates an ends-with condition
-func EndsWith(column string, value string) Where {
+func EndsWith(column, value string) Where {
 	return Where{Column: column, Operator: OpEndsWith, Value: value, Connector: ConnectorAnd}
 }
 

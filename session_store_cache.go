@@ -79,7 +79,7 @@ func (s *cacheSessionStore) DeleteByUserID(ctx context.Context, userID any) erro
 	}
 
 	for _, sess := range sessions {
-		s.cache.Delete(ctx, s.sessionKey(sess.Token))
+		_ = s.cache.Delete(ctx, s.sessionKey(sess.Token))
 	}
 
 	return s.cache.Delete(ctx, s.userSessionsKey(userID))

@@ -32,7 +32,7 @@ type PluginName string
 
 // Plugin Names
 const (
-	PluginCredentialPassword PluginName = "credential-password"
+	PluginCredentialPassword PluginName = "credential-password" // #nosec G101 -- plugin id string, not a secret
 	PluginTwoFactor          PluginName = "two-factor"
 	PluginOAuth              PluginName = "oauth"
 	PluginSessionJWT         PluginName = "session-jwt"

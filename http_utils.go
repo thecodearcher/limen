@@ -60,20 +60,19 @@ func parseJSONBody(req *http.Request) (map[string]any, []byte, error) {
 	return body, bodyBytes, nil
 }
 
-// parseAndStoreBody parses the JSON body if needed and stores it in context
-// Returns the updated request and whether body was parsed/stored
-func parseAndStoreBody(req *http.Request) (*http.Request, bool) {
+// parseAndStoreBody parses the JSON body if needed and stores it in context.
+func parseAndStoreBody(req *http.Request) *http.Request {
 	if GetJSONBody(req) != nil {
-		return req, false
+		return req
 	}
 
 	if !shouldParseBody(req) {
-		return req, false
+		return req
 	}
 
 	body, bodyBytes, err := parseJSONBody(req)
 	if err != nil {
-		return req, false
+		return req
 	}
 
 	req = req.WithContext(context.WithValue(req.Context(), bodyContextKey{}, body))
@@ -81,7 +80,7 @@ func parseAndStoreBody(req *http.Request) (*http.Request, bool) {
 	// Restore body for handlers that need to read it
 	req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-	return req, true
+	return req
 }
 
 func GetCurrentRouteFromContext(ctx context.Context) *Route {

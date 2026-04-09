@@ -9,7 +9,7 @@ import (
 )
 
 // Encrypt encrypts the plaintext using XChaCha20-Poly1305 with the provided key (32 bytes).
-func EncryptXChaCha(plaintext string, secret []byte, additionalData []byte) (string, error) {
+func EncryptXChaCha(plaintext string, secret, additionalData []byte) (string, error) {
 	if plaintext == "" {
 		return "", ErrEmptyText
 	}
@@ -32,7 +32,7 @@ func EncryptXChaCha(plaintext string, secret []byte, additionalData []byte) (str
 }
 
 // Decrypt decrypts the base64-encoded ciphertext using XChaCha20-Poly1305 with the provided key.
-func DecryptXChaCha(encoded string, secret []byte, additionalData []byte) (string, error) {
+func DecryptXChaCha(encoded string, secret, additionalData []byte) (string, error) {
 	if encoded == "" {
 		return "", ErrEmptyText
 	}

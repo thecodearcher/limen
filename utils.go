@@ -33,9 +33,9 @@ var (
 
 // generateCryptoSecureRandomString generates a cryptographically secure random string
 func generateCryptoSecureRandomString() string {
-	bytes := make([]byte, 32)
-	rand.Read(bytes)
-	return base64.RawURLEncoding.EncodeToString(bytes)
+	buf := make([]byte, 32)
+	_, _ = rand.Read(buf)
+	return base64.RawURLEncoding.EncodeToString(buf)
 }
 
 func GenerateRandomString(length int, charSetType ...CharSetType) string {
@@ -46,7 +46,7 @@ func GenerateRandomString(length int, charSetType ...CharSetType) string {
 	charCount := len(chars)
 	expectedBytes := make([]byte, length)
 
-	rand.Read(expectedBytes)
+	_, _ = rand.Read(expectedBytes)
 	for i := range length {
 		expectedBytes[i] = chars[int(expectedBytes[i])%charCount]
 	}
@@ -176,13 +176,13 @@ func sortRulesBySpecificity(rules []*RateLimitRule) {
 	})
 }
 
-func containsWildcard(path string) bool {
-	return strings.Contains(path, "*") || strings.Contains(path, "?") || strings.Contains(path, ":")
+func containsWildcard(pathStr string) bool {
+	return strings.Contains(pathStr, "*") || strings.Contains(pathStr, "?") || strings.Contains(pathStr, ":")
 }
 
-func countWildcards(path string) int {
+func countWildcards(pathStr string) int {
 	count := 0
-	for _, char := range path {
+	for _, char := range pathStr {
 		if char == '*' || char == '?' || char == ':' {
 			count++
 		}
@@ -378,7 +378,7 @@ func resolveRuleOverride(rule *RateLimitRule, customRules map[string]*RateLimitR
 	return rule
 }
 
-func normalizePluginPath(basePath string, pluginBasePath string, override *PluginHTTPOverride) string {
+func normalizePluginPath(basePath, pluginBasePath string, override *PluginHTTPOverride) string {
 	if override != nil && override.BasePath != "" {
 		pluginBasePath = override.BasePath
 	}
@@ -454,10 +454,10 @@ func ExtractCookieValue(headers http.Header, cookieName string) string {
 }
 
 // simple wrapper around url.JoinPath that returns an empty string if the join fails
-func joinURL(baseURL string, path ...string) string {
-	url, err := url.JoinPath(baseURL, path...)
+func joinURL(baseURL string, pathElems ...string) string {
+	joined, err := url.JoinPath(baseURL, pathElems...)
 	if err != nil {
 		return ""
 	}
-	return url
+	return joined
 }

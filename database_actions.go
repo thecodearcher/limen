@@ -59,7 +59,7 @@ func (h *DatabaseActionHelper) UpdateUser(ctx context.Context, updatedUser *User
 	return nil
 }
 
-func (h *DatabaseActionHelper) CreateVerification(ctx context.Context, action string, identifier string, token string, expiresIn time.Duration) (*Verification, error) {
+func (h *DatabaseActionHelper) CreateVerification(ctx context.Context, action, identifier, token string, expiresIn time.Duration) (*Verification, error) {
 	if identifier == "" {
 		return nil, errors.New("identifier is required")
 	}
@@ -79,7 +79,7 @@ func (h *DatabaseActionHelper) CreateVerification(ctx context.Context, action st
 	return h.FindVerificationByAction(ctx, action, identifier)
 }
 
-func (h *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, action string, identifier string) (*Verification, error) {
+func (h *DatabaseActionHelper) FindVerificationByAction(ctx context.Context, action, identifier string) (*Verification, error) {
 	verificationSchema := h.core.Schema.Verification
 	actionValue := GenerateVerificationAction(action, identifier)
 	verification, err := h.core.FindOne(ctx, verificationSchema,
@@ -121,7 +121,7 @@ func (h *DatabaseActionHelper) FindValidVerificationByToken(ctx context.Context,
 // Returns an error if the token is invalid or the action and identifier do not match.
 //
 // Note: This function will delete the verification token after it is verified.
-func (h *DatabaseActionHelper) VerifyVerificationToken(ctx context.Context, token string, action string, identifier string) error {
+func (h *DatabaseActionHelper) VerifyVerificationToken(ctx context.Context, token, action, identifier string) error {
 	verification, err := h.FindValidVerificationByToken(ctx, token)
 	if err != nil {
 		return ErrVerificationTokenInvalid

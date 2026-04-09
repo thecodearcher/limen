@@ -24,7 +24,7 @@ func TestOpaqueSessionManager_CreateSession(t *testing.T) {
 	l := newTestLimen(t)
 	userID := seedUser(t, l, "a@b.com")
 
-	req := httptest.NewRequest(http.MethodPost, "/signin", nil)
+	req := httptest.NewRequest(http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: "a@b.com"}}
 
 	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, false)
@@ -32,7 +32,7 @@ func TestOpaqueSessionManager_CreateSession(t *testing.T) {
 	assert.NotEmpty(t, result.Token)
 	assert.NotNil(t, result.Cookie)
 
-	validateReq := httptest.NewRequest(http.MethodGet, "/me", nil)
+	validateReq := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 	validateReq.AddCookie(result.Cookie)
 	validated, err := l.core.SessionManager.ValidateSession(context.Background(), validateReq)
 	assert.NoError(t, err)
@@ -45,14 +45,14 @@ func TestOpaqueSessionManager_CreateShortSession(t *testing.T) {
 	l := newTestLimenWithSessionConfig(t, WithSessionShortDuration(1*time.Hour))
 	userID := seedUser(t, l, "b@c.com")
 
-	req := httptest.NewRequest(http.MethodPost, "/signin", nil)
+	req := httptest.NewRequest(http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: "b@c.com"}}
 
 	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, true)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, result.Token)
 
-	validateReq := httptest.NewRequest(http.MethodGet, "/me", nil)
+	validateReq := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 	validateReq.AddCookie(result.Cookie)
 	validated, err := l.core.SessionManager.ValidateSession(context.Background(), validateReq)
 	assert.NoError(t, err)
@@ -67,7 +67,7 @@ func TestOpaqueSessionManager_ValidateSession(t *testing.T) {
 	userID := seedUser(t, l, "c@d.com")
 	sess := seedSession(t, l, userID, "c@d.com")
 
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 	req.AddCookie(sess.Cookie)
 
 	validated, err := l.core.SessionManager.ValidateSession(context.Background(), req)
@@ -94,7 +94,7 @@ func TestOpaqueSessionManager_ValidateSession_Expired(t *testing.T) {
 	}, nil)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 	req.AddCookie(&http.Cookie{Name: "limen_session", Value: "expired-token"})
 
 	_, err = l.core.SessionManager.ValidateSession(context.Background(), req)
@@ -114,7 +114,7 @@ func TestOpaqueSessionManager_ValidateSession_NotFound(t *testing.T) {
 	for _, tt := range testData {
 		t.Run(tt.name, func(t *testing.T) {
 			l := newTestLimen(t)
-			req := httptest.NewRequest(http.MethodGet, "/me", nil)
+			req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 			if tt.cookie != nil {
 				req.AddCookie(tt.cookie)
 			}
@@ -131,7 +131,7 @@ func TestOpaqueSessionManager_ExtractToken_Bearer(t *testing.T) {
 	l := newTestLimenWithSessionConfig(t, WithBearerEnabled())
 	sm := typedSessionManager(t, l)
 
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 	req.Header.Set("Authorization", "Bearer my-token-123")
 
 	token, err := sm.extractToken(req)
@@ -145,7 +145,7 @@ func TestOpaqueSessionManager_ExtractToken_CookiePriority(t *testing.T) {
 	l := newTestLimenWithSessionConfig(t, WithBearerEnabled())
 	sm := typedSessionManager(t, l)
 
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 	req.AddCookie(&http.Cookie{Name: "limen_session", Value: "cookie-token"})
 	req.Header.Set("Authorization", "Bearer bearer-token")
 
@@ -164,7 +164,7 @@ func TestOpaqueSessionManager_RevokeSession(t *testing.T) {
 	err := sm.RevokeSession(context.Background(), sess.Token)
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
 	req.AddCookie(sess.Cookie)
 	_, err = sm.ValidateSession(context.Background(), req)
 	assert.ErrorIs(t, err, ErrSessionNotFound)

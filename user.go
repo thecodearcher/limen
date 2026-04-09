@@ -78,8 +78,8 @@ func (u *UserSchema) ToStorage(data Model) map[string]any {
 }
 
 func (u *UserSchema) Serialize(data Model) map[string]any {
-	if u.BaseSchema.Serializer != nil {
-		return u.BaseSchema.Serializer(data)
+	if u.Serializer != nil {
+		return u.Serializer(data)
 	}
 	raw := data.Raw()
 	delete(raw, u.GetIDField())

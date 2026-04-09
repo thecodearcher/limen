@@ -101,7 +101,7 @@ func WithUserAdditionalFields(fn AdditionalFieldsFunc) SchemaConfigUserOption {
 // WithUserSerializer overrides the default user response serializer.
 func WithUserSerializer(serializer func(data *User) map[string]any) SchemaConfigUserOption {
 	return func(c *SchemaConfig, u *UserSchema) {
-		u.BaseSchema.Serializer = func(data Model) map[string]any {
+		u.Serializer = func(data Model) map[string]any {
 			return serializer(data.(*User))
 		}
 	}
@@ -316,7 +316,7 @@ func WithRateLimitFieldLastRequestAt(fieldName string) SchemaConfigRateLimitOpti
 // WithAccountSerializer overrides the default account response serializer.
 func WithAccountSerializer(serializer func(data *Account) map[string]any) SchemaConfigAccountOption {
 	return func(c *SchemaConfig, s *AccountSchema) {
-		s.BaseSchema.Serializer = func(data Model) map[string]any {
+		s.Serializer = func(data Model) map[string]any {
 			return serializer(data.(*Account))
 		}
 	}

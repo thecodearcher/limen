@@ -274,6 +274,6 @@ func newValidatorTestRequest(t *testing.T, body string) *http.Request {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req, _ = parseAndStoreBody(req)
+	req = parseAndStoreBody(req)
 	return req
 }

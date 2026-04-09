@@ -126,7 +126,7 @@ func (cm *CookieManager) SetSessionCookie(w http.ResponseWriter, sessionResult *
 	}
 
 	if sessionResult.ShortSession != nil && *sessionResult.ShortSession {
-		if err := cm.SetSignedCookie(w, shortSessionCookieName, "true", int(shortSessionMaxAgeSec.Seconds())); err != nil {
+		if err := cm.SetSignedCookie(w, shortSessionCookieName, "true", int(shortSessionMaxAge.Seconds())); err != nil {
 			return fmt.Errorf("failed to set short session cookie: %w", err)
 		}
 	}

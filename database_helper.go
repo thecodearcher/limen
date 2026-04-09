@@ -13,12 +13,7 @@ import (
 //
 //  1. Transaction from context (if in a transaction )
 //  2. Default database adapter
-//
-// if skipTx is true, the default database adapter is returned.
-func (core *LimenCore) getDB(ctx context.Context, skipTx ...bool) DatabaseAdapter {
-	if len(skipTx) > 0 && skipTx[0] {
-		return core.db
-	}
+func (core *LimenCore) getDB(ctx context.Context) DatabaseAdapter {
 	if tx := getTxFromContext(ctx); tx != nil {
 		return tx
 	}
@@ -81,7 +76,7 @@ func (core *LimenCore) Exists(ctx context.Context, schema Schema, conditions []W
 	return db.Exists(ctx, schema.GetTableName(), conditions)
 }
 
-func GenerateVerificationAction(action string, identifier string) string {
+func GenerateVerificationAction(action, identifier string) string {
 	return fmt.Sprintf("%s::%s", action, identifier)
 }
 
@@ -105,7 +100,7 @@ func (core *LimenCore) UpdateRaw(ctx context.Context, schema Schema, updatedData
 	if removeEmptyValues {
 		for key, value := range payload {
 			concreteValue := reflect.ValueOf(value)
-			//we remove any empty strings or zeros to avoid accidental NULL updates
+			// we remove any empty strings or zeros to avoid accidental NULL updates
 			if !concreteValue.IsValid() || concreteValue.IsZero() {
 				delete(payload, key)
 			}
@@ -158,7 +153,7 @@ func (core *LimenCore) Delete(ctx context.Context, schema Schema, conditions []W
 	// otherwise we delete the record directly
 	if schema.GetSoftDeleteField() != "" {
 		if err := db.Update(ctx, schema.GetTableName(), conditions, map[string]any{
-			string(schema.GetSoftDeleteField()): time.Now(),
+			schema.GetSoftDeleteField(): time.Now(),
 		}); err != nil {
 			return err
 		}

@@ -12,7 +12,7 @@ type RateLimit struct {
 
 func (r *RateLimit) Touch() {
 	r.LastRequestAt = time.Now().UnixMilli()
-	r.Count = r.Count + 1
+	r.Count++
 }
 
 func (r *RateLimit) ResetCounter() {

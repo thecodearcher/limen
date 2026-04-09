@@ -35,7 +35,7 @@ func TestGetSession_WithValidSession(t *testing.T) {
 		Session: &Session{Token: sess.Token, UserID: userID},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/me", http.NoBody)
 	req = withSessionContext(req, validatedSession)
 	w := httptest.NewRecorder()
 
@@ -52,7 +52,7 @@ func TestGetSession_WithoutSession(t *testing.T) {
 	l := newTestLimen(t)
 	handlers := newTestHandlersFromLimen(t, l)
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/me", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handlers.GetSession(w, req)
@@ -76,7 +76,7 @@ func TestListSessions(t *testing.T) {
 		Session: &Session{Token: sess1.Token, UserID: userID},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/sessions", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/sessions", http.NoBody)
 	req = withSessionContext(req, validatedSession)
 	w := httptest.NewRecorder()
 
@@ -102,7 +102,7 @@ func TestSignOut(t *testing.T) {
 		Session: &Session{Token: sess.Token, UserID: userID},
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/signout", nil)
+	req := httptest.NewRequest(http.MethodPost, "/auth/signout", http.NoBody)
 	req = withSessionContext(req, validatedSession)
 	w := httptest.NewRecorder()
 
@@ -141,7 +141,7 @@ func TestRevokeAllSessions(t *testing.T) {
 		Session: &Session{Token: sess.Token, UserID: userID},
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/revoke-sessions", nil)
+	req := httptest.NewRequest(http.MethodPost, "/auth/revoke-sessions", http.NoBody)
 	req = withSessionContext(req, validatedSession)
 	w := httptest.NewRecorder()
 
@@ -160,7 +160,7 @@ func TestSignOut_WithoutSession(t *testing.T) {
 	l := newTestLimen(t)
 	handlers := newTestHandlersFromLimen(t, l)
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/signout", nil)
+	req := httptest.NewRequest(http.MethodPost, "/auth/signout", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handlers.SignOut(w, req)

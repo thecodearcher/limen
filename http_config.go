@@ -7,7 +7,7 @@ import (
 
 const (
 	shortSessionCookieName = "limen_short_session"
-	shortSessionMaxAgeSec  = 1 * time.Hour // 1 hour
+	shortSessionMaxAge     = 1 * time.Hour // 1 hour
 )
 
 type HTTPConfigOption func(*httpConfig)

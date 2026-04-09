@@ -4,18 +4,16 @@ import (
 	"context"
 	"maps"
 	"net/http"
-	"regexp"
 	"slices"
 	"strconv"
 	"time"
 )
 
 type rateLimiter struct {
-	config          *RateLimiterConfig
-	store           RateLimiterStore
-	httpCore        *LimenHTTPCore
-	rules           []*RateLimitRule
-	disableForPaths []*regexp.Regexp
+	config   *RateLimiterConfig
+	store    RateLimiterStore
+	httpCore *LimenHTTPCore
+	rules    []*RateLimitRule
 }
 
 func newRateLimiter(config *RateLimiterConfig, httpCore *LimenHTTPCore, rules map[string]*RateLimitRule) *rateLimiter {

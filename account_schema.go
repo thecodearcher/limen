@@ -12,8 +12,8 @@ type AccountSchema struct {
 }
 
 func (s *AccountSchema) Serialize(data Model) map[string]any {
-	if s.BaseSchema.Serializer != nil {
-		return s.BaseSchema.Serializer(data)
+	if s.Serializer != nil {
+		return s.Serializer(data)
 	}
 	raw := data.Raw()
 	delete(raw, s.GetIDField())
