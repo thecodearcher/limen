@@ -1,20 +1,42 @@
-# Limen
+<p align="center">
+  <a href="https://limenauth.dev">
+    <img src="./banner.svg" alt="Limen — Composable authentication for Go" width="640" />
+  </a>
+</p>
 
-A modern, plugin-first authentication library for Go, inspired by [better-auth](https://www.better-auth.com/).
+<p align="center">
+  A modern, composable authentication library for Go, inspired by <a href="https://www.better-auth.com/">better-auth</a>.
+</p>
+
+<p align="center">
+  <a href="https://limenauth.dev">Documentation</a>
+  ·
+  <a href="https://github.com/thecodearcher/limen/issues">Issues</a>
+</p>
+
+<p align="center">
+  <a href="https://pkg.go.dev/github.com/thecodearcher/limen"><img src="https://img.shields.io/badge/reference-pkg.go.dev-ffffff?style=flat&colorA=000000&colorB=000000&logo=go&logoColor=white" alt="Go reference" /></a>
+  <a href="https://github.com/thecodearcher/limen/stargazers"><img src="https://img.shields.io/github/stars/thecodearcher/limen?style=flat&colorA=000000&colorB=000000&logo=github" alt="GitHub stars" /></a>
+
+</p>
 
 > **Status:** Work in progress — APIs may change before v1.0.
+
+Limen is a modular authentication library for Go that takes a **plugin-first** approach — the core ships with interfaces, session management, and security primitives, while every authentication method lives in its own importable Go module. You compose exactly the auth stack your application needs without pulling in code/dependencies you don't use.
+
+Out of the box, Limen provides:
+
+- Credential/password authentication
+- OAuth 2.0
+- Two-factor authentication
+- Session management
+- ...and more
+
+Bring your own database, bring your own framework — Limen adapts to your stack, not the other way around.
 
 ## Documentation
 
 Full guides, configuration reference, and plugin documentation are available at **[limenauth.dev](https://limenauth.dev)**.
-
-## Features
-
-- **Plugin-first architecture** — only import the authentication methods you need
-- **Struct-based configuration** with sensible defaults
-- **Database adapters** for GORM and database/sql
-- **Framework-agnostic** — returns a standard `http.Handler`
-- **Security-first defaults** — Argon2id password hashing, 32-byte signing secret, secure session management
 
 ## Requirements
 
@@ -59,7 +81,7 @@ func main() {
 	auth, err := limen.New(&limen.Config{
 		BaseURL:  "http://localhost:8080",
 		Database: gormadapter.New(db),
-		Secret:   []byte("your-32-byte-secret-key-here!!!!"), // exactly 32 bytes
+		Secret:   []byte("your-32-byte-secret-key-here!!!!"),
 		Plugins: []limen.Plugin{
 			credentialpassword.New(),
 		},
@@ -76,27 +98,11 @@ func main() {
 }
 ```
 
-The `Secret` field accepts exactly 32 bytes. Alternatively, set the `LIMEN_SECRET` environment variable and omit it from the struct.
+Alternatively, set the `LIMEN_SECRET` environment variable and omit the `Secret` from the struct.
 
-For a more complete example with OAuth providers, two-factor auth, and Gin integration, see [`examples/basic`](examples/basic).
+For a more complete example with OAuth providers, two-factor auth, and Gin integration, see `[examples](examples/)`.
 
-For full configuration options, middleware usage, and plugin APIs, visit **[limenauth.dev](https://limenauth.dev)**.
-
-## Plugins and Adapters
-
-Limen ships with plugins for email/password, OAuth (Google, GitHub, Apple, and more), two-factor auth, and JWT sessions — plus database adapters for GORM and database/sql. Each is a separate Go module so you only import what you need.
-
-See the full list and setup guides at **[limenauth.dev](https://limenauth.dev)**.
-
-## Development
-
-```bash
-# Run all tests (uses go.work for the multi-module workspace)
-go test ./...
-
-# Lint
-golangci-lint run ./...
-```
+For full configuration options, usage, and plugin APIs, visit **[limenauth.dev](https://limenauth.dev)**.
 
 ## Contributing
 
