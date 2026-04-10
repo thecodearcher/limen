@@ -8,7 +8,7 @@ The Limen CLI tool provides code generation capabilities for Limen authenticatio
 
 ### Prerequisites
 
-- Go 1.24.0 or later
+- Go 1.25 or later
 - Limen project with initialized schemas (`.limen/schemas.json`)
 
 ### Build from Source
@@ -232,7 +232,7 @@ You can also apply the SQL files manually or with your own migration runner.
 
 ### Schema File Not Found
 
-**Error:** `no schema file found; please ensure your app is run at least once with limen initialized`
+**Error:** `no schema file found; please ensure your app is run at least once with limen initialized to generate the schema needed for this operation`
 
 **Solution:** 
 - Ensure your Limen application has been initialized at least once
@@ -268,5 +268,4 @@ You can also apply the SQL files manually or with your own migration runner.
 ## Additional Resources
 
 - [Limen Main Documentation](../README.md)
-- [Limen Architecture](../README.md#architecture)
-- [Database Integration](../README.md#database-integration)
+- [Limen Website](https://limenauth.dev)
