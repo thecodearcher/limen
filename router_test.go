@@ -10,7 +10,7 @@ import (
 
 func serveRequest(t *testing.T, router *Router, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest(method, path, http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), method, path, http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 	return w

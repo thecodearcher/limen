@@ -32,7 +32,7 @@ func TestLimenCore_CreateSession(t *testing.T) {
 	l := newTestLimen(t)
 	userID := seedUser(t, l, "create-session@test.com")
 
-	req := httptest.NewRequest(http.MethodPost, "/signin", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 	w := httptest.NewRecorder()
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: "create-session@test.com"}}
 

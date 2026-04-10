@@ -10,7 +10,7 @@ import (
 
 func newTestHookContext(t *testing.T) *HookContext {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/auth/signin", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/auth/signin", http.NoBody)
 	w := httptest.NewRecorder()
 	responder := newTestResponder(t)
 	return &HookContext{

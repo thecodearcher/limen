@@ -26,7 +26,7 @@ func TestMiddlewareRequireSession_ValidSession(t *testing.T) {
 	})
 
 	handler := httpCore.MiddlewareRequireSession()(inner)
-	req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
 	req.AddCookie(sess.Cookie)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -46,7 +46,7 @@ func TestMiddlewareRequireSession_NoSession(t *testing.T) {
 		t.Fatal("inner handler should not be called")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/me", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -107,7 +107,7 @@ func TestMiddlewareCheckOrigin(t *testing.T) {
 			})
 
 			handler := httpCore.middlewareCheckOrigin()(inner)
-			req := httptest.NewRequest(tt.method, "/auth/signin", http.NoBody)
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, "/auth/signin", http.NoBody)
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
 			}
@@ -172,7 +172,7 @@ func TestMiddlewareCSRFProtection(t *testing.T) {
 			})
 
 			handler := httpCore.middlewareCSRFProtection()(inner)
-			req := httptest.NewRequest(tt.method, "/auth/signup", http.NoBody)
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, "/auth/signup", http.NoBody)
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
 			}

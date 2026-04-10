@@ -272,7 +272,7 @@ func TestValidateJSON(t *testing.T) {
 // parsed into the request context, matching what the router middleware does.
 func newValidatorTestRequest(t *testing.T, body string) *http.Request {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/test", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/test", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = parseAndStoreBody(req)
 	return req

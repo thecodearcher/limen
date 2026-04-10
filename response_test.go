@@ -21,7 +21,7 @@ func TestResponder_JSON(t *testing.T) {
 
 	responder := newTestResponder(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	w := httptest.NewRecorder()
 
 	responder.JSON(w, req, http.StatusOK, map[string]any{"key": "value"})
@@ -36,7 +36,7 @@ func TestResponder_JSON_StringMessage(t *testing.T) {
 
 	responder := newTestResponder(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	w := httptest.NewRecorder()
 
 	responder.JSON(w, req, http.StatusOK, "success")
@@ -50,7 +50,7 @@ func TestResponder_Error(t *testing.T) {
 
 	responder := newTestResponder(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	w := httptest.NewRecorder()
 
 	responder.Error(w, req, NewLimenError("something went wrong", http.StatusBadRequest, nil))
@@ -65,7 +65,7 @@ func TestResponder_Error_GenericError(t *testing.T) {
 
 	responder := newTestResponder(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	w := httptest.NewRecorder()
 
 	responder.Error(w, req, errors.New("generic error"))

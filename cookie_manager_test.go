@@ -67,7 +67,7 @@ func TestCookieManager_SetAndGet(t *testing.T) {
 	assert.Equal(t, "mykey", cookies[0].Name)
 	assert.Equal(t, "myval", cookies[0].Value)
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	req.AddCookie(cookies[0])
 	val, err := cm.Get(req, "mykey")
 	assert.NoError(t, err)
@@ -78,7 +78,7 @@ func TestCookieManager_Get_Missing(t *testing.T) {
 	t.Parallel()
 
 	cm := newTestCookieManager(t)
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 
 	_, err := cm.Get(req, "nonexistent")
 	assert.Error(t, err)
@@ -135,7 +135,7 @@ func TestCookieManager_SignedCookie_RoundTrip(t *testing.T) {
 	assert.NotNil(t, signedCookie)
 	assert.NotEqual(t, "secret-data", signedCookie.Value, "value should be encrypted")
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	req.AddCookie(signedCookie)
 	val, err := cm.GetSignedCookie(req, "signed")
 	assert.NoError(t, err)

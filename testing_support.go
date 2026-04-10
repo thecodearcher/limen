@@ -400,7 +400,7 @@ func SeedTestUser(t *testing.T, l *Limen, email string) *User {
 // SessionResult. The user must already exist.
 func SeedTestSession(t *testing.T, l *Limen, userID any, email string) *SessionResult {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/signin", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: email}}
 	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, false)
 	if err != nil {

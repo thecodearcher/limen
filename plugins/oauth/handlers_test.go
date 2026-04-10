@@ -130,7 +130,7 @@ func newOAuthHandlersForTest(t *testing.T) *oauthHandlers {
 
 func newFormPostRequest(t *testing.T, requestURL, body, contentType string) *http.Request {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, requestURL, strings.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, requestURL, strings.NewReader(body))
 	req.Header.Set("Content-Type", contentType)
 	return req
 }

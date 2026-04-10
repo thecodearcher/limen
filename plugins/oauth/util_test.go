@@ -71,9 +71,9 @@ func TestBuildAuthCodeURL(t *testing.T) {
 	config, _ := provider.OAuth2Config()
 
 	tests := []struct {
-		name       string
-		verifier   string
-		wantPKCE   bool
+		name     string
+		verifier string
+		wantPKCE bool
 	}{
 		{name: "includes PKCE when verifier provided", verifier: "verifier-value", wantPKCE: true},
 		{name: "no PKCE when verifier empty", verifier: "", wantPKCE: false},

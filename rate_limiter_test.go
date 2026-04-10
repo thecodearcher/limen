@@ -120,7 +120,7 @@ func TestRateLimiter_FindApplicableRule_MatchesSpecificRule(t *testing.T) {
 
 	rl := newTestRateLimiter(t, 100, time.Minute, signinRule)
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/signin", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/auth/signin", http.NoBody)
 	rule := rl.findApplicableRule(req)
 	assert.Equal(t, "/auth/signin", rule.path)
 	assert.Equal(t, 5, rule.maxRequests)
@@ -131,7 +131,7 @@ func TestRateLimiter_FindApplicableRule_FallsBackToDefault(t *testing.T) {
 
 	rl := newTestRateLimiter(t, 100, time.Minute)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/anything", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/anything", http.NoBody)
 	rule := rl.findApplicableRule(req)
 	assert.Equal(t, 100, rule.maxRequests)
 	assert.Equal(t, time.Minute, rule.window)
@@ -151,7 +151,7 @@ func TestRateLimiter_FindApplicableRule_WithLimitProvider(t *testing.T) {
 
 	rl := newTestRateLimiter(t, 100, time.Minute, dynamicRule)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/dynamic", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/dynamic", http.NoBody)
 	rule := rl.findApplicableRule(req)
 	assert.Equal(t, 20, rule.maxRequests)
 	assert.Equal(t, 2*time.Minute, rule.window)
@@ -173,7 +173,7 @@ func TestRateLimiter_Handle_Disabled(t *testing.T) {
 		called = true
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
@@ -190,7 +190,7 @@ func TestRateLimiter_Handle_AllowsWithinLimit(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	req.RemoteAddr = "192.168.1.1:1234"
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -209,14 +209,14 @@ func TestRateLimiter_Handle_BlocksExceeded(t *testing.T) {
 	}))
 
 	for range 2 {
-		req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 		req.RemoteAddr = "192.168.1.1:1234"
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
 	req.RemoteAddr = "192.168.1.1:1234"
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -241,7 +241,7 @@ func TestRateLimiter_Handle_DisabledRule(t *testing.T) {
 	}))
 
 	for range 5 {
-		req := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", http.NoBody)
 		req.RemoteAddr = "192.168.1.1:1234"
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, req)

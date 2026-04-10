@@ -33,7 +33,7 @@ func TestRotateSession_RevokesCurrentAndIssuesNew(t *testing.T) {
 	p, l := newTestPlugin(t, false)
 	user, oldSess := seedUserAndSession(t, l, "rotate@example.com")
 
-	req := httptest.NewRequest(http.MethodPost, "/two-factor/finalize-setup", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/two-factor/finalize-setup", nil)
 	req.AddCookie(oldSess.Cookie)
 	w := httptest.NewRecorder()
 
@@ -59,7 +59,7 @@ func TestRotateSession_RevokeOthersEnabled(t *testing.T) {
 	user, currentSess := seedUserAndSession(t, l, "others@example.com")
 	otherSess := limen.SeedTestSession(t, l, user.ID, "others@example.com")
 
-	req := httptest.NewRequest(http.MethodPost, "/two-factor/finalize-setup", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/two-factor/finalize-setup", nil)
 	req.AddCookie(currentSess.Cookie)
 	w := httptest.NewRecorder()
 
@@ -88,7 +88,7 @@ func TestRotateSession_RevokeOthersDisabled_KeepsOtherSessions(t *testing.T) {
 	user, currentSess := seedUserAndSession(t, l, "keep@example.com")
 	otherSess := limen.SeedTestSession(t, l, user.ID, "keep@example.com")
 
-	req := httptest.NewRequest(http.MethodPost, "/two-factor/disable", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/two-factor/disable", nil)
 	req.AddCookie(currentSess.Cookie)
 	w := httptest.NewRecorder()
 
@@ -112,7 +112,7 @@ func TestRotateSession_RevokeOthersDisabled_KeepsOtherSessions(t *testing.T) {
 
 func requestWithToken(t *testing.T, sess *limen.SessionResult) *http.Request {
 	t.Helper()
-	r := httptest.NewRequest(http.MethodGet, "/session", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/session", nil)
 	if sess.Cookie != nil {
 		r.AddCookie(sess.Cookie)
 	}
