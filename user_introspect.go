@@ -69,7 +69,7 @@ func (u *UserSchema) getDefaultColumns(config *SchemaConfig) []ColumnDefinition 
 				Name:         string(UserSchemaFirstNameField),
 				LogicalField: UserSchemaFirstNameField,
 				Type:         ColumnTypeString,
-				IsNullable:   false,
+				IsNullable:   true,
 				IsPrimaryKey: false,
 				Tags: map[string]string{
 					"json": "first_name",
