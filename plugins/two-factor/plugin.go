@@ -37,6 +37,7 @@ func New(opts ...ConfigOption) *twoFactorPlugin {
 		secret:                           getTOTPSecret(),
 		totp:                             NewDefaultTOTPConfig(),
 		otp:                              NewDefaultOTPConfig(),
+		backupCodes:                      NewDefaultBackupCodesConfig(),
 		cookieExpiration:                 defaultChallengeExpiration,
 		cookieName:                       defaultChallengeCookieName,
 		revokeOtherSessionsOnStateChange: true,
