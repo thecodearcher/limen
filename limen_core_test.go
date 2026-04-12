@@ -72,9 +72,15 @@ func TestLimenHTTPCore_IsTrustedOrigin(t *testing.T) {
 
 	l := newTestLimen(t)
 	httpCore := newTestHTTPCore(t, l)
-	httpCore.trustedOriginsPatterns = compileTrustedOrigins("http://localhost:8080", "https://*.example.com")
+	httpCore.trustedOriginsPatterns = compileTrustedOrigins("http://localhost:8080", "https://*.example.com", "test.com")
 
 	assert.True(t, httpCore.IsTrustedOrigin("http://localhost:8080"))
 	assert.True(t, httpCore.IsTrustedOrigin("https://app.example.com"))
+	assert.True(t, httpCore.IsTrustedOrigin("https://test.com"))
+	assert.True(t, httpCore.IsTrustedOrigin("http://localhost:8080/foo/bar"))
+	assert.True(t, httpCore.IsTrustedOrigin("https://app.example.com/foo/bar"))
+	assert.False(t, httpCore.IsTrustedOrigin("http://app.example.com"))
+	assert.False(t, httpCore.IsTrustedOrigin("https://example.com"))
+	assert.False(t, httpCore.IsTrustedOrigin("http://localhost:2080"))
 	assert.False(t, httpCore.IsTrustedOrigin("https://evil.com"))
 }

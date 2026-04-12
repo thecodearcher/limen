@@ -1,6 +1,8 @@
 package limen
 
 import (
+	"fmt"
+	"net/url"
 	"regexp"
 )
 
@@ -24,9 +26,15 @@ func (httpCore *LimenHTTPCore) SessionCookieName() string {
 	return httpCore.config.cookieConfig.sessionCookieName
 }
 
-func (httpCore *LimenHTTPCore) IsTrustedOrigin(url string) bool {
+func (httpCore *LimenHTTPCore) IsTrustedOrigin(urlStr string) bool {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	normalizedURL := fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host)
 	for _, pattern := range httpCore.trustedOriginsPatterns {
-		if pattern.MatchString(url) {
+		if pattern.MatchString(normalizedURL) {
 			return true
 		}
 	}

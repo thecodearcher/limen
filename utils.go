@@ -64,15 +64,15 @@ func ipExtractorFromRemoteAddr(request *http.Request) string {
 	return ip
 }
 
-// compilePattern compiles a glob pattern to a regex
+// compileRateLimitPattern compiles a rate limit pattern to a regex
 // Returns the compiled regex and an error if compilation fails
-func compilePattern(pattern string) (*regexp.Regexp, error) {
-	regexPattern := globToRegex(pattern)
+func compileRateLimitPattern(pattern string) (*regexp.Regexp, error) {
+	regexPattern := globToRegex(pattern, true)
 	return regexp.Compile(regexPattern)
 }
 
 // globToRegex converts a glob pattern to a regex pattern
-func globToRegex(pattern string) string {
+func globToRegex(pattern string, supportPathParameters bool) string {
 	var result strings.Builder
 	result.WriteString("^")
 
@@ -100,13 +100,17 @@ func globToRegex(pattern string) string {
 			result.WriteString("[^/]")
 
 		case ':':
-			// Route parameter (:param) - match one path segment. Skip param name until next / or end.
-			result.WriteString("[^/]+")
-			i++
-			for i < len(runes) && runes[i] != '/' {
+			if supportPathParameters {
+				// Route parameter (:param) - match one path segment. Skip param name until next / or end.
+				result.WriteString("[^/]+")
 				i++
+				for i < len(runes) && runes[i] != '/' {
+					i++
+				}
+				continue
+			} else {
+				result.WriteRune(char)
 			}
-			continue
 
 		case '[':
 			// Character class - copy until closing ]
@@ -332,7 +336,7 @@ func compileTrustedOrigins(origins ...string) []*regexp.Regexp {
 		if !strings.Contains(pattern, "://") {
 			normalizedPattern = "*://" + pattern
 		}
-		regexPattern := globToRegex(normalizedPattern)
+		regexPattern := globToRegex(normalizedPattern, false)
 		re, err := regexp.Compile(regexPattern)
 		if err != nil {
 			log.Panicf("failed to compile pattern for trusted origin %s: %v", pattern, err)
@@ -360,7 +364,7 @@ func processCustomRateLimitRules(basePath string, customRules map[string]*RateLi
 
 // compileAndSetRulePattern compiles the pattern and sets it on the rule
 func compileAndSetRulePattern(rule *RateLimitRule, completePath string) error {
-	compiledPattern, err := compilePattern(completePath)
+	compiledPattern, err := compileRateLimitPattern(completePath)
 	if err != nil {
 		return fmt.Errorf("failed to compile pattern: %w", err)
 	}

@@ -112,10 +112,11 @@ func TestGlobToRegex(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		pattern   string
-		matches   []string
-		noMatches []string
+		name                  string
+		pattern               string
+		matches               []string
+		noMatches             []string
+		supportPathParameters bool
 	}{
 		// exact literal
 		{
@@ -123,6 +124,12 @@ func TestGlobToRegex(t *testing.T) {
 			pattern:   "/auth/signin",
 			matches:   []string{"/auth/signin"},
 			noMatches: []string{"/auth/signup", "/auth", "/auth/signin/extra"},
+		},
+		{
+			name:      "port",
+			pattern:   "test:8080",
+			matches:   []string{"test:8080"},
+			noMatches: []string{"test:1080", "test"},
 		},
 		// * matches one segment (no slashes)
 		{
@@ -151,21 +158,24 @@ func TestGlobToRegex(t *testing.T) {
 		},
 		// :param matches one path segment
 		{
-			name:      "route param mid-path",
-			pattern:   "/oauth/:provider/callback",
-			matches:   []string{"/oauth/google/callback", "/oauth/github/callback"},
-			noMatches: []string{"/oauth/google/bad/callback", "/oauth//callback"},
+			name:                  "route param mid-path",
+			pattern:               "/oauth/:provider/callback",
+			supportPathParameters: true,
+			matches:               []string{"/oauth/google/callback", "/oauth/github/callback"},
+			noMatches:             []string{"/oauth/google/bad/callback", "/oauth//callback"},
 		},
 		{
-			name:      "route param at end",
-			pattern:   "/users/:id",
-			matches:   []string{"/users/42", "/users/abc"},
-			noMatches: []string{"/users/", "/users/42/edit"},
+			name:                  "route param at end",
+			pattern:               "/users/:id",
+			supportPathParameters: true,
+			matches:               []string{"/users/42", "/users/abc"},
+			noMatches:             []string{"/users/", "/users/42/edit"},
 		},
 		{
-			name:    "multiple route params",
-			pattern: "/api/:version/:resource",
-			matches: []string{"/api/v1/users", "/api/v2/posts"},
+			name:                  "multiple route params",
+			pattern:               "/api/:version/:resource",
+			supportPathParameters: true,
+			matches:               []string{"/api/v1/users", "/api/v2/posts"},
 		},
 		// [...] character class
 		{
@@ -203,7 +213,7 @@ func TestGlobToRegex(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			regex := globToRegex(tt.pattern)
+			regex := globToRegex(tt.pattern, tt.supportPathParameters)
 			re := regexp.MustCompile(regex)
 
 			for _, input := range tt.matches {
