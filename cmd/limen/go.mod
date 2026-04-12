@@ -2,14 +2,11 @@ module github.com/thecodearcher/limen/cmd/limen
 
 go 1.25.0
 
-replace github.com/thecodearcher/limen => ../../
-
-require github.com/thecodearcher/limen v0.0.0
-
 require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jackc/pgx/v5 v5.6.0
+	github.com/thecodearcher/limen v0.0.1
 	github.com/urfave/cli/v3 v3.6.1
 )
 
