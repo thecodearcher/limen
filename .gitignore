@@ -7,3 +7,4 @@ tmp/
 .air.toml
 .limen/
 .env
+limen-publish
