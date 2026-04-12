@@ -3,6 +3,7 @@ package limen
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,6 +40,27 @@ func TestDatabaseHelper_Create(t *testing.T) {
 	assert.Equal(t, "new@test.com", user.(*User).Email)
 }
 
+func TestDatabaseHelper_Create_SetsUpdatedAt(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	ctx := context.Background()
+	userSchema := l.core.Schema.User
+
+	err := l.core.Create(ctx, userSchema, &User{Email: "ts@test.com"}, nil)
+	require.NoError(t, err)
+
+	found, err := l.core.FindOne(ctx, userSchema, []Where{
+		Eq(userSchema.GetEmailField(), "ts@test.com"),
+	}, nil)
+	require.NoError(t, err)
+
+	raw := found.(*User).Raw()
+	updatedAt, ok := raw[userSchema.GetField(SchemaUpdatedAtField)].(time.Time)
+	require.True(t, ok, "updated_at should be set and typed as time.Time")
+	assert.False(t, updatedAt.IsZero())
+}
+
 func TestDatabaseHelper_Create_WithAdditionalFields(t *testing.T) {
 	t.Parallel()
 
@@ -73,6 +95,37 @@ func TestDatabaseHelper_Update(t *testing.T) {
 	}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "updated@test.com", user.(*User).Email)
+}
+
+func TestDatabaseHelper_Update_SetsUpdatedAt(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	ctx := context.Background()
+	userSchema := l.core.Schema.User
+
+	seedUser(t, l, "touch@test.com")
+	before, err := l.core.FindOne(ctx, userSchema, []Where{
+		Eq(userSchema.GetEmailField(), "touch@test.com"),
+	}, nil)
+	require.NoError(t, err)
+	beforeRaw := before.(*User).Raw()
+	beforeUpdated := beforeRaw[userSchema.GetField(SchemaUpdatedAtField)].(time.Time)
+
+	time.Sleep(2 * time.Millisecond)
+
+	err = l.core.Update(ctx, userSchema, &User{Email: "touched@test.com"}, []Where{
+		Eq(userSchema.GetEmailField(), "touch@test.com"),
+	})
+	require.NoError(t, err)
+
+	after, err := l.core.FindOne(ctx, userSchema, []Where{
+		Eq(userSchema.GetEmailField(), "touched@test.com"),
+	}, nil)
+	require.NoError(t, err)
+	afterUpdated := after.(*User).Raw()[userSchema.GetField(SchemaUpdatedAtField)].(time.Time)
+
+	assert.True(t, afterUpdated.After(beforeUpdated), "updated_at should advance on update")
 }
 
 func TestDatabaseHelper_Update_NoConditions(t *testing.T) {

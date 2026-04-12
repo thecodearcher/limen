@@ -61,6 +61,8 @@ func (core *LimenCore) Create(ctx context.Context, schema Schema, data Model, ad
 		return err
 	}
 
+	applyUpdatedAtTimestamp(schema, payload, true)
+
 	db := core.getDB(ctx)
 	err := db.Create(ctx, schema.GetTableName(), payload)
 	if err != nil {
@@ -107,6 +109,8 @@ func (core *LimenCore) UpdateRaw(ctx context.Context, schema Schema, updatedData
 		}
 	}
 
+	applyUpdatedAtTimestamp(schema, payload, false)
+
 	conditions = applySoftDeleteFilter(schema, conditions)
 	db := core.getDB(ctx)
 
@@ -133,6 +137,24 @@ func (core *LimenCore) assignID(ctx context.Context, schema Schema, payload map[
 	}
 
 	return nil
+}
+
+// applyUpdatedAtTimestamp sets the schema's updated_at column when the resolver exposes it.
+// For inserts (forInsert true), the timestamp is added only if the key is absent.
+// For updates (forInsert false), it is always set to time.Now().
+func applyUpdatedAtTimestamp(schema Schema, payload map[string]any, forInsert bool) {
+	col := schema.GetField(SchemaUpdatedAtField)
+	if col == "" {
+		return
+	}
+	now := time.Now()
+	if forInsert {
+		if _, exists := payload[col]; !exists {
+			payload[col] = now
+		}
+		return
+	}
+	payload[col] = now
 }
 
 func applySoftDeleteFilter(schema Schema, conditions []Where) []Where {

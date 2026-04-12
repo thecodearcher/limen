@@ -4,6 +4,7 @@ type SchemaDefinitionMap map[SchemaName]SchemaDefinition
 
 type Schema interface {
 	GetTableName() SchemaTableName
+	GetField(name SchemaField) string
 	ToStorage(data Model) map[string]any
 	FromStorage(data map[string]any) Model
 	Serialize(data Model) map[string]any
