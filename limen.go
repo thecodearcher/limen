@@ -91,15 +91,13 @@ func (a *Limen) Handler() http.Handler {
 	config := a.config.HTTP
 
 	config.basePath = NormalizePath(config.basePath)
-	allUrls := []string{a.core.GetBaseURL()}
-	allUrls = append(allUrls, config.trustedOrigins...)
 
 	httpCore := &LimenHTTPCore{
 		Responder:              newResponder(config, a.core.cookies, a.config.Session.BearerEnabled),
 		authInstance:           a,
 		config:                 config,
 		core:                   a.core,
-		trustedOriginsPatterns: compileTrustedOrigins(allUrls...),
+		trustedOriginsPatterns: compileTrustedOrigins(config.trustedOrigins...),
 	}
 
 	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Plugins)

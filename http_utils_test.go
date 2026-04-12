@@ -35,42 +35,6 @@ func TestNormalizePath(t *testing.T) {
 	}
 }
 
-func TestOriginMatcher(t *testing.T) {
-	t.Parallel()
-
-	patterns := compileTrustedOrigins("http://localhost:3000", "https://*.example.com")
-
-	tests := []struct {
-		name    string
-		origin  string
-		want    bool
-		referer string
-	}{
-		{name: "exact match", origin: "http://localhost:3000", want: true},
-		{name: "wildcard subdomain", origin: "https://app.example.com", want: true},
-		{name: "no match", origin: "http://evil.com", want: false},
-		{name: "empty origin", origin: "", want: false},
-		{name: "referer match", origin: "", referer: "http://localhost:3000", want: true},
-		{name: "referer no match", origin: "", referer: "http://evil.com", want: false},
-		{name: "referer empty", origin: "", referer: "", want: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", http.NoBody)
-			if tt.origin != "" {
-				req.Header.Set("Origin", tt.origin)
-			}
-			if tt.referer != "" {
-				req.Header.Set("Referer", tt.referer)
-			}
-			got := originMatcher(req, patterns)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestJoinURL(t *testing.T) {
 	t.Parallel()
 

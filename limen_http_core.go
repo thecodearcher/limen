@@ -33,6 +33,11 @@ func (httpCore *LimenHTTPCore) IsTrustedOrigin(urlStr string) bool {
 	}
 
 	normalizedURL := fmt.Sprintf("%s://%s", parsedURL.Scheme, parsedURL.Host)
+
+	if normalizedURL == httpCore.core.GetBaseURL() {
+		return true
+	}
+
 	for _, pattern := range httpCore.trustedOriginsPatterns {
 		if pattern.MatchString(normalizedURL) {
 			return true
