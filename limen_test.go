@@ -17,7 +17,7 @@ func TestNew(t *testing.T) {
 			name: "valid configuration",
 			config: &Config{
 				Database: newTestMemoryAdapter(t),
-				Secret:   TestSecret,
+				Secret:   testSecret,
 			},
 			wantErr: false,
 		},

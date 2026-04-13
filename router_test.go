@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func serveRequest(t *testing.T, router *Router, method, path string) *httptest.ResponseRecorder {
+func serveRequest(t *testing.T, router *router, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequestWithContext(t.Context(), method, path, http.NoBody)
 	w := httptest.NewRecorder()
@@ -19,7 +19,7 @@ func serveRequest(t *testing.T, router *Router, method, path string) *httptest.R
 func TestRouter(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil)
+	router := newRouter(nil)
 
 	router.AddRoute(MethodGET, "/users", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -75,7 +75,7 @@ func TestRouter(t *testing.T) {
 func TestRouterHEADWithoutRegisteredHandler(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil)
+	router := newRouter(nil)
 	router.AddRoute(MethodGET, "/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("test"))
@@ -89,7 +89,7 @@ func TestRouterHEADWithoutRegisteredHandler(t *testing.T) {
 func TestGetParams(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil)
+	router := newRouter(nil)
 
 	var capturedParams map[string]string
 	var capturedParam1, capturedParam2 string
@@ -112,7 +112,7 @@ func TestGetParams(t *testing.T) {
 func TestMultipleParameters(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil)
+	router := newRouter(nil)
 
 	router.AddRoute(MethodGET, "/oauth/:provider/callback/:token", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -153,7 +153,7 @@ func TestMultipleParameters(t *testing.T) {
 func TestPerMethodHandlers(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil)
+	router := newRouter(nil)
 
 	router.AddRoute(MethodGET, "/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -223,7 +223,7 @@ func TestRouterMiddlewareExecutionOrder(t *testing.T) {
 		})
 	})
 
-	router := NewRouter(nil, globalMW)
+	router := newRouter(nil, globalMW)
 	router.AddRoute(MethodGET, "/test", func(w http.ResponseWriter, r *http.Request) {
 		executionOrder = append(executionOrder, "handler")
 		w.WriteHeader(http.StatusOK)
@@ -249,7 +249,7 @@ func TestRouterMiddlewareWithParams(t *testing.T) {
 		})
 	})
 
-	router := NewRouter(nil)
+	router := newRouter(nil)
 	router.AddRoute(MethodGET, "/users/:id", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("user-" + GetParam(r, "id")))

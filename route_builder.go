@@ -7,7 +7,7 @@ import (
 
 // RouteBuilder provides a clean API for plugins to register routes.
 type RouteBuilder struct {
-	group *RouterGroup
+	group *routerGroup
 	core  *LimenHTTPCore
 }
 

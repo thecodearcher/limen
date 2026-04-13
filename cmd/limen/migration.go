@@ -14,7 +14,7 @@ type Migration struct {
 	DownSQL string // SQL to rollback the migration
 }
 
-func generateMigrations(db *sql.DB, driver Driver, config *limen.CliConfig) ([]Migration, error) {
+func generateMigrations(db *sql.DB, driver Driver, config *cliConfig) ([]Migration, error) {
 	migrations := make([]Migration, 0, len(config.Schemas))
 	timestamp := time.Now().Format("20060102150405")
 

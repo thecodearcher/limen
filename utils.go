@@ -195,7 +195,7 @@ func countWildcards(pathStr string) int {
 }
 
 func pathMatcher(req *http.Request, pathRegex *regexp.Regexp) bool {
-	normalizedPath := NormalizePath(req.URL.Path)
+	normalizedPath := normalizePath(req.URL.Path)
 	return pathRegex.MatchString(normalizedPath)
 }
 
@@ -253,8 +253,8 @@ func addSoftDeleteField(fields []ColumnDefinition, config *SchemaConfig, schemaN
 	return fields
 }
 
-// IsValidCoreSchema checks if a string is a valid core schema name
-func IsValidCoreSchema(name string) bool {
+// isValidCoreSchema checks if a string is a valid core schema name.
+func isValidCoreSchema(name string) bool {
 	switch SchemaName(name) {
 	case CoreSchemaUsers, CoreSchemaSessions, CoreSchemaVerifications, CoreSchemaRateLimits, CoreSchemaAccounts:
 		return true
@@ -285,14 +285,6 @@ func getTime(v any) time.Time {
 	}
 	t, _ := v.(time.Time)
 	return t
-}
-
-func GetAdditionalFieldsFromRequest(response http.ResponseWriter, request *http.Request, schema Schema) (map[string]any, error) {
-	if schema.GetAdditionalFields() != nil {
-		additionalFieldsContext := newAdditionalFieldsContext(request, response)
-		return schema.GetAdditionalFields()(additionalFieldsContext)
-	}
-	return make(map[string]any), nil
 }
 
 func joinCustomStringSlice[T ~string](fields []T, separator string) string {
@@ -364,7 +356,7 @@ func normalizePluginPath(basePath, pluginBasePath string, override *PluginHTTPOv
 		pluginBasePath = override.BasePath
 	}
 
-	return path.Join(basePath, NormalizePath(pluginBasePath))
+	return path.Join(basePath, normalizePath(pluginBasePath))
 }
 
 func isCoreSchema(schema Schema) bool {

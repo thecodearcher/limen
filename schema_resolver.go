@@ -1,17 +1,17 @@
 package limen
 
-type SchemaFieldMap map[SchemaName]map[SchemaField]string
+type schemaFieldMap map[SchemaName]map[SchemaField]string
 
 // SchemaResolver resolves logical field names to concrete column names
 // using the discovered schema map.
 type SchemaResolver struct {
 	tableNames map[SchemaName]SchemaTableName
-	fields     SchemaFieldMap
+	fields     schemaFieldMap
 }
 
 // newFieldResolver creates a new resolver from discovered schemas.
 func newFieldResolver(schemas SchemaDefinitionMap) *SchemaResolver {
-	fieldSchemas := make(SchemaFieldMap)
+	fieldSchemas := make(schemaFieldMap)
 	tableNames := make(map[SchemaName]SchemaTableName)
 	for schemaName, schema := range schemas {
 		fieldSchemas[schemaName] = make(map[SchemaField]string)

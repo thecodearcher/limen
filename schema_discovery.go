@@ -4,10 +4,9 @@ import (
 	"fmt"
 )
 
-// DiscoverAllSchemas discovers all schemas from core and all registered plugins.
-// It merges plugin-extended fields into core schemas and returns a complete schema map.
-//
-// The returned map is the resolved schemas with all customizations applied.
+// discoverSchemas loads schemas from core configuration and all registered plugins,
+// merges plugin-extended fields into core schemas, and returns the resolved map with
+// customizations, foreign keys, and indexes applied.
 func discoverSchemas(schemaConfig *SchemaConfig, plugins []Plugin) (map[SchemaName]SchemaDefinition, error) {
 	schemas := collectCoreSchemas(schemaConfig)
 	applyCoreSchemaCustomizations(schemas, schemaConfig)
@@ -138,7 +137,7 @@ func mergeSchemaTable(plugin Plugin, def *SchemaDefinition, schemaName SchemaNam
 func mergeSchemaExtension(plugin Plugin, def *SchemaDefinition, schemas map[SchemaName]SchemaDefinition) error {
 	extendsName := def.Extends
 
-	if !IsValidCoreSchema(string(extendsName)) {
+	if !isValidCoreSchema(string(extendsName)) {
 		return fmt.Errorf("plugin %s extends invalid core schema: %s", plugin.Name(), extendsName)
 	}
 

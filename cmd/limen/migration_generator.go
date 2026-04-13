@@ -19,7 +19,7 @@ type sqlMigrationGenerator struct {
 	useAutoIncrementIDs bool
 }
 
-func newSQLMigrationGenerator(driver Driver, config *limen.CliConfig) (*sqlMigrationGenerator, error) {
+func newSQLMigrationGenerator(driver Driver, config *cliConfig) (*sqlMigrationGenerator, error) {
 	return &sqlMigrationGenerator{
 		driver:              driver,
 		useAutoIncrementIDs: config.UseAutoIncrementID,

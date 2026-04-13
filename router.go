@@ -42,29 +42,26 @@ var methodIndex = map[HTTPMethod]int{
 
 type Middleware func(http.Handler) http.Handler
 
-// RadixNode represents a node in the radix tree
-type RadixNode struct {
+// radixNode is a node in the radix tree.
+type radixNode struct {
 	path string
 
-	routes [8]*Route
+	routes [8]*route
 
-	children map[string]*RadixNode
+	children map[string]*radixNode
 
 	// Parameter child (for :param routes)
-	paramChild *RadixNode
+	paramChild *radixNode
 	paramName  string
 
 	// Whether this node represents a parameter (starts with :)
 	isParam bool
 }
 
-// Router is a radix tree-based HTTP router optimized for authentication endpoints
-// Supports:
-// - Static segments
-// - :param (single segment parameters)
-// - HEAD -> GET fallback
-type Router struct {
-	root             *RadixNode
+// router is a radix tree-based HTTP router optimized for authentication endpoints.
+// Supports static segments, :param (single segment parameters), and HEAD -> GET fallback.
+type router struct {
+	root             *radixNode
 	globalMiddleware []Middleware
 	beforeHooks      []Hook
 	afterHooks       []Hook
@@ -77,8 +74,8 @@ type RouteMetadata struct {
 	originalPattern string
 }
 
-// Route represents a single route with its handler and metadata
-type Route struct {
+// route is a single registered route with its handler and metadata.
+type route struct {
 	Method      HTTPMethod
 	Pattern     string
 	Handler     http.HandlerFunc
@@ -91,20 +88,20 @@ type Route struct {
 // RouteID is a unique identifier for each route
 type RouteID string
 
-// RouterGroup represents a group of routes with a common prefix and middleware.
+// routerGroup is a group of routes with a common prefix and middleware.
 // Routes added to a group automatically have the prefix prepended and group middleware applied.
-type RouterGroup struct {
-	router     *Router
+type routerGroup struct {
+	router     *router
 	prefix     string
 	middleware []Middleware
 }
 
-// NewRouter creates a new radix tree router instance.
+// newRouter creates a new radix tree router instance.
 // Add global or plugin hooks with AddHooks.
-func NewRouter(responder *Responder, globalMiddleware ...Middleware) *Router {
-	return &Router{
-		root: &RadixNode{
-			children: make(map[string]*RadixNode),
+func newRouter(responder *Responder, globalMiddleware ...Middleware) *router {
+	return &router{
+		root: &radixNode{
+			children: make(map[string]*radixNode),
 		},
 		globalMiddleware: globalMiddleware,
 		responder:        responder,
@@ -112,7 +109,7 @@ func NewRouter(responder *Responder, globalMiddleware ...Middleware) *Router {
 }
 
 // AddHooks appends the hook set's Before and After hooks to the router.
-func (r *Router) AddHooks(h *Hooks) {
+func (r *router) AddHooks(h *Hooks) {
 	if h == nil {
 		return
 	}
@@ -130,8 +127,8 @@ func (r *Router) AddHooks(h *Hooks) {
 
 // AddRoute adds a new route to the radix tree.
 // Middleware is applied in order: global middleware first, then route-specific middleware.
-func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
-	route := &Route{
+func (r *router) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
+	route := &route{
 		Method:     method,
 		Pattern:    pattern,
 		Handler:    handler,
@@ -146,9 +143,9 @@ func (r *Router) AddRoute(method HTTPMethod, pattern string, handler http.Handle
 
 // Group creates a new router group with the given prefix and middleware.
 // All routes added to the group will have the prefix prepended to their paths.
-func (r *Router) Group(prefix string, middleware ...Middleware) *RouterGroup {
-	prefix = NormalizePath(prefix)
-	return &RouterGroup{
+func (r *router) Group(prefix string, middleware ...Middleware) *routerGroup {
+	prefix = normalizePath(prefix)
+	return &routerGroup{
 		router:     r,
 		prefix:     prefix,
 		middleware: middleware,
@@ -156,7 +153,7 @@ func (r *Router) Group(prefix string, middleware ...Middleware) *RouterGroup {
 }
 
 // insertRoute iteratively inserts a route into the radix tree
-func (r *Router) insertRoute(route *Route, segments []string) {
+func (r *router) insertRoute(route *route, segments []string) {
 	current := r.root
 
 	for _, segment := range segments {
@@ -173,7 +170,7 @@ func (r *Router) insertRoute(route *Route, segments []string) {
 }
 
 // handleParameterSegment handles parameter segments with early returns
-func (r *Router) handleParameterSegment(current *RadixNode, segment string) *RadixNode {
+func (r *router) handleParameterSegment(current *radixNode, segment string) *radixNode {
 	paramName := segment[1:]
 
 	if current.paramChild != nil {
@@ -183,9 +180,9 @@ func (r *Router) handleParameterSegment(current *RadixNode, segment string) *Rad
 		return current.paramChild
 	}
 
-	current.paramChild = &RadixNode{
+	current.paramChild = &radixNode{
 		path:      segment,
-		children:  make(map[string]*RadixNode),
+		children:  make(map[string]*radixNode),
 		isParam:   true,
 		paramName: paramName,
 	}
@@ -193,21 +190,21 @@ func (r *Router) handleParameterSegment(current *RadixNode, segment string) *Rad
 }
 
 // handleStaticSegment handles static segments with early returns
-func (r *Router) handleStaticSegment(current *RadixNode, segment string) *RadixNode {
+func (r *router) handleStaticSegment(current *radixNode, segment string) *radixNode {
 	if child, exists := current.children[segment]; exists {
 		return child
 	}
 
-	child := &RadixNode{
+	child := &radixNode{
 		path:     segment,
-		children: make(map[string]*RadixNode),
+		children: make(map[string]*radixNode),
 	}
 	current.children[segment] = child
 	return child
 }
 
 // ServeHTTP implements http.Handler
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	segments := r.splitPath(req.URL.Path)
 	route, params := r.matchRoute(segments, HTTPMethod(req.Method))
 	if route != nil {
@@ -220,7 +217,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // wrapHandler applies global middleware, route-specific middleware to a handler
 // and applies hooks to the request and response and this is where the request body is parsed and stored in the request context
-func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware, route *Route) http.HandlerFunc {
+func (r *router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middleware, route *route) http.HandlerFunc {
 	allMiddleware := slices.Concat(r.globalMiddleware, routeMiddleware)
 	wrapped := r.applyMiddleware(allMiddleware, handler)
 	hasAfterHooks := len(r.afterHooks) > 0
@@ -260,7 +257,7 @@ func (r *Router) wrapHandler(handler http.HandlerFunc, routeMiddleware []Middlew
 }
 
 // writeFinalResponse writes the final response after hooks have run
-func (r *Router) writeFinalResponse(rw *responseWriter, req *http.Request) {
+func (r *router) writeFinalResponse(rw *responseWriter, req *http.Request) {
 	if !rw.written || r.responder == nil {
 		return // Handler didn't use Responder, response already sent
 	}
@@ -289,7 +286,7 @@ func (r *Router) writeFinalResponse(rw *responseWriter, req *http.Request) {
 	r.responder.JSON(rw.ResponseWriter, req, status, payload)
 }
 
-func (r *Router) prepareHookContext(req *http.Request, w http.ResponseWriter, route *Route) *HookContext {
+func (r *router) prepareHookContext(req *http.Request, w http.ResponseWriter, route *route) *HookContext {
 	routePattern := ""
 	if route.Metadata != nil {
 		routePattern = route.Metadata.originalPattern
@@ -306,7 +303,7 @@ func (r *Router) prepareHookContext(req *http.Request, w http.ResponseWriter, ro
 	}
 }
 
-func (r *Router) runBeforeHooks(hookCtx *HookContext) bool {
+func (r *router) runBeforeHooks(hookCtx *HookContext) bool {
 	for _, hook := range r.beforeHooks {
 		if hook.PathMatcher == nil || hook.PathMatcher(hookCtx) {
 			if !hook.Run(hookCtx) {
@@ -317,7 +314,7 @@ func (r *Router) runBeforeHooks(hookCtx *HookContext) bool {
 	return true
 }
 
-func (r *Router) runAfterHooks(hookCtx *HookContext) bool {
+func (r *router) runAfterHooks(hookCtx *HookContext) bool {
 	for _, hook := range r.afterHooks {
 		if hook.PathMatcher == nil || hook.PathMatcher(hookCtx) {
 			if !hook.Run(hookCtx) {
@@ -329,7 +326,7 @@ func (r *Router) runAfterHooks(hookCtx *HookContext) bool {
 }
 
 // handleRoute handles a matched route with parameters
-func (r *Router) handleRoute(w http.ResponseWriter, req *http.Request, route *Route, params map[string]string) {
+func (r *router) handleRoute(w http.ResponseWriter, req *http.Request, route *route, params map[string]string) {
 	ctx := context.WithValue(req.Context(), currentRouteContextKey{}, route)
 	req = req.WithContext(ctx)
 
@@ -343,12 +340,12 @@ func (r *Router) handleRoute(w http.ResponseWriter, req *http.Request, route *Ro
 }
 
 // matchRoute searches the radix tree for a matching route
-func (r *Router) matchRoute(segments []string, method HTTPMethod) (*Route, map[string]string) {
+func (r *router) matchRoute(segments []string, method HTTPMethod) (*route, map[string]string) {
 	current := r.root
 	params := make(map[string]string)
 	methodIdx := methodIndex[method]
 	// track nearest ANY prefix
-	var lastAny *Route
+	var lastAny *route
 	lastAnyParams := map[string]string{}
 
 	// check root for ANY (if you ever mount at "/")
@@ -403,7 +400,7 @@ func copyParams(m map[string]string) map[string]string {
 }
 
 // splitPath splits a path into segments, removing empty segments
-func (r *Router) splitPath(pathStr string) []string {
+func (r *router) splitPath(pathStr string) []string {
 	pathStr = path.Clean(pathStr)
 
 	if pathStr == "/" || pathStr == "" {
@@ -416,9 +413,9 @@ func (r *Router) splitPath(pathStr string) []string {
 
 // AddRoute adds a route to the group with the group's prefix prepended.
 // Middleware is applied in order: router global middleware, group middleware, then route-specific middleware.
-func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
+func (g *routerGroup) AddRoute(method HTTPMethod, pattern string, handler http.HandlerFunc, routeID RouteID, metadata *RouteMetadata, middleware ...Middleware) {
 	allMiddleware := slices.Concat(g.middleware, middleware)
-	fullPattern := g.prefix + NormalizePath(pattern)
+	fullPattern := g.prefix + normalizePath(pattern)
 	if metadata == nil {
 		metadata = &RouteMetadata{}
 	}
@@ -426,7 +423,7 @@ func (g *RouterGroup) AddRoute(method HTTPMethod, pattern string, handler http.H
 	g.router.AddRoute(method, fullPattern, handler, routeID, metadata, allMiddleware...)
 }
 
-func (r *Router) applyMiddleware(mws []Middleware, h http.Handler) http.Handler {
+func (r *router) applyMiddleware(mws []Middleware, h http.Handler) http.Handler {
 	for i := len(mws) - 1; i >= 0; i-- {
 		if mw := mws[i]; mw != nil {
 			h = mw(h)

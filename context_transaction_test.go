@@ -50,7 +50,7 @@ func newTestLimenWithTxAdapter(t *testing.T) (*Limen, *testTxAdapter) {
 	l, err := New(&Config{
 		BaseURL:  "http://localhost:8080",
 		Database: adapter,
-		Secret:   TestSecret,
+		Secret:   testSecret,
 	})
 	require.NoError(t, err)
 	return l, adapter

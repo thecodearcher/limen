@@ -14,7 +14,7 @@ func newTestLimenWithEmailVerification(t *testing.T, opts ...EmailVerificationCo
 	l, err := New(&Config{
 		BaseURL:           "http://localhost:8080",
 		Database:          newTestMemoryAdapter(t),
-		Secret:            TestSecret,
+		Secret:            testSecret,
 		EmailVerification: DefaultEmailVerification(opts...),
 	})
 	require.NoError(t, err)

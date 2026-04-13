@@ -10,7 +10,7 @@ type limenHandlers struct {
 	config    *httpConfig
 }
 
-func registerBaseRoutes(router *Router, httpCore *LimenHTTPCore, core *LimenCore, basePath string) {
+func registerBaseRoutes(router *router, httpCore *LimenHTTPCore, core *LimenCore, basePath string) {
 	routeBuilder := &RouteBuilder{
 		group: router.Group(basePath),
 		core:  httpCore,

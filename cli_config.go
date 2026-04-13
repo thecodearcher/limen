@@ -9,12 +9,6 @@ import (
 	"path/filepath"
 )
 
-// CliConfig represents the JSON file format containing schemas
-type CliConfig struct {
-	Schemas            SchemaDefinitionMap `json:"schemas"`
-	UseAutoIncrementID bool                `json:"useAutoIncrementID"`
-}
-
 // calculateHash computes MD5 hash of the given bytes and returns hex string.
 // Used only for deterministic config/schema file fingerprints, not for security.
 func calculateHash(data []byte) string {
@@ -23,7 +17,10 @@ func calculateHash(data []byte) string {
 }
 
 func (c *Config) serializeSchemasToJSON(schemas SchemaDefinitionMap) ([]byte, error) {
-	file := CliConfig{
+	file := struct {
+		Schemas            SchemaDefinitionMap `json:"schemas"`
+		UseAutoIncrementID bool                `json:"useAutoIncrementID"`
+	}{
 		Schemas:            schemas,
 		UseAutoIncrementID: c.Schema.IDGenerator == nil,
 	}

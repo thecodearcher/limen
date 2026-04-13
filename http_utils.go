@@ -11,8 +11,8 @@ import (
 
 type bodyContextKey struct{}
 
-// NormalizePath normalizes the base path to start with a slash
-func NormalizePath(basePath string) string {
+// normalizePath normalizes the base path to start with a slash.
+func normalizePath(basePath string) string {
 	if !strings.HasPrefix(basePath, "/") {
 		basePath = "/" + basePath
 	}
@@ -83,8 +83,8 @@ func parseAndStoreBody(req *http.Request) *http.Request {
 	return req
 }
 
-func GetCurrentRouteFromContext(ctx context.Context) *Route {
-	if route, ok := ctx.Value(currentRouteContextKey{}).(*Route); ok {
+func getCurrentRouteFromContext(ctx context.Context) *route {
+	if route, ok := ctx.Value(currentRouteContextKey{}).(*route); ok {
 		return route
 	}
 	return nil

@@ -90,7 +90,7 @@ func New(config *Config) (*Limen, error) {
 func (a *Limen) Handler() http.Handler {
 	config := a.config.HTTP
 
-	config.basePath = NormalizePath(config.basePath)
+	config.basePath = normalizePath(config.basePath)
 
 	httpCore := &LimenHTTPCore{
 		Responder:              newResponder(config, a.core.cookies, a.config.Session.BearerEnabled),
@@ -102,7 +102,7 @@ func (a *Limen) Handler() http.Handler {
 
 	globalMiddlewares := prepareGlobalMiddlewares(config, httpCore, a.config.Plugins)
 
-	router := NewRouter(httpCore.Responder, globalMiddlewares...)
+	router := newRouter(httpCore.Responder, globalMiddlewares...)
 	if config.hooks != nil {
 		router.AddHooks(config.hooks)
 	}
@@ -189,7 +189,7 @@ func TryUse[T any](a *Limen, name PluginName) (T, bool) {
 	return typed, ok
 }
 
-func registerPluginRoutes(router *Router, plugins []Plugin, httpCore *LimenHTTPCore, config *httpConfig) {
+func registerPluginRoutes(router *router, plugins []Plugin, httpCore *LimenHTTPCore, config *httpConfig) {
 	for _, plugin := range plugins {
 		pluginConfig := plugin.PluginHTTPConfig()
 		basePath := pluginConfig.BasePath

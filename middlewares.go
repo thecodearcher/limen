@@ -84,7 +84,7 @@ func (httpCore *LimenHTTPCore) middlewareCSRFProtection() Middleware {
 			}
 
 			contentType := strings.Split(r.Header.Get("Content-Type"), ";")[0]
-			route := GetCurrentRouteFromContext(r.Context())
+			route := getCurrentRouteFromContext(r.Context())
 
 			if route != nil && route.Metadata != nil && len(route.Metadata.AllowedContentTypes) > 0 {
 				if !slices.Contains(route.Metadata.AllowedContentTypes, contentType) {

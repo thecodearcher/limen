@@ -17,7 +17,7 @@ func loadSchemaFromConfig(filePath string) (limen.SchemaDefinitionMap, error) {
 	return loaded.Schemas, nil
 }
 
-func loadConfig(filePath string) (*limen.CliConfig, error) {
+func loadConfig(filePath string) (*cliConfig, error) {
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
@@ -30,14 +30,14 @@ func loadConfig(filePath string) (*limen.CliConfig, error) {
 	return parseConfigFile(absPath)
 }
 
-func parseConfigFile(filePath string) (*limen.CliConfig, error) {
+func parseConfigFile(filePath string) (*cliConfig, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var config limen.CliConfig
+	var config cliConfig
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&config); err != nil {
 		return nil, fmt.Errorf("failed to decode JSON: %w", err)

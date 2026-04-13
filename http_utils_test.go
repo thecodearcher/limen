@@ -29,7 +29,7 @@ func TestNormalizePath(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := NormalizePath(tt.input)
+			got := normalizePath(tt.input)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -193,11 +193,11 @@ func TestGlobToRegex(t *testing.T) {
 func TestIsValidCoreSchema(t *testing.T) {
 	t.Parallel()
 
-	assert.True(t, IsValidCoreSchema("users"))
-	assert.True(t, IsValidCoreSchema("sessions"))
-	assert.True(t, IsValidCoreSchema("verifications"))
-	assert.True(t, IsValidCoreSchema("rate_limits"))
-	assert.True(t, IsValidCoreSchema("accounts"))
-	assert.False(t, IsValidCoreSchema("unknown"))
-	assert.False(t, IsValidCoreSchema(""))
+	assert.True(t, isValidCoreSchema("users"))
+	assert.True(t, isValidCoreSchema("sessions"))
+	assert.True(t, isValidCoreSchema("verifications"))
+	assert.True(t, isValidCoreSchema("rate_limits"))
+	assert.True(t, isValidCoreSchema("accounts"))
+	assert.False(t, isValidCoreSchema("unknown"))
+	assert.False(t, isValidCoreSchema(""))
 }

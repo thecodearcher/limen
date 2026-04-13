@@ -13,9 +13,8 @@ import (
 	"time"
 )
 
-// TestSecret is a fixed 32-byte key for deterministic test encryption.
-// Plugin tests can reference this directly instead of defining their own.
-var TestSecret = []byte("01234567890123456789012345678901")
+// testSecret is a fixed 32-byte key for deterministic test encryption.
+var testSecret = []byte("01234567890123456789012345678901")
 
 // ---------------------------------------------------------------------------
 // In-memory DatabaseAdapter
@@ -371,7 +370,7 @@ func NewTestLimen(t *testing.T, plugins ...Plugin) (*Limen, *LimenCore) {
 	l, err := New(&Config{
 		BaseURL:  "http://localhost:8080",
 		Database: newTestMemoryAdapter(t),
-		Secret:   TestSecret,
+		Secret:   testSecret,
 		Plugins:  plugins,
 	})
 	if err != nil {

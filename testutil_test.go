@@ -34,7 +34,7 @@ func newTestLimenWithSessionConfig(t *testing.T, opts ...SessionConfigOption) *L
 	l, err := New(&Config{
 		BaseURL:  "http://localhost:8080",
 		Database: newTestMemoryAdapter(t),
-		Secret:   TestSecret,
+		Secret:   testSecret,
 		Session:  NewDefaultSessionConfig(opts...),
 	})
 	require.NoError(t, err)
