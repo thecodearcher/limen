@@ -7,17 +7,17 @@ import (
 
 // Config is the main configuration struct for the limen library
 type Config struct {
-	BaseURL           string
-	Database          DatabaseAdapter
-	CacheStore        CacheAdapter
-	CacheKeyPrefix    string
-	Plugins           []Plugin
-	Schema            *SchemaConfig
-	Session           *sessionConfig
-	HTTP              *httpConfig
-	CLI               *CLIConfig
-	EmailVerification *emailVerificationConfig
-	Secret            []byte
+	BaseURL        string
+	Database       DatabaseAdapter
+	CacheStore     CacheAdapter
+	CacheKeyPrefix string
+	Plugins        []Plugin
+	Schema         *SchemaConfig
+	Session        *sessionConfig
+	HTTP           *httpConfig
+	CLI            *CLIConfig
+	Email          *emailConfig
+	Secret         []byte
 }
 
 // CLIConfig contains configuration for CLI tool support
@@ -72,8 +72,8 @@ func (c *Config) validate() error {
 		c.HTTP = NewDefaultHTTPConfig()
 	}
 
-	if c.EmailVerification == nil {
-		c.EmailVerification = DefaultEmailVerification()
+	if c.Email == nil {
+		c.Email = NewDefaultEmailConfig()
 	}
 
 	if err := c.validateHTTP(); err != nil {

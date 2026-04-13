@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestLimenWithEmailVerification(t *testing.T, opts ...EmailVerificationConfigOption) *Limen {
+func newTestLimenWithEmailVerification(t *testing.T, opts ...EmailConfigOption) *Limen {
 	t.Helper()
 
 	l, err := New(&Config{
-		BaseURL:           "http://localhost:8080",
-		Database:          newTestMemoryAdapter(t),
-		Secret:            testSecret,
-		EmailVerification: DefaultEmailVerification(opts...),
+		BaseURL:  "http://localhost:8080",
+		Database: newTestMemoryAdapter(t),
+		Secret:   testSecret,
+		Email:    NewDefaultEmailConfig(opts...),
 	})
 	require.NoError(t, err)
 	return l
@@ -77,10 +77,10 @@ func TestRequestEmailVerification_SendsEmail(t *testing.T) {
 
 	var sentEmail, sentToken string
 	l := newTestLimenWithEmailVerification(t,
-		WithSendEmailVerificationMail(func(email, token string) {
+		WithEmailVerification(WithSendEmailVerificationMail(func(email, token string) {
 			sentEmail = email
 			sentToken = token
-		}),
+		})),
 	)
 	SeedTestUser(t, l, "send@test.com")
 
@@ -95,9 +95,9 @@ func TestRequestEmailVerification_SkipsSendWhenFlagFalse(t *testing.T) {
 
 	called := false
 	l := newTestLimenWithEmailVerification(t,
-		WithSendEmailVerificationMail(func(_, _ string) {
+		WithEmailVerification(WithSendEmailVerificationMail(func(_, _ string) {
 			called = true
-		}),
+		})),
 	)
 	SeedTestUser(t, l, "nosend@test.com")
 

@@ -7,7 +7,7 @@ import (
 
 // EmailVerificationEnabled reports whether email verification is enabled.
 func (c *LimenCore) EmailVerificationEnabled() bool {
-	return c.config.EmailVerification.enabled
+	return c.config.Email.verification.enabled
 }
 
 // RequestEmailVerification looks up the user by email, ensures the address
@@ -41,13 +41,13 @@ func (c *LimenCore) CreateEmailVerification(ctx context.Context, user *User) (*V
 	if err != nil {
 		return nil, err
 	}
-	return c.DBAction.CreateVerification(ctx, EmailVerificationAction, user.Email, token, c.config.EmailVerification.expiration)
+	return c.DBAction.CreateVerification(ctx, EmailVerificationAction, user.Email, token, c.config.Email.verification.expiration)
 }
 
 // SendEmailVerificationMail dispatches the verification email when a callback is configured.
 func (c *LimenCore) SendEmailVerificationMail(user *User, verification *Verification) {
-	if c.config.EmailVerification.sendEmail != nil {
-		c.config.EmailVerification.sendEmail(user.Email, verification.Value)
+	if c.config.Email.verification.sendEmail != nil {
+		c.config.Email.verification.sendEmail(user.Email, verification.Value)
 	}
 }
 
@@ -78,8 +78,8 @@ func (c *LimenCore) VerifyEmail(ctx context.Context, token string) error {
 }
 
 func (c *LimenCore) generateEmailVerificationToken(user *User) (string, error) {
-	if c.config.EmailVerification.generateToken != nil {
-		return c.config.EmailVerification.generateToken(user)
+	if c.config.Email.verification.generateToken != nil {
+		return c.config.Email.verification.generateToken(user)
 	}
 
 	return generateCryptoSecureRandomString(), nil
