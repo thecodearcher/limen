@@ -138,67 +138,69 @@ func generateAppleClientSecret(teamID, keyID, clientID, privateKeyPEM string) (s
 // buildOAuthOptions returns OAuth plugin options, including generic Discord and Keycloak (discovery) providers when credentials are set.
 func buildOAuthOptions(appleClientID, appleClientSecret, googleClientID, googleClientSecret, githubClientID, githubClientSecret, facebookClientID, facebookClientSecret, discordClientID, discordClientSecret, microsoftClientID, microsoftClientSecret, twitterClientID, twitterClientSecret, linkedinClientID, linkedinClientSecret, twitchClientID, twitchClientSecret, spotifyClientID, spotifyClientSecret, keycloakDiscoveryURL, keycloakClientID, keycloakClientSecret string) []oauth.ConfigOption {
 	opts := []oauth.ConfigOption{
-		oauth.WithProvider(oauthapple.New(
-			oauthapple.WithClientID(appleClientID),
-			oauthapple.WithClientSecret(appleClientSecret),
-			// oauthapple.WithRedirectURL("https://bat-concise-chamois.ngrok-free.app/api/auth/oauth/apple/callback"),
-		)),
-		oauth.WithProvider(oauthgoogle.New(
-			oauthgoogle.WithClientID(googleClientID),
-			oauthgoogle.WithClientSecret(googleClientSecret),
-			oauthgoogle.WithOption("access_type", "offline"),
-			oauthgoogle.WithOption("prompt", "consent"),
-		)),
-		oauth.WithProvider(oauthgithub.New(
-			oauthgithub.WithClientID(githubClientID),
-			oauthgithub.WithClientSecret(githubClientSecret),
-		)),
+		oauth.WithProviders(
+			oauthapple.New(
+				oauthapple.WithClientID(appleClientID),
+				oauthapple.WithClientSecret(appleClientSecret),
+				// oauthapple.WithRedirectURL("https://bat-concise-chamois.ngrok-free.app/api/auth/oauth/apple/callback"),
+			),
+			oauthgoogle.New(
+				oauthgoogle.WithClientID(googleClientID),
+				oauthgoogle.WithClientSecret(googleClientSecret),
+				oauthgoogle.WithOption("access_type", "offline"),
+				oauthgoogle.WithOption("prompt", "consent"),
+			),
+			oauthgithub.New(
+				oauthgithub.WithClientID(githubClientID),
+				oauthgithub.WithClientSecret(githubClientSecret),
+			),
+		),
 	}
 	if facebookClientID != "" && facebookClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthfacebook.New(
+		opts = append(opts, oauth.WithProviders(oauthfacebook.New(
 			oauthfacebook.WithClientID(facebookClientID),
 			oauthfacebook.WithClientSecret(facebookClientSecret),
 		)))
 	}
 	if discordClientID != "" && discordClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthdiscord.New(
+		opts = append(opts, oauth.WithProviders(oauthdiscord.New(
 			oauthdiscord.WithClientID(discordClientID),
 			oauthdiscord.WithClientSecret(discordClientSecret),
 		)))
 	}
 	if microsoftClientID != "" && microsoftClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthmicrosoft.New(
+		opts = append(opts, oauth.WithProviders(oauthmicrosoft.New(
 			oauthmicrosoft.WithClientID(microsoftClientID),
 			oauthmicrosoft.WithClientSecret(microsoftClientSecret),
 		)))
 	}
 	if twitterClientID != "" && twitterClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthtwitter.New(
+		opts = append(opts, oauth.WithProviders(oauthtwitter.New(
 			oauthtwitter.WithClientID(twitterClientID),
 			oauthtwitter.WithClientSecret(twitterClientSecret),
 		)))
 	}
 	if linkedinClientID != "" && linkedinClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthlinkedin.New(
+		opts = append(opts, oauth.WithProviders(oauthlinkedin.New(
 			oauthlinkedin.WithClientID(linkedinClientID),
 			oauthlinkedin.WithClientSecret(linkedinClientSecret),
 		)))
 	}
 	if twitchClientID != "" && twitchClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthtwitch.New(
+		opts = append(opts, oauth.WithProviders(oauthtwitch.New(
 			oauthtwitch.WithClientID(twitchClientID),
 			oauthtwitch.WithClientSecret(twitchClientSecret),
 		)))
 	}
 	if spotifyClientID != "" && spotifyClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthspotify.New(
+		opts = append(opts, oauth.WithProviders(oauthspotify.New(
 			oauthspotify.WithClientID(spotifyClientID),
 			oauthspotify.WithClientSecret(spotifyClientSecret),
 			oauthspotify.WithRedirectURL("http://127.0.0.1:8080/api/auth/oauth/spotify/callback"),
 		)))
 	}
 	if keycloakDiscoveryURL != "" && keycloakClientID != "" && keycloakClientSecret != "" {
-		opts = append(opts, oauth.WithProvider(oauthgeneric.New(
+		opts = append(opts, oauth.WithProviders(oauthgeneric.New(
 			oauthgeneric.WithName("keycloak"),
 			oauthgeneric.WithClientID(keycloakClientID),
 			oauthgeneric.WithClientSecret(keycloakClientSecret),
@@ -251,7 +253,6 @@ func buildOAuthOptions(appleClientID, appleClientSecret, googleClientID, googleC
 
 // buildConfig builds the limen configuration
 func buildConfig(db limen.DatabaseAdapter) *limen.Config {
-
 	googleClientID := os.Getenv("GOOGLE_CLIENT_ID")
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 	appleClientID := os.Getenv("APPLE_CLIENT_ID")
@@ -298,11 +299,13 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 		// BaseURL:  "https://bat-concise-chamois.ngrok-free.app",
 		Database: db,
 		Secret:   []byte("rNH8JSJcbiyoPhXk5hQEjbI86SaSIgzw"), // 32 bytes for cookies + plugins (OAuth, 2FA) when they omit their own
-		EmailVerification: limen.DefaultEmailVerification(
-			limen.WithSendEmailVerificationMail(func(email string, token string) {
-				fmt.Printf("Sending verification email to %s\n", email)
-				fmt.Printf("Verification token: %s\n", token)
-			}),
+		Email: limen.NewDefaultEmailConfig(
+			limen.WithEmailVerification(
+				limen.WithSendEmailVerificationMail(func(email string, token string) {
+					fmt.Printf("Sending verification email to %s\n", email)
+					fmt.Printf("Verification token: %s\n", token)
+				}),
+			),
 		),
 		Plugins: []limen.Plugin{
 			// sessionjwt.New(
@@ -319,7 +322,6 @@ func buildConfig(db limen.DatabaseAdapter) *limen.Config {
 				credentialpassword.WithSendPasswordResetEmail(func(email string, token string) {
 					fmt.Printf("Sending password reset email to %s\n", email)
 					fmt.Printf("Password reset token: %s\n", token)
-
 				}),
 				credentialpassword.WithUsernameSupport(true),
 				credentialpassword.WithRequireUsernameOnSignUp(false),
@@ -650,7 +652,6 @@ func main() {
 	})
 
 	http.ListenAndServe(":8080", r)
-
 }
 
 func sessionTransformer(user map[string]any, sessionResult *limen.SessionResult) (map[string]any, error) {

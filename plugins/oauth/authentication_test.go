@@ -102,7 +102,7 @@ func TestGetAuthorizationURL(t *testing.T) {
 		customProvider := &authURLBuilderProvider{
 			testProvider: testProvider{name: "custom-builder"},
 		}
-		l, plugin := newTestOAuthPlugin(t, WithProvider(customProvider))
+		l, plugin := newTestOAuthPlugin(t, WithProviders(customProvider))
 		_ = l.Handler()
 
 		authURL, cookieValue, err := plugin.GetAuthorizationURL(context.Background(), "custom-builder", &OAuthAuthorizeURLData{})
@@ -120,7 +120,7 @@ func TestGetAuthorizationURL(t *testing.T) {
 		formPostProvider := &responseModeProvider{
 			testProvider: testProvider{name: "form-post"},
 		}
-		l, plugin := newTestOAuthPlugin(t, WithProvider(formPostProvider))
+		l, plugin := newTestOAuthPlugin(t, WithProviders(formPostProvider))
 		_ = l.Handler()
 
 		authURL, cookieValue, err := plugin.GetAuthorizationURL(context.Background(), "form-post", &OAuthAuthorizeURLData{})
@@ -160,7 +160,7 @@ func TestExchangeAuthorizationCodeForTokens(t *testing.T) {
 			Scope:        "openid email",
 		},
 	}
-	_, plugin := newTestOAuthPlugin(t, WithProvider(customProvider))
+	_, plugin := newTestOAuthPlugin(t, WithProviders(customProvider))
 
 	t.Run("missing PKCE verifier", func(t *testing.T) {
 		t.Parallel()
@@ -234,7 +234,7 @@ func TestHandleOAuthCallback(t *testing.T) {
 				Scope:        "openid email",
 			},
 		}
-		l, plugin := newTestOAuthPlugin(t, WithProvider(customProvider))
+		l, plugin := newTestOAuthPlugin(t, WithProviders(customProvider))
 		_ = l.Handler()
 
 		authURL, cookieValue, err := plugin.GetAuthorizationURL(context.Background(), "cb-success", &OAuthAuthorizeURLData{})

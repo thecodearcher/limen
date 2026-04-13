@@ -14,7 +14,7 @@ import (
 func newTestDatabaseStateStore(t *testing.T) *databaseStateStore {
 	t.Helper()
 	provider := &testProvider{name: "test"}
-	plugin := New(WithProvider(provider), WithDatabaseState())
+	plugin := New(WithProviders(provider), WithDatabaseState())
 	limen.NewTestLimen(t, plugin)
 	return newDatabaseStateStore(plugin.core, 5*time.Minute)
 }

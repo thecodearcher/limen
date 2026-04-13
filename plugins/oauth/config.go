@@ -25,13 +25,15 @@ type config struct {
 	disableRedirect             bool
 }
 
-// WithProvider registers an OAuth provider (e.g. Google, GitHub).
-func WithProvider(p Provider) ConfigOption {
+// WithProviders registers one or more OAuth providers (e.g. Google, GitHub).
+func WithProviders(providers ...Provider) ConfigOption {
 	return func(c *config) {
 		if c.providers == nil {
 			c.providers = make(map[string]Provider)
 		}
-		c.providers[p.Name()] = p
+		for _, p := range providers {
+			c.providers[p.Name()] = p
+		}
 	}
 }
 

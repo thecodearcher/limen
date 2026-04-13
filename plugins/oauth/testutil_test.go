@@ -50,7 +50,7 @@ func newTestOAuthPlugin(t *testing.T, opts ...ConfigOption) (*limen.Limen, *oaut
 	t.Helper()
 
 	defaults := []ConfigOption{
-		WithProvider(&testProvider{name: "test"}),
+		WithProviders(&testProvider{name: "test"}),
 	}
 	opts = append(defaults, opts...)
 	plugin := New(opts...)

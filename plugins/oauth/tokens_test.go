@@ -72,7 +72,7 @@ func TestRefreshAccessToken(t *testing.T) {
 		},
 	}
 
-	l, plugin := newTestOAuthPlugin(t, WithDisableTokensEncryption(), WithProvider(refresher))
+	l, plugin := newTestOAuthPlugin(t, WithDisableTokensEncryption(), WithProviders(refresher))
 	ctx := context.Background()
 	user := seedOAuthUser(t, l, "refresh@example.com")
 

@@ -49,7 +49,7 @@ func (o *oauthPlugin) Initialize(core *limen.LimenCore) error {
 	}
 
 	if len(o.config.providers) == 0 {
-		return fmt.Errorf("oauth: at least one provider must be registered via oauth.WithProvider()")
+		return fmt.Errorf("oauth: at least one provider must be registered via oauth.WithProviders()")
 	}
 
 	o.providers = o.config.providers
