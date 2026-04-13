@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"golang.org/x/oauth2"
 
@@ -19,7 +20,9 @@ var linkedinEndpoint = oauth2.Endpoint{
 // New creates a LinkedIn OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"openid", "profile", "email"},
+		clientID:     os.Getenv("LINKEDIN_CLIENT_ID"),
+		clientSecret: os.Getenv("LINKEDIN_CLIENT_SECRET"),
+		scopes:       []string{"openid", "profile", "email"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

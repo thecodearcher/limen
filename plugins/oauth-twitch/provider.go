@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"golang.org/x/oauth2"
 
@@ -21,7 +22,9 @@ const claimsParam = `{"id_token":{"email":null,"email_verified":null,"picture":n
 // New creates a Twitch OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"openid", "user:read:email"},
+		clientID:     os.Getenv("TWITCH_CLIENT_ID"),
+		clientSecret: os.Getenv("TWITCH_CLIENT_SECRET"),
+		scopes:       []string{"openid", "user:read:email"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

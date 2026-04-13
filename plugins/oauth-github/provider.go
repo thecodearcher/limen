@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -14,7 +15,9 @@ import (
 
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"read:user", "user:email"},
+		clientID:     os.Getenv("GITHUB_CLIENT_ID"),
+		clientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+		scopes:       []string{"read:user", "user:email"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

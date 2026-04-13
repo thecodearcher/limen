@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -18,7 +19,9 @@ import (
 // New creates a Google OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"openid", "email", "profile"},
+		clientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		clientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		scopes:       []string{"openid", "email", "profile"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

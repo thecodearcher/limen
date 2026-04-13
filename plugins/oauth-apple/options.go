@@ -12,6 +12,7 @@ type config struct {
 }
 
 // WithClientID sets the Apple Services ID (the identifier for your app).
+// Defaults to env var APPLE_CLIENT_ID.
 func WithClientID(id string) ConfigOption {
 	return func(c *config) {
 		c.clientID = id
@@ -19,6 +20,7 @@ func WithClientID(id string) ConfigOption {
 }
 
 // WithClientSecret sets the client secret JWT for Apple Sign In.
+// Defaults to env var APPLE_CLIENT_SECRET.
 func WithClientSecret(secret string) ConfigOption {
 	return func(c *config) {
 		c.clientSecret = secret

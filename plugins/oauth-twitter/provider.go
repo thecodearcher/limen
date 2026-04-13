@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -21,7 +22,9 @@ var twitterEndpoint = oauth2.Endpoint{
 // New creates a Twitter (X) OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"users.read", "users.email", "tweet.read", "offline.access"},
+		clientID:     os.Getenv("TWITTER_CLIENT_ID"),
+		clientSecret: os.Getenv("TWITTER_CLIENT_SECRET"),
+		scopes:       []string{"users.read", "users.email", "tweet.read", "offline.access"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

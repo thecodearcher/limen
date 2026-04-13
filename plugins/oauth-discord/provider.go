@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -20,7 +21,9 @@ var discordEndpoint = oauth2.Endpoint{
 // New creates a Discord OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"identify", "email"},
+		clientID:     os.Getenv("DISCORD_CLIENT_ID"),
+		clientSecret: os.Getenv("DISCORD_CLIENT_SECRET"),
+		scopes:       []string{"identify", "email"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

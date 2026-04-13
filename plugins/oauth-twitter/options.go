@@ -12,6 +12,7 @@ type config struct {
 }
 
 // WithClientID sets the X OAuth2 client ID.
+// Defaults to env var TWITTER_CLIENT_ID.
 func WithClientID(id string) ConfigOption {
 	return func(c *config) {
 		c.clientID = id
@@ -19,6 +20,7 @@ func WithClientID(id string) ConfigOption {
 }
 
 // WithClientSecret sets the X OAuth2 client secret.
+// Defaults to env var TWITTER_CLIENT_SECRET.
 func WithClientSecret(secret string) ConfigOption {
 	return func(c *config) {
 		c.clientSecret = secret

@@ -12,6 +12,7 @@ type config struct {
 }
 
 // WithClientID sets the Facebook OAuth2 client ID (App ID).
+// Defaults to env var FACEBOOK_CLIENT_ID.
 func WithClientID(id string) ConfigOption {
 	return func(c *config) {
 		c.clientID = id
@@ -19,6 +20,7 @@ func WithClientID(id string) ConfigOption {
 }
 
 // WithClientSecret sets the Facebook OAuth2 client secret (App Secret).
+// Defaults to env var FACEBOOK_CLIENT_SECRET.
 func WithClientSecret(secret string) ConfigOption {
 	return func(c *config) {
 		c.clientSecret = secret

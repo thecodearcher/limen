@@ -14,6 +14,7 @@ type config struct {
 }
 
 // WithClientID sets the Microsoft OAuth2 client ID (Application ID).
+// Defaults to env var MICROSOFT_CLIENT_ID.
 func WithClientID(id string) ConfigOption {
 	return func(c *config) {
 		c.clientID = id
@@ -21,6 +22,7 @@ func WithClientID(id string) ConfigOption {
 }
 
 // WithClientSecret sets the Microsoft OAuth2 client secret.
+// Defaults to env var MICROSOFT_CLIENT_SECRET.
 func WithClientSecret(secret string) ConfigOption {
 	return func(c *config) {
 		c.clientSecret = secret

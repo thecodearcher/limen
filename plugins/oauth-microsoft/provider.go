@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -27,8 +28,10 @@ func microsoftEndpoint(authority string) oauth2.Endpoint {
 // New creates a Microsoft OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"openid", "profile", "email"},
-		tenant: defaultTenant,
+		clientID:     os.Getenv("MICROSOFT_CLIENT_ID"),
+		clientSecret: os.Getenv("MICROSOFT_CLIENT_SECRET"),
+		scopes:       []string{"openid", "profile", "email"},
+		tenant:       defaultTenant,
 	}
 	for _, opt := range opts {
 		opt(cfg)

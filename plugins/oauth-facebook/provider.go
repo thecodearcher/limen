@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -20,7 +21,9 @@ var facebookEndpoint = oauth2.Endpoint{
 // New creates a Facebook OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"email", "public_profile"},
+		clientID:     os.Getenv("FACEBOOK_CLIENT_ID"),
+		clientSecret: os.Getenv("FACEBOOK_CLIENT_SECRET"),
+		scopes:       []string{"email", "public_profile"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

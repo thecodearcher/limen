@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 
 	"golang.org/x/oauth2"
 
@@ -21,7 +22,9 @@ var appleEndpoint = oauth2.Endpoint{
 // New creates an Apple OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"name", "email"},
+		clientID:     os.Getenv("APPLE_CLIENT_ID"),
+		clientSecret: os.Getenv("APPLE_CLIENT_SECRET"),
+		scopes:       []string{"name", "email"},
 	}
 	for _, opt := range opts {
 		opt(cfg)

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -20,7 +21,9 @@ var spotifyEndpoint = oauth2.Endpoint{
 // New creates a Spotify OAuth provider that implements oauth.Provider.
 func New(opts ...ConfigOption) oauth.Provider {
 	cfg := &config{
-		scopes: []string{"user-read-email"},
+		clientID:     os.Getenv("SPOTIFY_CLIENT_ID"),
+		clientSecret: os.Getenv("SPOTIFY_CLIENT_SECRET"),
+		scopes:       []string{"user-read-email"},
 	}
 	for _, opt := range opts {
 		opt(cfg)
