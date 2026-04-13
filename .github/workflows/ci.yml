@@ -21,7 +21,11 @@ jobs:
           go-version: "1.25"
 
       - name: Run tests
-        run: go test -race -count=1 work
+        run: |
+          for dir in $(find . -name go.mod -not -path './examples/*' -exec dirname {} \;); do
+            echo "=== testing $dir ==="
+            (cd "$dir" && go test -race -count=1 ./...)
+          done
 
   lint:
     name: Lint
