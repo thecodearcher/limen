@@ -14,7 +14,6 @@ type oauthPlugin struct {
 	providers     map[string]Provider
 	stateStore    StateStore
 	httpCore      *limen.LimenHTTPCore
-	cookies       *limen.CookieManager
 }
 
 func New(opts ...ConfigOption) *oauthPlugin {
@@ -36,7 +35,6 @@ func (o *oauthPlugin) Name() limen.PluginName {
 
 func (o *oauthPlugin) Initialize(core *limen.LimenCore) error {
 	o.core = core
-	o.cookies = core.Cookies()
 	o.accountSchema = core.Schema.Account
 	if len(o.config.secret) == 0 {
 		if base := core.Secret(); len(base) == 32 {

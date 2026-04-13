@@ -15,7 +15,7 @@ type LimenCore struct {
 	DBAction       *DatabaseActionHelper
 	Schema         *SchemaConfig
 	SessionManager SessionManager
-	cookies        *CookieManager
+	cookies        *cookieManager
 	schemaResolver *SchemaResolver
 	plugins        map[PluginName]Plugin
 	secret         []byte
@@ -45,7 +45,7 @@ func (c *LimenCore) GetPlugin(name PluginName) (Plugin, bool) {
 // Cookies returns the shared CookieManager that plugins should use for
 // all cookie operations. The returned manager inherits security attributes
 // from the central cookie configuration.
-func (c *LimenCore) Cookies() *CookieManager {
+func (c *LimenCore) Cookies() *cookieManager {
 	return c.cookies
 }
 

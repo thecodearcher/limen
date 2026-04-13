@@ -14,11 +14,6 @@ type LimenHTTPCore struct {
 	trustedOriginsPatterns []*regexp.Regexp
 }
 
-// Cookies returns the shared CookieManager for cookie operations.
-func (httpCore *LimenHTTPCore) Cookies() *CookieManager {
-	return httpCore.core.Cookies()
-}
-
 func (httpCore *LimenHTTPCore) SessionCookieName() string {
 	if httpCore.config.cookieConfig == nil {
 		return ""

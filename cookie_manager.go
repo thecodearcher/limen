@@ -5,23 +5,23 @@ import (
 	"net/http"
 )
 
-// CookieManager provides a unified interface for cookie operations across
+// cookieManager provides a unified interface for cookie operations across
 // the core library and plugins. All cookies inherit security attributes
 // (Secure, HttpOnly, SameSite, Path, Domain, Partitioned) from the central
 // cookieConfig, so callers only specify name, value, and maxAge.
-type CookieManager struct {
+type cookieManager struct {
 	base   *cookieConfig
 	secret []byte
 }
 
-func newCookieManager(base *cookieConfig, secret []byte) *CookieManager {
-	return &CookieManager{base: base, secret: secret}
+func newCookieManager(base *cookieConfig, secret []byte) *cookieManager {
+	return &cookieManager{base: base, secret: secret}
 }
 
 // NewCookie builds an *http.Cookie that inherits security attributes from
 // the central cookie configuration. The caller supplies only what varies
 // per use-case: name, value, and maxAge (in seconds; use -1 to delete).
-func (cm *CookieManager) NewCookie(name, value string, maxAge int) *http.Cookie {
+func (cm *cookieManager) NewCookie(name, value string, maxAge int) *http.Cookie {
 	cookie := &http.Cookie{
 		Name:        name,
 		Value:       value,
@@ -41,12 +41,12 @@ func (cm *CookieManager) NewCookie(name, value string, maxAge int) *http.Cookie 
 }
 
 // Set creates a cookie and writes it to the response.
-func (cm *CookieManager) Set(w http.ResponseWriter, name, value string, maxAge int) {
+func (cm *cookieManager) Set(w http.ResponseWriter, name, value string, maxAge int) {
 	http.SetCookie(w, cm.NewCookie(name, value, maxAge))
 }
 
 // WriteCookie writes a pre-built cookie to the response (e.g. session cookie from SessionResult).
-func (cm *CookieManager) writeCookie(w http.ResponseWriter, cookie *http.Cookie) {
+func (cm *cookieManager) writeCookie(w http.ResponseWriter, cookie *http.Cookie) {
 	if cm == nil || cookie == nil {
 		return
 	}
@@ -54,18 +54,18 @@ func (cm *CookieManager) writeCookie(w http.ResponseWriter, cookie *http.Cookie)
 }
 
 // SetOnHookCtx creates a cookie and writes it via a HookContext.
-func (cm *CookieManager) SetOnHookCtx(ctx *HookContext, name, value string, maxAge int) {
+func (cm *cookieManager) SetOnHookCtx(ctx *HookContext, name, value string, maxAge int) {
 	ctx.SetResponseCookie(cm.NewCookie(name, value, maxAge))
 }
 
 // Delete writes a deletion cookie (MaxAge = -1, empty value).
-func (cm *CookieManager) Delete(w http.ResponseWriter, name string) {
+func (cm *cookieManager) Delete(w http.ResponseWriter, name string) {
 	http.SetCookie(w, cm.NewCookie(name, "", -1))
 }
 
 // ClearSessionCookie clears the session cookie from the response using the
 // central cookie configuration name.
-func (cm *CookieManager) ClearSessionCookie(w http.ResponseWriter) {
+func (cm *cookieManager) ClearSessionCookie(w http.ResponseWriter) {
 	if cm == nil || cm.base == nil || cm.base.sessionCookieName == "" {
 		return
 	}
@@ -74,7 +74,7 @@ func (cm *CookieManager) ClearSessionCookie(w http.ResponseWriter) {
 
 // Get reads a cookie value from the request.
 // Returns the value and nil on success, or ("", error) if the cookie is absent.
-func (cm *CookieManager) Get(r *http.Request, name string) (string, error) {
+func (cm *cookieManager) Get(r *http.Request, name string) (string, error) {
 	cookie, err := r.Cookie(name)
 	if err != nil {
 		return "", err
@@ -83,7 +83,7 @@ func (cm *CookieManager) Get(r *http.Request, name string) (string, error) {
 }
 
 // SetSignedCookie sets a signed cookie
-func (cm *CookieManager) SetSignedCookie(w http.ResponseWriter, name, value string, maxAge int) error {
+func (cm *cookieManager) SetSignedCookie(w http.ResponseWriter, name, value string, maxAge int) error {
 	cookie := cm.NewCookie(name, value, maxAge)
 	if cm.secret == nil {
 		return fmt.Errorf("secret is nil")
@@ -98,7 +98,7 @@ func (cm *CookieManager) SetSignedCookie(w http.ResponseWriter, name, value stri
 }
 
 // GetSignedCookie gets a signed cookie
-func (cm *CookieManager) GetSignedCookie(r *http.Request, name string) (string, error) {
+func (cm *cookieManager) GetSignedCookie(r *http.Request, name string) (string, error) {
 	value, err := cm.Get(r, name)
 	if err != nil {
 		return "", err
@@ -112,7 +112,7 @@ func (cm *CookieManager) GetSignedCookie(r *http.Request, name string) (string, 
 	return decoded, nil
 }
 
-func (cm *CookieManager) SetSessionCookie(w http.ResponseWriter, sessionResult *SessionResult) error {
+func (cm *cookieManager) SetSessionCookie(w http.ResponseWriter, sessionResult *SessionResult) error {
 	if sessionResult == nil {
 		return nil
 	}
@@ -135,7 +135,7 @@ func (cm *CookieManager) SetSessionCookie(w http.ResponseWriter, sessionResult *
 
 // checkIsShortSession reads and decodes the short session cookie from the request.
 // Returns false if cookie is absent, expired, or invalid (no error; treat as no short session).
-func (cm *CookieManager) checkIsShortSession(r *http.Request) bool {
+func (cm *cookieManager) checkIsShortSession(r *http.Request) bool {
 	value, err := cm.GetSignedCookie(r, shortSessionCookieName)
 	if err != nil {
 		return false

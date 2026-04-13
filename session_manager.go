@@ -13,7 +13,7 @@ type opaqueSessionManager struct {
 	store      SessionStore
 	config     *sessionConfig
 	core       *LimenCore
-	cookies    *CookieManager
+	cookies    *cookieManager
 	cookieName string
 }
 

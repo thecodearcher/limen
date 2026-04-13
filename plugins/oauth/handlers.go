@@ -42,7 +42,7 @@ func (h *oauthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	callbackErr := callbackErrorFromQuery(r.URL.Query())
 
-	cookieValue, err := h.plugin.cookies.Get(r, h.plugin.config.cookieName)
+	cookieValue, err := h.plugin.core.Cookies().Get(r, h.plugin.config.cookieName)
 	if err != nil {
 		h.handleCallbackResponse(w, r, nil, nil, nil, ErrMissingStateCookie)
 		return
@@ -227,9 +227,9 @@ func (h *oauthHandlers) FormPostCallback(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *oauthHandlers) setStateCookie(w http.ResponseWriter, value string) {
-	h.plugin.cookies.Set(w, h.plugin.config.cookieName, value, int(h.plugin.config.cookieTTL.Seconds()))
+	h.plugin.core.Cookies().Set(w, h.plugin.config.cookieName, value, int(h.plugin.config.cookieTTL.Seconds()))
 }
 
 func (h *oauthHandlers) clearStateCookie(w http.ResponseWriter) {
-	h.plugin.cookies.Delete(w, h.plugin.config.cookieName)
+	h.plugin.core.Cookies().Delete(w, h.plugin.config.cookieName)
 }

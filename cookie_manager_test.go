@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newTestCookieManager(t *testing.T) *CookieManager {
+func newTestCookieManager(t *testing.T) *cookieManager {
 	t.Helper()
 	cfg := &cookieConfig{
 		sessionCookieName: "limen_session",

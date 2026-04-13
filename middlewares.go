@@ -24,13 +24,13 @@ func (httpCore *LimenHTTPCore) MiddlewareRequireSession() Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, err := httpCore.authInstance.GetSession(r)
 			if err != nil {
-				httpCore.Cookies().ClearSessionCookie(w)
+				httpCore.core.Cookies().ClearSessionCookie(w)
 				httpCore.Responder.Error(w, r, NewLimenError(err.Error(), http.StatusUnauthorized, nil))
 				return
 			}
 
 			if session.Refreshed != nil {
-				if err := httpCore.Cookies().SetSessionCookie(w, session.Refreshed); err != nil {
+				if err := httpCore.core.Cookies().SetSessionCookie(w, session.Refreshed); err != nil {
 					httpCore.Responder.Error(w, r, err)
 					return
 				}

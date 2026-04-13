@@ -19,7 +19,6 @@ type challengePayload struct {
 type twoFactorPlugin struct {
 	core            *limen.LimenCore
 	httpCore        *limen.LimenHTTPCore
-	cookies         *limen.CookieManager
 	twoFactorSchema *twoFactorSchema
 	userSchema      *userWithTwoFactorSchema
 	config          *config
@@ -53,7 +52,6 @@ func New(opts ...ConfigOption) *twoFactorPlugin {
 
 func (t *twoFactorPlugin) Initialize(core *limen.LimenCore) error {
 	t.core = core
-	t.cookies = core.Cookies()
 	if len(t.config.secret) == 0 {
 		if base := core.Secret(); len(base) > 0 {
 			t.config.secret = base
@@ -135,7 +133,7 @@ func (t *twoFactorPlugin) revokeSessionFromResponse(ctx *limen.HookContext) {
 		_ = t.core.SessionManager.RevokeSession(ctx.Request().Context(), sessionToken)
 	}
 	ctx.RemoveResponseCookie(sessionCookieName)
-	t.httpCore.Cookies().ClearSessionCookie(ctx.Response())
+	t.core.Cookies().ClearSessionCookie(ctx.Response())
 }
 
 func (t *twoFactorPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
@@ -276,15 +274,15 @@ func (t *twoFactorPlugin) verifyChallengeToken(token string) (*challengePayload,
 }
 
 func (t *twoFactorPlugin) setChallengeCookie(ctx *limen.HookContext, token string) {
-	t.cookies.SetOnHookCtx(ctx, t.config.cookieName, token, int(t.config.cookieExpiration.Seconds()))
+	t.core.Cookies().SetOnHookCtx(ctx, t.config.cookieName, token, int(t.config.cookieExpiration.Seconds()))
 }
 
 func (t *twoFactorPlugin) clearChallengeCookie(w http.ResponseWriter) {
-	t.cookies.Delete(w, t.config.cookieName)
+	t.core.Cookies().Delete(w, t.config.cookieName)
 }
 
 func (t *twoFactorPlugin) getChallengeFromCookie(r *http.Request) (string, error) {
-	val, err := t.cookies.Get(r, t.config.cookieName)
+	val, err := t.core.Cookies().Get(r, t.config.cookieName)
 	if err != nil {
 		return "", ErrChallengeMissing
 	}

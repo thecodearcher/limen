@@ -9,11 +9,11 @@ import (
 type Responder struct {
 	cfg                *responseEnvelopeConfig
 	sessionTransformer SessionTransformer
-	cookies            *CookieManager
+	cookies            *cookieManager
 	bearerEnabled      bool
 }
 
-func newResponder(cfg *httpConfig, cookies *CookieManager, bearerEnabled bool) *Responder {
+func newResponder(cfg *httpConfig, cookies *cookieManager, bearerEnabled bool) *Responder {
 	if cfg == nil {
 		cfg = &httpConfig{}
 	}
