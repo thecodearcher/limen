@@ -8,3 +8,5 @@ tmp/
 .limen/
 .env
 limen-publish
+go.work
+go.work.sum

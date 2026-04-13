@@ -100,7 +100,7 @@ func main() {
 
 Alternatively, set the `LIMEN_SECRET` environment variable and omit the `Secret` from the struct.
 
-For a more complete example with OAuth providers, two-factor auth, and Gin integration, see `[examples](examples/)`.
+For a more complete example with OAuth providers, two-factor auth, and Gin integration, see the [examples](examples/).
 
 For full configuration options, usage, and plugin APIs, visit **[limenauth.dev](https://limenauth.dev)**.
 

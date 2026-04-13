@@ -1,4 +1,4 @@
-module example/basic
+module example/adapters-sql
 
 go 1.25.0
 
