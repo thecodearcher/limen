@@ -3,7 +3,7 @@ module github.com/thecodearcher/limen/plugins/oauth-twitch
 go 1.25.0
 
 require (
-	github.com/thecodearcher/limen/plugins/oauth v0.0.4
+	github.com/thecodearcher/limen/plugins/oauth v0.0.5
 	golang.org/x/oauth2 v0.35.0
 )
 

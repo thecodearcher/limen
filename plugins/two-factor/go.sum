@@ -1,6 +1,5 @@
 github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc h1:biVzkmvwrH8WK8raXaxBx6fRVTlJILwEwQGL1I/ByEI=
 github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
-github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -20,8 +19,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/thecodearcher/limen v0.0.6 h1:mZg7SdSMTftue3Td4KhnW1YCxaMO0TYl918S02uLJxc=
 github.com/thecodearcher/limen v0.0.6/go.mod h1:JCYwREDExWflPtKRNjWCV1K0WfN0ZfQTsP6ZVTHT+pE=
-github.com/thecodearcher/limen/plugins/credential-password v0.0.1 h1:yf0gznxEck9qh1V9qNx9FdLNtohyiRyd0ZlaGS0ubU8=
-github.com/thecodearcher/limen/plugins/credential-password v0.0.1/go.mod h1:F/CWm2mAEyfHg1VURy6/GtAkYV4esNiD7z1L3NgcJSg=
+github.com/thecodearcher/limen/plugins/credential-password v0.0.2 h1:AthHgGgR5sYDPnB9yKcCPdcr/zhu7nPV9eLU/d3Sg34=
+github.com/thecodearcher/limen/plugins/credential-password v0.0.2/go.mod h1:ENt7UgsduqnVLYMkTXonwQTchEHyyY8QF0H61NzhlVI=
 golang.org/x/crypto v0.48.0 h1:/VRzVqiRSggnhY7gNRxPauEQ5Drw9haKdM0jqfcCFts=
 golang.org/x/crypto v0.48.0/go.mod h1:r0kV5h3qnFPlQnBSrULhlsRfryS2pmewsg+XfMgkVos=
 golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=
