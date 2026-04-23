@@ -20,8 +20,6 @@
 
 </p>
 
-> **Status:** Work in progress — APIs may change before v1.0.
-
 Limen is a modular authentication library for Go that takes a **plugin-first** approach — the core ships with interfaces, session management, and security primitives, while every authentication method lives in its own importable Go module. You compose exactly the auth stack your application needs without pulling in code/dependencies you don't use.
 
 Out of the box, Limen provides:
@@ -107,6 +105,12 @@ For full configuration options, usage, and plugin APIs, visit **[limenauth.dev](
 ## Contributing
 
 Contributions are welcome! Please open an issue or submit a pull request.
+
+## Security
+
+Found a security issue? Please **do not** open a public issue. Email
+[security@limenauth.dev](mailto:security@limenauth.dev) instead. See
+[SECURITY.md](SECURITY.md) for full details on our disclosure process.
 
 ## License
 
