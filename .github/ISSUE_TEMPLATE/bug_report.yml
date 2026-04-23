@@ -1,0 +1,111 @@
+name: Bug report
+description: Report a defect in Limen core, an adapter, or a plugin.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill out the
+        sections below so we can reproduce the issue quickly.
+
+        **Do not report security vulnerabilities here.** See
+        [SECURITY.md](https://github.com/thecodearcher/limen/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A clear, concise description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Please provide a minimal reproduction. A code snippet or link to a
+        small repo is ideal.
+      placeholder: |
+        1. Configure Limen with '...'
+        2. Call '...'
+        3. See error '...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include error messages, stack traces, and logs if available.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected module
+      description: Which part of Limen is affected? Select all that apply.
+      multiple: true
+      options:
+        - limen (core)
+        - adapters/gorm
+        - adapters/sql
+        - plugins/credential-password
+        - plugins/oauth (or a specific oauth-* plugin)
+        - plugins/session-jwt
+        - plugins/two-factor
+        - cmd/limen (CLI)
+        - examples
+        - other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: limen-version
+    attributes:
+      label: Limen version(s)
+      description: Output of `go list -m github.com/thecodearcher/limen/...` or the relevant module version(s).
+      placeholder: "e.g. limen v0.1.0, adapters/gorm v0.0.2"
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go version
+      description: Output of `go version`.
+      placeholder: "e.g. go version go1.25.0 darwin/arm64"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / environment
+      placeholder: "e.g. macOS 15.1, Ubuntu 24.04, Docker alpine:3.20"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Screenshots, related issues, workarounds, anything else useful.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and this is not a duplicate.
+          required: true
+        - label: I have confirmed this is not a security vulnerability (which should be reported privately).
+          required: true

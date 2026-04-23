@@ -1,0 +1,68 @@
+name: Feature request
+description: Suggest a new feature, plugin, or improvement to an existing one.
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! For open-ended ideas or
+        questions, consider starting a
+        [discussion](https://github.com/thecodearcher/limen/discussions)
+        instead.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? What's the use case?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the API, behaviour, or change you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you've tried or thought about, and why they fall short.
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected module
+      multiple: true
+      options:
+        - limen (core)
+        - adapters/gorm
+        - adapters/sql
+        - plugins/credential-password
+        - plugins/oauth (or a specific oauth-* plugin)
+        - plugins/session-jwt
+        - plugins/two-factor
+        - cmd/limen (CLI)
+        - a new adapter
+        - a new plugin
+        - docs
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Links, prior art in other libraries, sketches, etc.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and discussions for similar proposals.
+          required: true
