@@ -8,7 +8,7 @@ require (
 )
 
 require (
-	github.com/thecodearcher/limen v0.0.6 // indirect
+	github.com/thecodearcher/limen v0.1.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 )

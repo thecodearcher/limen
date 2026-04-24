@@ -22,8 +22,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/thecodearcher/limen v0.0.6 h1:mZg7SdSMTftue3Td4KhnW1YCxaMO0TYl918S02uLJxc=
-github.com/thecodearcher/limen v0.0.6/go.mod h1:JCYwREDExWflPtKRNjWCV1K0WfN0ZfQTsP6ZVTHT+pE=
+github.com/thecodearcher/limen v0.1.0 h1:j5oC2dD+ORSF1Xi93xfVqg8DzpX8ckq4TqI+TPU5yO0=
+github.com/thecodearcher/limen v0.1.0/go.mod h1:JCYwREDExWflPtKRNjWCV1K0WfN0ZfQTsP6ZVTHT+pE=
 github.com/urfave/cli/v3 v3.6.1 h1:j8Qq8NyUawj/7rTYdBGrxcH7A/j7/G8Q5LhWEW4G3Mo=
 github.com/urfave/cli/v3 v3.6.1/go.mod h1:ysVLtOEmg2tOy6PknnYVhDoouyC/6N42TMeoMzskhso=
 golang.org/x/crypto v0.48.0 h1:/VRzVqiRSggnhY7gNRxPauEQ5Drw9haKdM0jqfcCFts=
