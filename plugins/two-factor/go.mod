@@ -6,7 +6,7 @@ require (
 	github.com/pquerna/otp v1.4.0
 	github.com/stretchr/testify v1.11.1
 	github.com/thecodearcher/limen v0.1.0
-	github.com/thecodearcher/limen/plugins/credential-password v0.0.2
+	github.com/thecodearcher/limen/plugins/credential-password v0.1.0
 )
 
 require (

@@ -19,8 +19,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/thecodearcher/limen v0.1.0 h1:j5oC2dD+ORSF1Xi93xfVqg8DzpX8ckq4TqI+TPU5yO0=
 github.com/thecodearcher/limen v0.1.0/go.mod h1:JCYwREDExWflPtKRNjWCV1K0WfN0ZfQTsP6ZVTHT+pE=
-github.com/thecodearcher/limen/plugins/credential-password v0.0.2 h1:AthHgGgR5sYDPnB9yKcCPdcr/zhu7nPV9eLU/d3Sg34=
-github.com/thecodearcher/limen/plugins/credential-password v0.0.2/go.mod h1:ENt7UgsduqnVLYMkTXonwQTchEHyyY8QF0H61NzhlVI=
+github.com/thecodearcher/limen/plugins/credential-password v0.1.0 h1:meEMGDXonc7UK/xjfu6W5IC1I3ru4Fm3V1gQa8OTcE8=
+github.com/thecodearcher/limen/plugins/credential-password v0.1.0/go.mod h1:XMQN4UI7F4CQxS74Hccemm8bjrB3do6PzXg+rSi8z/I=
 golang.org/x/crypto v0.48.0 h1:/VRzVqiRSggnhY7gNRxPauEQ5Drw9haKdM0jqfcCFts=
 golang.org/x/crypto v0.48.0/go.mod h1:r0kV5h3qnFPlQnBSrULhlsRfryS2pmewsg+XfMgkVos=
 golang.org/x/sys v0.41.0 h1:Ivj+2Cp/ylzLiEU89QhWblYnOE9zerudt9Ftecq2C6k=
