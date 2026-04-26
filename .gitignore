@@ -10,3 +10,4 @@ tmp/
 limen-publish
 go.work
 go.work.sum
+examples/kitchen/
