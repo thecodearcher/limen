@@ -14,34 +14,18 @@ type discoveryDocument struct {
 }
 
 func (c *config) resolveDiscovery(discoveryURL string) {
-	if discoveryURL == "" {
-		return
-	}
-
 	doc, err := fetchDiscoveryDocument(discoveryURL)
 	if err != nil {
 		panic("oauth-consentkeys: discovery fetch failed: " + err.Error())
 	}
-	if c.authorizationURL == "" {
-		c.authorizationURL = doc.AuthorizationEndpoint
-	}
-	if c.tokenURL == "" {
-		c.tokenURL = doc.TokenEndpoint
-	}
-	if c.userInfoURL == "" {
-		c.userInfoURL = doc.UserinfoEndpoint
-	}
+	c.authorizationURL = doc.AuthorizationEndpoint
+	c.tokenURL = doc.TokenEndpoint
+	c.userInfoURL = doc.UserinfoEndpoint
 }
 
 func (c *config) validateEndpoints() {
-	if c.authorizationURL == "" {
-		panic("oauth-consentkeys: authorization URL is required (use WithAuthorizationURL)")
-	}
-	if c.tokenURL == "" {
-		panic("oauth-consentkeys: token URL is required (use WithTokenURL)")
-	}
-	if c.userInfoURL == "" {
-		panic("oauth-consentkeys: userinfo URL is required (use WithUserInfoURL)")
+	if c.authorizationURL == "" || c.tokenURL == "" || c.userInfoURL == "" {
+		panic("oauth-consentkeys: discovery document missing required endpoints")
 	}
 }
 

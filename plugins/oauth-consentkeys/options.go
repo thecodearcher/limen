@@ -30,27 +30,6 @@ func WithClientSecret(secret string) ConfigOption {
 	}
 }
 
-// WithAuthorizationURL overrides the authorization endpoint discovered from OIDC metadata.
-func WithAuthorizationURL(url string) ConfigOption {
-	return func(c *config) {
-		c.authorizationURL = url
-	}
-}
-
-// WithTokenURL overrides the token endpoint discovered from OIDC metadata.
-func WithTokenURL(url string) ConfigOption {
-	return func(c *config) {
-		c.tokenURL = url
-	}
-}
-
-// WithUserInfoURL overrides the userinfo endpoint discovered from OIDC metadata.
-func WithUserInfoURL(url string) ConfigOption {
-	return func(c *config) {
-		c.userInfoURL = url
-	}
-}
-
 // WithRedirectURL sets the callback URL registered in ConsentKeys.
 func WithRedirectURL(url string) ConfigOption {
 	return func(c *config) {
