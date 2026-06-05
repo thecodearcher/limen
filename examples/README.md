@@ -17,6 +17,7 @@ DATABASE_URL="postgres://..." go run ./examples/basic
 DATABASE_URL="postgres://..." go run ./examples/gin
 DATABASE_URL="postgres://..." GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... go run ./examples/oauth-google
 DATABASE_URL="postgres://..." go run ./examples/two-factor
+DATABASE_URL="postgres://..." go run ./examples/email-otp
 DATABASE_URL="postgres://..." go run ./examples/adapters/gorm
 DATABASE_URL="postgres://..." go run ./examples/adapters/sql
 ```
@@ -29,6 +30,7 @@ DATABASE_URL="postgres://..." go run ./examples/adapters/sql
 | `gin` | GORM | credential-password | -- |
 | `oauth-google` | GORM | OAuth (Google) | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
 | `two-factor` | GORM | credential-password, two-factor | -- |
+| `email-otp` | `database/sql` | email-otp | -- |
 | `adapters/gorm` | GORM | credential-password | -- |
 | `adapters/sql` | `database/sql` | credential-password | -- |
 
