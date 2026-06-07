@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Limen Passkey Demo</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+      h1 { margin-bottom: 0.25rem; }
+      h2 { margin-top: 2rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
+      input { display: block; margin: 0.25rem 0 0.5rem; padding: 0.4rem; width: 100%; max-width: 320px; }
+      button { margin: 0.25rem 0; padding: 0.4rem 0.8rem; cursor: pointer; }
+      pre { background: #f4f4f4; padding: 0.5rem; overflow: auto; border-radius: 4px; font-size: 12px; }
+      .row { display: flex; gap: 0.5rem; align-items: center; }
+      .status { padding: 0.4rem 0.6rem; border-radius: 4px; margin-top: 0.5rem; }
+      .ok { background: #d4edda; }
+      .err { background: #f8d7da; }
+    </style>
+  </head>
+  <body>
+    <h1>Limen Passkey Demo</h1>
+    <p>
+      Bare-bones HTML to exercise the passkey plugin end-to-end. Use Chrome
+      DevTools → <em>WebAuthn</em> panel to enable a virtual authenticator so
+      no physical key is required.
+    </p>
+
+    <h2>1. Create an account or sign in</h2>
+    <p>Passkey registration requires an authenticated session. Use email + password to get one.</p>
+    <input id="email" placeholder="email" value="alice@example.com" />
+    <input id="password" type="password" placeholder="password" value="hunter2!HUNTER2" />
+    <div class="row">
+      <button onclick="signUp()">Sign up</button>
+      <button onclick="signIn()">Sign in</button>
+    </div>
+    <div id="auth-status"></div>
+
+    <h2>2. Register a passkey</h2>
+    <input id="passkey-name" placeholder="passkey name" value="My device" />
+    <button onclick="registerPasskey()">Register passkey</button>
+    <div id="register-status"></div>
+
+    <h2>3. Sign in with a passkey</h2>
+    <button onclick="signOut()">Sign out first</button>
+    <button onclick="authenticateWithPasskey()">Sign in with passkey</button>
+    <div id="auth-passkey-status"></div>
+
+    <h2>4. Manage passkeys</h2>
+    <button onclick="listPasskeys()">List my passkeys</button>
+    <pre id="passkeys-list"></pre>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const setStatus = (id, ok, msg) => {
+        const el = $(id);
+        el.className = "status " + (ok ? "ok" : "err");
+        el.textContent = msg;
+      };
+
+      const fetchJSON = async (url, opts = {}) => {
+        const res = await fetch(url, {
+          credentials: "include",
+          headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+          ...opts,
+        });
+        const text = await res.text();
+        let body;
+        try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+        if (!res.ok) throw new Error(typeof body === "string" ? body : (body?.message || res.statusText));
+        return body;
+      };
+
+      // Base64url helpers for shuttling bytes between JSON and BufferSource.
+      const b64uToBuf = (s) => {
+        const pad = "=".repeat((4 - (s.length % 4)) % 4);
+        const b64 = (s + pad).replace(/-/g, "+").replace(/_/g, "/");
+        const bin = atob(b64);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return out.buffer;
+      };
+      const bufToB64u = (buf) => {
+        const bin = String.fromCharCode(...new Uint8Array(buf));
+        return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+      };
+
+      async function signUp() {
+        try {
+          await fetchJSON("/api/auth/signup/credential", {
+            method: "POST",
+            body: JSON.stringify({ email: $("email").value, password: $("password").value }),
+          });
+          setStatus("auth-status", true, "Signed up + signed in.");
+        } catch (e) { setStatus("auth-status", false, "sign-up failed: " + e.message); }
+      }
+
+      async function signIn() {
+        try {
+          await fetchJSON("/api/auth/signin/credential", {
+            method: "POST",
+            body: JSON.stringify({ credential: $("email").value, password: $("password").value }),
+          });
+          setStatus("auth-status", true, "Signed in.");
+        } catch (e) { setStatus("auth-status", false, "sign-in failed: " + e.message); }
+      }
+
+      async function signOut() {
+        try {
+          await fetchJSON("/api/auth/signout", { method: "POST" });
+          setStatus("auth-status", true, "Signed out.");
+        } catch (e) { setStatus("auth-status", false, "sign-out failed: " + e.message); }
+      }
+
+      async function registerPasskey() {
+        try {
+          const name = encodeURIComponent($("passkey-name").value || "");
+          const wrapped = await fetchJSON("/api/auth/passkey/generate-register-options?name=" + name);
+          // The Go protocol library wraps options under `publicKey`.
+          const options = wrapped.publicKey || wrapped;
+
+          // Convert base64url fields to ArrayBuffers for the browser API.
+          options.challenge = b64uToBuf(options.challenge);
+          options.user.id = b64uToBuf(options.user.id);
+          if (options.excludeCredentials) {
+            options.excludeCredentials = options.excludeCredentials.map((c) => ({
+              ...c, id: b64uToBuf(c.id),
+            }));
+          }
+
+          const cred = await navigator.credentials.create({ publicKey: options });
+          const body = {
+            id: cred.id,
+            rawId: bufToB64u(cred.rawId),
+            type: cred.type,
+            response: {
+              clientDataJSON: bufToB64u(cred.response.clientDataJSON),
+              attestationObject: bufToB64u(cred.response.attestationObject),
+              transports: cred.response.getTransports?.() || [],
+            },
+            clientExtensionResults: cred.getClientExtensionResults?.() || {},
+          };
+          const result = await fetchJSON("/api/auth/passkey/verify-registration", {
+            method: "POST", body: JSON.stringify(body),
+          });
+          setStatus("register-status", true, "Registered: " + JSON.stringify(result));
+        } catch (e) { setStatus("register-status", false, "register failed: " + e.message); }
+      }
+
+      async function authenticateWithPasskey() {
+        try {
+          const wrapped = await fetchJSON("/api/auth/passkey/generate-authenticate-options");
+          const options = wrapped.publicKey || wrapped;
+          options.challenge = b64uToBuf(options.challenge);
+          if (options.allowCredentials) {
+            options.allowCredentials = options.allowCredentials.map((c) => ({
+              ...c, id: b64uToBuf(c.id),
+            }));
+          }
+          const assertion = await navigator.credentials.get({ publicKey: options });
+          const body = {
+            id: assertion.id,
+            rawId: bufToB64u(assertion.rawId),
+            type: assertion.type,
+            response: {
+              clientDataJSON: bufToB64u(assertion.response.clientDataJSON),
+              authenticatorData: bufToB64u(assertion.response.authenticatorData),
+              signature: bufToB64u(assertion.response.signature),
+              userHandle: assertion.response.userHandle ? bufToB64u(assertion.response.userHandle) : null,
+            },
+            clientExtensionResults: assertion.getClientExtensionResults?.() || {},
+          };
+          const result = await fetchJSON("/api/auth/passkey/verify-authentication", {
+            method: "POST", body: JSON.stringify(body),
+          });
+          setStatus("auth-passkey-status", true, "Signed in via passkey: " + JSON.stringify(result));
+        } catch (e) { setStatus("auth-passkey-status", false, "passkey auth failed: " + e.message); }
+      }
+
+      async function listPasskeys() {
+        try {
+          const list = await fetchJSON("/api/auth/passkey/list");
+          $("passkeys-list").textContent = JSON.stringify(list, null, 2);
+        } catch (e) { $("passkeys-list").textContent = "list failed: " + e.message; }
+      }
+    </script>
+  </body>
+</html>
