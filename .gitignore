@@ -11,3 +11,21 @@ limen-publish
 go.work
 go.work.sum
 examples/kitchen/
+
+# Generated per-developer migration SQL produced by `limen generate migrations`.
+# Each developer regenerates these against their own database; they should not be checked in.
+examples/*/migrations/
+
+# Locally-built CLI binaries from `cd cmd/limen && go build`.
+cmd/limen/limen
+cmd/limen/limen.exe
+
+# Local test artifacts (curl cookie jars, etc.).
+cookies.txt
+
+# Claude Code local configuration.
+.claude/
+
+# Go build artifacts left in example dirs (e.g. `go build` without `-o`).
+examples/*/*.exe
+examples/*/*/*.exe

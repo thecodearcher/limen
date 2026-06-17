@@ -37,6 +37,7 @@ const (
 	PluginOAuth              PluginName = "oauth"
 	PluginSessionJWT         PluginName = "session-jwt"
 	PluginMagicLink          PluginName = "magic-link"
+	PluginEmailOTP           PluginName = "email-otp"
 )
 
 // ============================================================================
