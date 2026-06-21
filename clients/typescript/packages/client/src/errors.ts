@@ -23,8 +23,7 @@ export function deriveErrorCode(status: number): LimenErrorCode {
 
 /**
  * The single error type every SDK call throws on non-2xx. Carries the raw
- * server message, the HTTP status, and a derived typed code. Subclass-free so
- * `instanceof LimenError` is the only check consumers need.
+ * server message, the HTTP status, and a derived typed code.
  */
 export class LimenError extends Error {
   override readonly name = "LimenError";

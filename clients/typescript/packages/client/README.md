@@ -9,6 +9,8 @@
   <a href="https://github.com/thecodearcher/limen"><img src="https://img.shields.io/github/stars/thecodearcher/limen?style=flat&colorA=000000&colorB=000000&logo=github" alt="GitHub stars" /></a>
 </p>
 
+## Limen Auth
+
 Official TypeScript client SDK for **[Limen](https://github.com/thecodearcher/limen)** — a modern, composable authentication library for Go. Framework-agnostic core with first-class **React, Vue, Svelte, and Solid** adapters.
 
 ## Install
