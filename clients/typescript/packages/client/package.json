@@ -1,6 +1,6 @@
 {
   "name": "limen-auth",
-  "version": "0.0.2-beta.0",
+  "version": "0.0.2",
   "description": "Official TypeScript SDK for Limen, a composable Go auth library. Framework-agnostic core with React, Vue, Svelte, and Solid adapters.",
   "keywords": [
     "limen",

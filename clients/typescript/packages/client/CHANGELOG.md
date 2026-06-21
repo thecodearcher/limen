@@ -1,5 +1,11 @@
 # limen-auth
 
+## 0.0.2
+
+### Patch Changes
+
+- d25ccf8: Testing CI
+
 ## 0.0.2-beta.0
 
 ### Patch Changes
