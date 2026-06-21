@@ -4,5 +4,7 @@
   "initialVersions": {
     "limen-auth": "0.0.1"
   },
-  "changesets": []
+  "changesets": [
+    "sour-cars-kiss"
+  ]
 }
