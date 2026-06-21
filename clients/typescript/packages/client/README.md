@@ -1,22 +1,21 @@
 <p align="center">
   <a href="https://limenauth.dev">
-    <img src="./banner.svg" alt="Limen" width="640" />
+    <img src="https://raw.githubusercontent.com/thecodearcher/limen/master/banner.svg" alt="Limen" width="640" />
   </a>
 </p>
 
-# limen-auth
+<p align="center">
+  <a href="https://www.npmjs.com/package/limen-auth"><img src="https://img.shields.io/npm/v/limen-auth?style=flat&colorA=000000&colorB=000000&logo=npm&logoColor=white" alt="npm version" /></a>
+  <a href="https://github.com/thecodearcher/limen"><img src="https://img.shields.io/github/stars/thecodearcher/limen?style=flat&colorA=000000&colorB=000000&logo=github" alt="GitHub stars" /></a>
+</p>
 
 Official TypeScript client SDK for **[Limen](https://github.com/thecodearcher/limen)** — a modern, composable authentication library for Go. Framework-agnostic core with first-class **React, Vue, Svelte, and Solid** adapters.
-
-> 📖 Full guides and API reference: **[limenauth.dev](https://limenauth.dev)**
 
 ## Install
 
 ```bash
 npm install limen-auth
 ```
-
-Works with any framework — or none at all. If you're on React, Vue, Svelte, or Solid, just have that framework installed; there's nothing else to add.
 
 ## Quick start
 
@@ -29,44 +28,20 @@ export const auth = createAuthClient({
   plugins: [credentialPasswordPlugin()],
 });
 
+// `auth.$session` is a reactive store for the current user — it loads on its
+// own, stays in sync across tabs, and updates whenever you sign in or out.
+auth.$session.subscribe(({ data, isPending }) => {
+  if (isPending) return;
+  console.log(data ? `Signed in as ${data.user.email}` : "Signed out");
+});
+
+// Mutations update `$session` automatically — no manual refetch.
 await auth.signIn.credential({ credential: "ada@example.com", password: "secret" });
-const session = await auth.getSession(); // Session | null
 await auth.signout();
 ```
 
-`auth.$session` is a reactive store for the current user. It loads on its own, keeps your open tabs in sync, and updates as you sign in and out — so the UI always reflects the real session.
+Using a framework? `limen-auth/react`, `/vue`, `/svelte`, and `/solid` give you a `useSession()` hook over the same store.
 
-## Framework adapters
+## Documentation
 
-Import `createAuthClient` from your framework's entry point and you get a `useSession()` wired to it:
-
-```tsx
-import { createAuthClient } from "limen-auth/react";
-import { credentialPasswordPlugin } from "limen-auth/plugins/credential";
-
-export const auth = createAuthClient({ baseURL: "...", plugins: [credentialPasswordPlugin()] });
-
-function Profile() {
-  const { data, isPending } = auth.useSession();
-  if (isPending) return <p>Loading…</p>;
-  return data ? <p>Hi {data.user.email}</p> : <p>Signed out</p>;
-}
-```
-
-Also available from `limen-auth/vue`, `limen-auth/svelte`, and `limen-auth/solid`.
-
-## Plugins
-
-Add the sign-in flows you need as plugins (each lives under `limen-auth/plugins/<name>`):
-
-- `credentialPasswordPlugin` — email/username + password
-- `oauthClientPlugin` — social / OAuth providers
-- `magicLinkPlugin` — passwordless email links
-- `twoFactorPlugin` — TOTP, OTP, and backup codes
-- `bearerPlugin` / `sessionJwtPlugin` — token-based sessions
-
-See the plugin and full API reference at **[limenauth.dev](https://limenauth.dev)**.
-
-## License
-
-MIT © Brian Iyoha
+Full guides, framework adapters (React, Vue, Svelte, Solid), the plugin catalog, and the complete API reference live at **[limenauth.dev](https://limenauth.dev)**.

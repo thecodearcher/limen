@@ -13,7 +13,10 @@
     "lint": "eslint packages",
     "format": "prettier --write \"packages/**/*.{ts,tsx,md}\"",
     "format:check": "prettier --check \"packages/**/*.{ts,tsx,md}\"",
-    "test": "pnpm -r --filter './packages/*' run test"
+    "test": "pnpm -r --filter './packages/*' run test",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

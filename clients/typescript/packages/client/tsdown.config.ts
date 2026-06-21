@@ -1,6 +1,11 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
+  format: ["esm"],
+  dts: true,
+  clean: true,
+  treeshake: true,
+  unbundle: true,
   entry: [
     "src/index.ts",
     "src/react/index.ts",
@@ -10,10 +15,4 @@ export default defineConfig({
     "src/plugins/index.ts",
     "src/plugins/*/index.ts",
   ],
-  format: ["esm"],
-  dts: true,
-  clean: true,
-  treeshake: true,
-  sourcemap: true,
-  target: "es2022",
 });

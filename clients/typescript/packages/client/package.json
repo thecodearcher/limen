@@ -18,7 +18,7 @@
     "typescript",
     "sdk"
   ],
-  "homepage": "https://github.com/thecodearcher/limen#readme",
+  "homepage": "https://limenauth.dev",
   "bugs": "https://github.com/thecodearcher/limen/issues",
   "repository": {
     "type": "git",
@@ -29,6 +29,7 @@
   "author": "Brian Iyoha <brian.iyoha@gmail.com>",
   "type": "module",
   "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "publishConfig": {
     "access": "public"
   },

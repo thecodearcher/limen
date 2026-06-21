@@ -1,8 +1,8 @@
-export const VERSION = "0.0.0";
+export { VERSION } from "./version";
 
 export { createAuthClient } from "./client";
 
-export { LimenError, deriveErrorCode } from "./errors";
+export { deriveErrorCode, LimenError } from "./errors";
 export type { LimenErrorCode } from "./errors";
 
 export { camelizeEach, camelizeKeys } from "./helpers";
@@ -27,8 +27,8 @@ export { route } from "./route";
 export { defaultSerialize } from "./serialize";
 
 export type { AnyRouteContext, RouteContext } from "./context";
-export type { RouteCallOptions, RouteHandler } from "./route";
 export type { RunRoute } from "./define-plugin";
+export type { RouteCallOptions, RouteHandler } from "./route";
 
 export { coreClientPlugin } from "./routes";
 export type { ActiveSession, CoreContribution, VerifyEmailInput } from "./routes";

@@ -9,3 +9,4 @@ coverage/
 .vscode/
 .cursor/
 .claude/
+.npmrc
