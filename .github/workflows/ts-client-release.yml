@@ -24,8 +24,35 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     steps:
+      - name: Generate release app token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      # The prerelease line must never publish a stable version to @latest, so
+      # refuse to release from `next` unless it's in Changesets beta pre mode.
+      - name: Require beta pre mode on next
+        if: github.ref_name == 'next'
+        run: |
+          file=.changeset/pre.json
+          if [ ! -f "$file" ]; then
+            echo "::error::'next' must be in beta pre mode before releasing, but $file is missing. Run 'pnpm changeset pre enter beta'."
+            exit 1
+          fi
+          mode="$(jq -r '.mode // ""' "$file")"
+          tag="$(jq -r '.tag // ""' "$file")"
+          if [ "$mode" != "pre" ] || [ "$tag" != "beta" ]; then
+            echo "::error::'next' must be in beta pre mode (found mode='$mode', tag='$tag')."
+            exit 1
+          fi
+          echo "next is in beta pre mode."
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -53,7 +80,7 @@ jobs:
           title: "chore(client-ts): release"
           commit: "chore(client-ts): release"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
@@ -61,7 +88,7 @@ jobs:
       - name: Stamp release PR title with the version
         if: steps.changesets.outputs.pullRequestNumber
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           version="$(jq -r '.version' packages/client/package.json)"
           gh pr edit "${{ steps.changesets.outputs.pullRequestNumber }}" \
