@@ -5,8 +5,12 @@ on:
     branches: [master, next]
     paths: ["clients/typescript/**"]
   pull_request:
-    branches: [master, next]
     paths: ["clients/typescript/**"]
+
+# Cancel superseded runs on the same ref so rapid pushes don't pile up.
+concurrency:
+  group: ts-client-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
