@@ -3,6 +3,7 @@ package limen
 import (
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // cookieManager provides a unified interface for cookie operations across
@@ -63,13 +64,42 @@ func (cm *cookieManager) Delete(w http.ResponseWriter, name string) {
 	http.SetCookie(w, cm.NewCookie(name, "", -1))
 }
 
-// ClearSessionCookie clears the session cookie from the response using the
-// central cookie configuration name.
-func (cm *cookieManager) ClearSessionCookie(w http.ResponseWriter) {
+// DeleteSessionCookie writes a session deletion cookie (Max-Age=-1, empty value).
+// It tells the browser to remove an existing session cookie.
+func (cm *cookieManager) DeleteSessionCookie(w http.ResponseWriter) {
 	if cm == nil || cm.base == nil || cm.base.sessionCookieName == "" {
 		return
 	}
 	cm.Delete(w, cm.base.sessionCookieName)
+}
+
+// ClearSessionResponse removes any pending session Set-Cookie header already queued
+// on this response, then writes a session deletion cookie.
+// Use this when intercepting a response that may have just issued a session cookie.
+func (cm *cookieManager) ClearSessionResponse(w http.ResponseWriter) {
+	if cm == nil || cm.base == nil {
+		return
+	}
+	if cm.base.sessionCookieName != "" {
+		removeResponseCookie(w.Header(), cm.base.sessionCookieName)
+	}
+	cm.DeleteSessionCookie(w)
+}
+
+// removeResponseCookie removes matching Set-Cookie entries from response headers only.
+// It prevents the cookie from being sent in this response; it does not delete browser state.
+func removeResponseCookie(h http.Header, name string) {
+	cookies := h.Values("Set-Cookie")
+	if len(cookies) == 0 {
+		return
+	}
+	h.Del("Set-Cookie")
+	for _, c := range cookies {
+		// Cookie format is "name=value; ..." - keep everything but the target name.
+		if !strings.HasPrefix(c, name+"=") {
+			h.Add("Set-Cookie", c)
+		}
+	}
 }
 
 // Get reads a cookie value from the request.

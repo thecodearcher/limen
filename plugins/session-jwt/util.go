@@ -56,7 +56,7 @@ func (p *sessionJWTPlugin) extractToken(r *http.Request) (string, error) {
 func (p *sessionJWTPlugin) extractRefreshToken(r *http.Request) (token string, family string, err error) {
 	var raw string
 	if body := limen.GetJSONBody(r); body != nil {
-		if val, ok := body["refreshToken"].(string); ok {
+		if val, ok := body["refresh_token"].(string); ok {
 			raw = strings.TrimSpace(val)
 		}
 	}

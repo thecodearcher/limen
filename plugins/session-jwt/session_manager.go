@@ -64,18 +64,25 @@ func (m *jwtSessionManager) ValidateSession(ctx context.Context, r *http.Request
 	}
 
 	var user *limen.User
-	if m.plugin.config.refreshUser {
-		user, err = m.plugin.fetchUser(ctx, resolved)
-		if err != nil {
-			return nil, limen.ErrSessionNotFound
+	switch v := resolved.(type) {
+	case *limen.User:
+		user = v
+	case map[string]any:
+		user = m.plugin.core.Schema.User.FromStorage(v).(*limen.User)
+	default:
+		if m.plugin.config.refreshUser {
+			user, err = m.plugin.core.DBAction.FindUserByID(ctx, v)
+			if err != nil {
+				return nil, limen.ErrSessionNotFound
+			}
+		} else {
+			user = m.plugin.claimsToUser(claims, v)
 		}
-	} else {
-		user = m.plugin.claimsToUser(claims, resolved)
 	}
 
 	return &limen.ValidatedSession{
 		User:    user,
-		Session: m.plugin.claimsToSession(claims, tokenString, resolved),
+		Session: m.plugin.claimsToSession(claims, tokenString, user.ID),
 	}, nil
 }
 
@@ -126,13 +133,6 @@ func (m *jwtSessionManager) RevokeAllSessions(ctx context.Context, userID any) e
 	}
 
 	return p.DeleteRefreshTokensByUserID(ctx, userID)
-}
-
-func (p *sessionJWTPlugin) fetchUser(ctx context.Context, resolved any) (*limen.User, error) {
-	if user, ok := resolved.(*limen.User); ok {
-		return user, nil
-	}
-	return p.core.DBAction.FindUserByID(ctx, resolved)
 }
 
 func (p *sessionJWTPlugin) buildSessionResult(jwtString string, rt *RefreshToken) *limen.SessionResult {
@@ -191,17 +191,18 @@ func (p *sessionJWTPlugin) claimsToSession(claims *LimenClaims, rawToken string,
 }
 
 func (p *sessionJWTPlugin) claimsToUser(claims *LimenClaims, userID any) *limen.User {
-	var emailVerifiedAt *time.Time
+	schema := p.core.Schema.User
+	raw := map[string]any{}
+	if p.config.userFromClaims != nil {
+		maps.Copy(raw, p.config.userFromClaims(claims))
+	}
+	raw[schema.GetIDField()] = userID
+	raw[schema.GetEmailField()] = claims.Email
 	if claims.EmailVerified {
-		now := time.Now()
-		emailVerifiedAt = &now
+		raw[schema.GetEmailVerifiedAtField()] = time.Now()
 	}
 
-	return &limen.User{
-		ID:              userID,
-		Email:           claims.Email,
-		EmailVerifiedAt: emailVerifiedAt,
-	}
+	return schema.FromStorage(raw).(*limen.User)
 }
 
 func claimsMetadata(claims *LimenClaims) map[string]any {

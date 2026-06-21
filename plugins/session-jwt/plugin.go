@@ -29,7 +29,7 @@ func New(opts ...ConfigOption) *sessionJWTPlugin {
 		refreshTokenEnabled:  true,
 		subjectEncoder:       func(user *limen.User) string { return fmt.Sprintf("%v", user.ID) },
 		subjectResolver:      func(subject string) (any, error) { return subject, nil },
-		refreshUser:          false,
+		refreshUser:          true,
 		blacklistStoreType:   limen.StoreTypeCache,
 	}
 

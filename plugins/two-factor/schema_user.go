@@ -13,7 +13,7 @@ type UserWithTwoFactor struct {
 	TwoFactorEnabled bool
 }
 
-func newDefaultSchemaUserTwoFactor(userSchema *limen.UserSchema, opts ...SchemaUserTwoFactorOption) *userWithTwoFactorSchema {
+func newDefaultSchemaUserTwoFactor(userSchema *limen.UserSchema) *userWithTwoFactorSchema {
 	return &userWithTwoFactorSchema{
 		UserSchema: userSchema,
 	}

@@ -61,18 +61,20 @@ func TestVerifyMagicLinkHandler_RedirectSelection(t *testing.T) {
 		name             string
 		email            string
 		opts             *RequestMagicLinkOptions
+		expectRedirect   bool
 		expectedLocation string
 	}{
 		{
-			name:             "falls back to base URL when no redirect provided",
-			email:            "fallback@test.com",
-			opts:             nil,
-			expectedLocation: baseURL,
+			name:           "returns session JSON when no redirect provided",
+			email:          "fallback@test.com",
+			opts:           nil,
+			expectRedirect: false,
 		},
 		{
 			name:             "uses trusted redirect URI",
 			email:            "callback@test.com",
 			opts:             &RequestMagicLinkOptions{RedirectURI: baseURL + "/welcome"},
+			expectRedirect:   true,
 			expectedLocation: baseURL + "/welcome",
 		},
 		{
@@ -82,6 +84,7 @@ func TestVerifyMagicLinkHandler_RedirectSelection(t *testing.T) {
 				RedirectURI:        baseURL + "/default",
 				NewUserRedirectURI: baseURL + "/welcome-new",
 			},
+			expectRedirect:   true,
 			expectedLocation: baseURL + "/welcome-new",
 		},
 	}
@@ -102,8 +105,14 @@ func TestVerifyMagicLinkHandler_RedirectSelection(t *testing.T) {
 			w := httptest.NewRecorder()
 			l.Handler().ServeHTTP(w, req)
 
-			assert.Equal(t, http.StatusSeeOther, w.Code)
-			assert.Equal(t, tt.expectedLocation, w.Header().Get("Location"))
+			if tt.expectRedirect {
+				assert.Equal(t, http.StatusSeeOther, w.Code)
+				assert.Equal(t, tt.expectedLocation, w.Header().Get("Location"))
+			} else {
+				assert.Equal(t, http.StatusOK, w.Code)
+				assert.Empty(t, w.Header().Get("Location"))
+				assert.Contains(t, w.Body.String(), tt.email)
+			}
 			assert.NotEmpty(t, w.Result().Cookies(), "successful verify must set a session cookie")
 		})
 	}

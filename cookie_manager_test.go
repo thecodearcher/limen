@@ -105,7 +105,7 @@ func TestCookieManager_ClearSessionCookie(t *testing.T) {
 	cm := newTestCookieManager(t)
 	w := httptest.NewRecorder()
 
-	cm.ClearSessionCookie(w)
+	cm.DeleteSessionCookie(w)
 
 	cookies := w.Result().Cookies()
 	assert.Len(t, cookies, 1)

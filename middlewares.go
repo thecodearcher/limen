@@ -24,7 +24,7 @@ func (httpCore *LimenHTTPCore) MiddlewareRequireSession() Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			session, err := httpCore.authInstance.GetSession(r)
 			if err != nil {
-				httpCore.core.Cookies().ClearSessionCookie(w)
+				httpCore.core.Cookies().DeleteSessionCookie(w)
 				httpCore.Responder.Error(w, r, NewLimenError(err.Error(), http.StatusUnauthorized, nil))
 				return
 			}

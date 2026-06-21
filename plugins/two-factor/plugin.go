@@ -123,17 +123,11 @@ func (t *twoFactorPlugin) revokeSessionFromResponse(ctx *limen.HookContext) {
 		return
 	}
 
-	sessionCookieName := t.httpCore.SessionCookieName()
-	if sessionCookieName == "" {
-		return
+	responder := t.httpCore.Responder
+	if token := responder.IssuedSessionToken(ctx.Response().Header()); token != "" {
+		_ = t.core.SessionManager.RevokeSession(ctx.Request().Context(), token)
 	}
-
-	sessionToken := limen.ExtractCookieValue(ctx.Response().Header(), sessionCookieName)
-	if sessionToken != "" {
-		_ = t.core.SessionManager.RevokeSession(ctx.Request().Context(), sessionToken)
-	}
-	ctx.RemoveResponseCookie(sessionCookieName)
-	t.core.Cookies().ClearSessionCookie(ctx.Response())
+	responder.ClearSessionResponse(ctx.Response())
 }
 
 func (t *twoFactorPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {

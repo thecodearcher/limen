@@ -2,7 +2,6 @@ package limen
 
 import (
 	"net/http"
-	"strings"
 )
 
 type HookFunc func(ctx *HookContext) bool
@@ -131,13 +130,5 @@ func (hc *HookContext) DeleteResponseHeader(key string) {
 // preventing it from being sent to the client. This is different from DeleteResponseCookie
 // which sends a Set-Cookie header telling the browser to delete the cookie.
 func (hc *HookContext) RemoveResponseCookie(name string) {
-	h := hc.response.Header()
-	cookies := h.Values("Set-Cookie")
-	h.Del("Set-Cookie")
-	for _, c := range cookies {
-		// Cookie format is "name=value; ..." - check if it starts with the target name
-		if !strings.HasPrefix(c, name+"=") {
-			h.Add("Set-Cookie", c)
-		}
-	}
+	removeResponseCookie(hc.response.Header(), name)
 }

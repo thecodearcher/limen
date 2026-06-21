@@ -89,9 +89,7 @@ func (h *magicLinkHandlers) resolveCallbackURLs(state *MagicLinkState) (string, 
 		}
 		errorCallbackURL = state.ErrorRedirectURI
 	}
-	if callbackURL == "" {
-		callbackURL = h.plugin.core.GetBaseURL()
-	}
+
 	return callbackURL, errorCallbackURL
 }
 

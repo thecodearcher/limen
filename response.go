@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+// Response header names used to carry session tokens in bearer/JWT transport.
+const (
+	HeaderSetAuthToken    = "Set-Auth-Token"    //nolint:gosec // G101 false positive: HTTP header name, not a credential
+	HeaderSetRefreshToken = "Set-Refresh-Token" //nolint:gosec // G101 false positive: HTTP header name, not a credential
+	HeaderExposeHeaders   = "Access-Control-Expose-Headers"
+)
+
 type Responder struct {
 	cfg                *responseEnvelopeConfig
 	sessionTransformer SessionTransformer
@@ -179,12 +186,12 @@ func (rs Responder) setSessionHeaders(w http.ResponseWriter, sessionResult *Sess
 	var exposed []string
 
 	if sessionResult.Token != "" {
-		rs.AddHeader(w, "Set-Auth-Token", sessionResult.Token)
-		exposed = append(exposed, "Set-Auth-Token")
+		rs.AddHeader(w, HeaderSetAuthToken, sessionResult.Token)
+		exposed = append(exposed, HeaderSetAuthToken)
 	}
 	if sessionResult.RefreshToken != "" {
-		rs.AddHeader(w, "Set-Refresh-Token", sessionResult.RefreshToken)
-		exposed = append(exposed, "Set-Refresh-Token")
+		rs.AddHeader(w, HeaderSetRefreshToken, sessionResult.RefreshToken)
+		exposed = append(exposed, HeaderSetRefreshToken)
 	}
 
 	if len(exposed) > 0 {
@@ -192,15 +199,81 @@ func (rs Responder) setSessionHeaders(w http.ResponseWriter, sessionResult *Sess
 	}
 }
 
+// IssuedSessionToken returns the session token a response carries.
+func (rs Responder) IssuedSessionToken(h http.Header) string {
+	if rs.cookies != nil && rs.cookies.base != nil {
+		if name := rs.cookies.base.sessionCookieName; name != "" {
+			if token := ExtractCookieValue(h, name); token != "" {
+				return token
+			}
+		}
+	}
+	return h.Get(HeaderSetAuthToken)
+}
+
+// ClearSessionResponse removes any pending session from this response so no
+// usable session is sent to the client.
+func (rs Responder) ClearSessionResponse(w http.ResponseWriter) {
+	if rs.cookies != nil {
+		rs.cookies.ClearSessionResponse(w)
+	}
+	h := w.Header()
+	h.Del(HeaderSetAuthToken)
+	h.Del(HeaderSetRefreshToken)
+	removeExposeHeaders(h, HeaderSetAuthToken, HeaderSetRefreshToken)
+}
+
 // appendExposeHeaders appends header names to Access-Control-Expose-Headers
 // without overwriting values already set by the user's CORS middleware.
 func (rs Responder) appendExposeHeaders(w http.ResponseWriter, headers ...string) {
-	existing := w.Header().Get("Access-Control-Expose-Headers")
-	toAdd := strings.Join(headers, ", ")
-	if existing != "" {
-		toAdd = existing + ", " + toAdd
+	for _, header := range headers {
+		if header == "" {
+			continue
+		}
+		w.Header().Add(HeaderExposeHeaders, header)
 	}
-	w.Header().Set("Access-Control-Expose-Headers", toAdd)
+}
+
+// removeExposeHeaders drops the given names from Access-Control-Expose-Headers
+func removeExposeHeaders(h http.Header, names ...string) {
+	values := h.Values(HeaderExposeHeaders)
+	if len(values) == 0 {
+		return
+	}
+
+	remove := make(map[string]struct{}, len(names))
+	for _, n := range names {
+		n = strings.ToLower(strings.TrimSpace(n))
+		if n != "" {
+			remove[n] = struct{}{}
+		}
+	}
+
+	kept := make([]string, 0, len(values))
+	seen := make(map[string]struct{})
+	for _, raw := range values {
+		for part := range strings.SplitSeq(raw, ",") {
+			name := strings.TrimSpace(part)
+			if name == "" {
+				continue
+			}
+			lower := strings.ToLower(name)
+			if _, drop := remove[lower]; drop {
+				continue
+			}
+			if _, exists := seen[lower]; exists {
+				continue
+			}
+			seen[lower] = struct{}{}
+			kept = append(kept, name)
+		}
+	}
+
+	if len(kept) == 0 {
+		h.Del(HeaderExposeHeaders)
+		return
+	}
+	h.Set(HeaderExposeHeaders, strings.Join(kept, ", "))
 }
 
 // Redirect sends a redirect response. When the response is deferred (after-hooks in use),
