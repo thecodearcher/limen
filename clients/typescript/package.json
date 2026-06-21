@@ -16,7 +16,7 @@
     "test": "pnpm -r --filter './packages/*' run test",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish --no-git-tag"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
