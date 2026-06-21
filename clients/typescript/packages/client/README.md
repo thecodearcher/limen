@@ -34,7 +34,7 @@ export const auth = createAuthClient({
 // own, stays in sync across tabs, and updates whenever you sign in or out.
 auth.$session.subscribe(({ data, isPending }) => {
   if (isPending) return;
-  console.log(data ? `Signed in as ${data.user.email}` : "Signed out");
+  console.log(data ? `Signed in as ${data.user.email}` : "Signed out!");
 });
 
 // Mutations update `$session` automatically — no manual refetch.
