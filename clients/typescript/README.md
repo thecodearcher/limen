@@ -1,4 +1,4 @@
-# limen-ts
+# Typescript Clients SDKs
 
 TypeScript client SDKs for [Limen](https://github.com/thecodearcher/limen) — a modern, composable authentication library for Go.
 
