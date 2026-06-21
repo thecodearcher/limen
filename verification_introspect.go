@@ -50,7 +50,7 @@ func (v *VerificationSchema) getDefaultColumns(config *SchemaConfig) []ColumnDef
 		{
 			Name:         string(VerificationSchemaValueField),
 			LogicalField: VerificationSchemaValueField,
-			Type:         ColumnTypeString,
+			Type:         ColumnTypeText,
 			IsNullable:   false,
 			IsPrimaryKey: false,
 			Tags: map[string]string{
