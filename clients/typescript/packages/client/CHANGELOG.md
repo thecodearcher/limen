@@ -1,5 +1,11 @@
 # limen-auth
 
+## 0.0.3
+
+### Patch Changes
+
+- afa7f0e: Add support for plugin schema type extensions
+
 ## 0.0.2
 
 ### Patch Changes
