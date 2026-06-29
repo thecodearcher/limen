@@ -1,5 +1,11 @@
 # limen-auth
 
+## 0.0.4
+
+### Patch Changes
+
+- 4e8da95: refactor: rename social.accounts to social.listAccounts for clarity in oauth plugin
+
 ## 0.0.3
 
 ### Patch Changes
