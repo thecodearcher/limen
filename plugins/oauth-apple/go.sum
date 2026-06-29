@@ -4,8 +4,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/thecodearcher/limen v0.1.2 h1:qSImCDOrMtD/k4v2FHhtz2RDNXXWTjzAOh4v69SD2RE=
-github.com/thecodearcher/limen v0.1.2/go.mod h1:JCYwREDExWflPtKRNjWCV1K0WfN0ZfQTsP6ZVTHT+pE=
+github.com/thecodearcher/limen v0.1.3 h1:h/OMJdzGN4pLn94uRvPQebHhOP5RsusV/GL7B3l5wCo=
+github.com/thecodearcher/limen v0.1.3/go.mod h1:JCYwREDExWflPtKRNjWCV1K0WfN0ZfQTsP6ZVTHT+pE=
 github.com/thecodearcher/limen/plugins/oauth v0.1.1 h1:/BrSaULDUdUgBFT5AyOdezL8B8IiVkh62Dxtr1sdYD0=
 github.com/thecodearcher/limen/plugins/oauth v0.1.1/go.mod h1:bcZkOlk3MfWjS91uK4CeUZDRkCwpgLbvk8GT9IFPAsw=
 golang.org/x/crypto v0.48.0 h1:/VRzVqiRSggnhY7gNRxPauEQ5Drw9haKdM0jqfcCFts=
