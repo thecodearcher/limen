@@ -75,6 +75,8 @@ func (a *Adapter) buildOneCondition(c limen.Where) (string, []any) {
 		return col + " IS NULL", nil
 	case limen.OpIsNotNull:
 		return col + " IS NOT NULL", nil
+	case limen.OpCaseInsensitiveEq:
+		return "LOWER(" + col + ") = LOWER(?)", []any{c.Value}
 	default:
 		return "", nil
 	}

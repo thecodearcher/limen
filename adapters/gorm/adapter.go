@@ -196,6 +196,8 @@ func (a *Adapter) buildWhereClause(condition limen.Where) (string, []any) {
 		return condition.Column + " IS NULL", nil
 	case limen.OpIsNotNull:
 		return condition.Column + " IS NOT NULL", nil
+	case limen.OpCaseInsensitiveEq:
+		return "LOWER(" + condition.Column + ") = LOWER(?)", []any{condition.Value}
 	default:
 		return "", nil
 	}

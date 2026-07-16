@@ -280,6 +280,10 @@ func testMatchesSingle(row map[string]any, c Where) bool {
 			}
 		}
 		return true
+	case OpCaseInsensitiveEq:
+        left, leftOK := val.(string)
+        right, rightOK := c.Value.(string)
+        return leftOK && rightOK && strings.EqualFold(left, right)
 	default:
 		return testValuesEqual(val, c.Value)
 	}

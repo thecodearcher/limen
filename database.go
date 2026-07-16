@@ -52,6 +52,7 @@ const (
 	OpEndsWith   Operator = "ends_with"   // ends with
 	OpIsNull     Operator = "is_null"     // is null
 	OpIsNotNull  Operator = "is_not_null" // is not null
+	OpCaseInsensitiveEq Operator = "case_insensitive_eq"
 )
 
 // Connector defines how conditions are joined
@@ -220,4 +221,13 @@ func IsNotNull(column string) Where {
 func (w Where) Or() Where {
 	w.Connector = ConnectorOr
 	return w
+}
+
+func CaseInsensitiveEq(column, value string) Where {
+	return Where{
+		Column: column,
+		Operator: OpCaseInsensitiveEq,
+		Value: value,
+		Connector: ConnectorAnd,
+	}
 }

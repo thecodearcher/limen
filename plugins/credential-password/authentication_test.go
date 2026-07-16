@@ -42,6 +42,46 @@ func TestSignUp_DuplicateEmail(t *testing.T) {
 	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
 }
 
+func TestSignUp_DuplicateNormalizedEmail(t *testing.T) {
+	t.Parallel()
+
+	plugin := newTestLimenWithPlugin(t)
+	seedTestUser(t, plugin, "DUP@test.com", "Password1")
+
+	pw := "Password1"
+	_, err := plugin.SignUpWithCredentialAndPassword(context.Background(), &limen.User{
+		Email: "dup@test.com",
+		Password: &pw,
+	}, nil)
+
+	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
+}
+
+func TestSignUp_DuplicateNonNormalizedEmail(t *testing.T) {
+	t.Parallel()
+
+	plugin := newTestLimenWithPlugin(t)
+
+	pw := "Password1"
+	// direct user creation to test legacy, non-normalized emails
+	err := plugin.dbAction.CreateUser(
+		context.Background(),
+		&limen.User{
+			Email: "DUP@test.com",
+			Password: &pw,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	_, err = plugin.SignUpWithCredentialAndPassword(context.Background(), &limen.User{
+		Email: "dUp@test.com",
+		Password: &pw,
+	}, nil)
+
+	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
+}
+
 func TestSignUp_WithUsername(t *testing.T) {
 	t.Parallel()
 

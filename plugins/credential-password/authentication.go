@@ -86,6 +86,11 @@ func (p *credentialPasswordPlugin) SignUpWithCredentialAndPassword(ctx context.C
 
 	additionalFields = p.setUsernameField(additionalFields, username)
 
+	user = &limen.User{
+		Email: strings.ToLower(user.Email),
+		Password: user.Password,
+	}
+
 	userExists, err := p.checkEmailExists(ctx, user.Email)
 	if err != nil {
 		return nil, err
@@ -159,7 +164,7 @@ func (p *credentialPasswordPlugin) checkUsernameExists(ctx context.Context, user
 
 func (p *credentialPasswordPlugin) checkEmailExists(ctx context.Context, email string) (bool, error) {
 	exists, err := p.core.Exists(ctx, p.userSchema, []limen.Where{
-		limen.Eq(p.userSchema.GetEmailField(), email),
+		limen.CaseInsensitiveEq(p.userSchema.GetEmailField(), email),
 	})
 	if err != nil {
 		return false, err
