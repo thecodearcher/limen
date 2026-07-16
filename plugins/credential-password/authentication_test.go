@@ -134,6 +134,17 @@ func TestSignIn(t *testing.T) {
 	assert.Equal(t, "signin@test.com", result.User.Email)
 }
 
+func TestSignIn_NormalizedEmail(t *testing.T) {
+	t.Parallel()
+
+	plugin := newTestLimenWithPlugin(t)
+	seedTestUser(t, plugin, "normalized@test.com", "Password1")
+
+	result, err := plugin.SignInWithCredentialAndPassword(context.Background(), "NORMALIZED@test.com", "Password1")
+	require.NoError(t, err)
+	assert.Equal(t, "normalized@test.com", result.User.Email)
+}
+
 func TestSignIn_Errors(t *testing.T) {
 	t.Parallel()
 

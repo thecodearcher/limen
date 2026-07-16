@@ -19,7 +19,7 @@ func (p *credentialPasswordPlugin) SignInWithCredentialAndPassword(ctx context.C
 	if isUsername {
 		user, err = p.FindUserByUsername(ctx, credential)
 	} else {
-		user, err = p.dbAction.FindUserByEmail(ctx, credential)
+		user, err = p.dbAction.FindUserByEmail(ctx, strings.ToLower(credential))
 	}
 
 	if err != nil {
