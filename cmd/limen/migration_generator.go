@@ -38,13 +38,28 @@ func (s *sqlMigrationGenerator) generateDownMigration(schema *limen.SchemaDefini
 	if diff != nil && diff.HasChanges() {
 		return s.generateAlterDownMigration(schema.GetTableName(), diff)
 	}
-	return fmt.Sprintf("DROP TABLE IF EXISTS %s;", schema.GetTableName()), nil
+	return fmt.Sprintf("DROP TABLE IF EXISTS %s;", s.quote(string(schema.GetTableName()))), nil
+}
+
+// quote quotes a single identifier for the target database.
+func (s *sqlMigrationGenerator) quote(name string) string {
+	return s.driver.QuoteIdentifier(name)
+}
+
+// quoteAll quotes each identifier and joins them with separator, for the
+// column lists in PRIMARY KEY and CREATE INDEX.
+func quoteAll[T ~string](s *sqlMigrationGenerator, names []T, separator string) string {
+	quoted := make([]string, len(names))
+	for i := range names {
+		quoted[i] = s.quote(string(names[i]))
+	}
+	return strings.Join(quoted, separator)
 }
 
 func (s *sqlMigrationGenerator) generateCreateTable(schema *limen.SchemaDefinition) (string, error) {
 	var buf strings.Builder
 
-	fmt.Fprintf(&buf, "CREATE TABLE IF NOT EXISTS %s (\n", schema.GetTableName())
+	fmt.Fprintf(&buf, "CREATE TABLE IF NOT EXISTS %s (\n", s.quote(string(schema.GetTableName())))
 
 	columns := make([]string, 0, len(schema.Columns))
 	for _, field := range schema.Columns {
@@ -61,7 +76,7 @@ func (s *sqlMigrationGenerator) generateCreateTable(schema *limen.SchemaDefiniti
 	}
 
 	if len(pkFields) > 0 {
-		fmt.Fprintf(&buf, ",\n  PRIMARY KEY (%s)", strings.Join(pkFields, ", "))
+		fmt.Fprintf(&buf, ",\n  PRIMARY KEY (%s)", quoteAll(s, pkFields, ", "))
 	}
 
 	for _, fk := range schema.ForeignKeys {
@@ -135,7 +150,7 @@ func (s *sqlMigrationGenerator) generateUpAlterTableStatement(tableName limen.Sc
 	var buf strings.Builder
 	statements := []string{}
 
-	fmt.Fprintf(&buf, "ALTER TABLE %s\n", tableName)
+	fmt.Fprintf(&buf, "ALTER TABLE %s\n", s.quote(string(tableName)))
 	for _, col := range diff.AddedColumns {
 		colDef := s.generateColumnDefinition(&col)
 		statements = append(statements, fmt.Sprintf("ADD COLUMN %s", colDef))
@@ -161,7 +176,7 @@ func (s *sqlMigrationGenerator) generateDownAlterTableStatement(tableName limen.
 	var buf strings.Builder
 	statements := []string{}
 
-	fmt.Fprintf(&buf, "ALTER TABLE %s\n", tableName)
+	fmt.Fprintf(&buf, "ALTER TABLE %s\n", s.quote(string(tableName)))
 
 	for _, fk := range diff.AddedForeignKeys {
 		dropOp := s.driver.DropForeignKeySQL(string(tableName), fk.Name)
@@ -181,7 +196,7 @@ func (s *sqlMigrationGenerator) generateDownAlterTableStatement(tableName limen.
 }
 
 func (s *sqlMigrationGenerator) generateColumnDefinition(field *limen.ColumnDefinition) string {
-	parts := []string{field.Name}
+	parts := []string{s.quote(field.Name)}
 
 	isAutoIncrement := field.LogicalField == limen.SchemaIDField && s.useAutoIncrementIDs
 
@@ -214,10 +229,12 @@ func (s *sqlMigrationGenerator) generateForeignKeyStatement(fk *limen.ForeignKey
 
 	if alterTable {
 		fmt.Fprintf(&buf, "ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-			fk.Name, fk.Column, string(fk.ReferencedSchema), string(fk.ReferencedField))
+			s.quote(fk.Name), s.quote(string(fk.Column)),
+			s.quote(string(fk.ReferencedSchema)), s.quote(string(fk.ReferencedField)))
 	} else {
 		fmt.Fprintf(&buf, ",\nCONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-			fk.Name, fk.Column, string(fk.ReferencedSchema), string(fk.ReferencedField))
+			s.quote(fk.Name), s.quote(string(fk.Column)),
+			s.quote(string(fk.ReferencedSchema)), s.quote(string(fk.ReferencedField)))
 	}
 
 	if fk.OnDelete != "" {
@@ -234,20 +251,9 @@ func (s *sqlMigrationGenerator) generateForeignKeyStatement(fk *limen.ForeignKey
 func (s *sqlMigrationGenerator) generateCreateIndexStatement(idx *limen.IndexDefinition, tableName limen.SchemaTableName) string {
 	if idx.Unique {
 		return fmt.Sprintf("CREATE UNIQUE INDEX %s ON %s (%s);",
-			idx.Name, tableName, joinCustomStringSlice(idx.Columns, ", "))
+			s.quote(idx.Name), s.quote(string(tableName)), quoteAll(s, idx.Columns, ", "))
 	}
 
 	return fmt.Sprintf("CREATE INDEX %s ON %s (%s);",
-		idx.Name, tableName, joinCustomStringSlice(idx.Columns, ", "))
-}
-
-func joinCustomStringSlice[T ~string](fields []T, separator string) string {
-	var joined string
-	for i := range fields {
-		joined += string(fields[i])
-		if i < len(fields)-1 {
-			joined += separator
-		}
-	}
-	return joined
+		s.quote(idx.Name), s.quote(string(tableName)), quoteAll(s, idx.Columns, ", "))
 }
