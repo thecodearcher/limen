@@ -261,6 +261,28 @@ func TestGenerateDownMigrationForExistingTableQuotesIdentifiers(t *testing.T) {
 	})
 }
 
+// A down migration that drops an index and alters the table emits both, and
+// the two must not run together into one statement. The driver's DropIndexSQL
+// carries no terminator of its own, unlike generateCreateIndexStatement on the
+// up path, so the caller has to supply it.
+func TestGenerateDownMigrationTerminatesEachStatement(t *testing.T) {
+	t.Parallel()
+
+	got, err := newTestGenerator(t, NewPostgresDriver()).
+		generateDownMigration(reservedWordSchema(), reservedWordDiff())
+	if err != nil {
+		t.Fatalf("generateDownMigration() error = %v", err)
+	}
+
+	assertContainsAll(t, got, []string{`DROP INDEX IF EXISTS "idx_user_order";`})
+
+	for _, stmt := range strings.Split(got, ";") {
+		if strings.Contains(stmt, "DROP INDEX") && strings.Contains(stmt, "ALTER TABLE") {
+			t.Errorf("DROP INDEX and ALTER TABLE share one statement\ngot:\n%s", got)
+		}
+	}
+}
+
 func TestDriverDropStatementsQuoteIdentifiers(t *testing.T) {
 	t.Parallel()
 

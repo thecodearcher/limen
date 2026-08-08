@@ -122,7 +122,11 @@ func (s *sqlMigrationGenerator) generateAlterDownMigration(tableName limen.Schem
 	statements := []string{}
 
 	for _, idx := range diff.AddedIndexes {
-		dropSQL := s.driver.DropIndexSQL(string(tableName), idx.Name)
+		// DropIndexSQL is a standalone statement but carries no terminator,
+		// unlike DropColumnSQL and DropForeignKeySQL, which are fragments of
+		// the ALTER TABLE appended below. Without the semicolon the two run
+		// together into one statement the database rejects.
+		dropSQL := s.driver.DropIndexSQL(string(tableName), idx.Name) + ";"
 		statements = append(statements, dropSQL)
 	}
 
