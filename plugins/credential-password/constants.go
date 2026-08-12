@@ -4,6 +4,7 @@ import "github.com/thecodearcher/limen"
 
 const (
 	defaultMinPasswordLength        = 8
+	minAllowedPasswordLength        = 4
 	defaultPasswordRequireUppercase = true
 	defaultPasswordRequireNumbers   = true
 	defaultPasswordRequireSymbols   = false
