@@ -67,15 +67,16 @@ type PublicIDConfig struct {
 }
 
 type BaseSchema struct {
-	// A function to return a map of additional fields to be added to the schema when creating a record. e.g:
-	//  func(ctx context.Context) map[string]any {
+	// A function to return a map of additional fields to be added to the schema when writing a record. e.g:
+	//  func(ctx *AdditionalFieldsContext) (map[string]any, error) {
 	// 		return map[string]any{
 	//  		"uuid": uuid.New().String(),
 	//  		"created_at": time.Now(),
 	//  		"updated_at": time.Now(),
-	// 		 }
+	// 		 }, nil
 	//	 }
-	// NOTE: fields here will override the global additional fields function.
+	// NOTE: fields here will override the global additional fields function, and the function
+	// runs on both creates and updates.
 	additionalFields AdditionalFieldsFunc
 
 	// schemaInfo contains all resolved schema information including table name, field mappings, and resolver

@@ -9,6 +9,26 @@ import (
 	"time"
 )
 
+type UpdateOption func(*updateOptions)
+
+func WithUpdateAdditionalFields(fields map[string]any) UpdateOption {
+	return func(options *updateOptions) {
+		options.additionalFields = fields
+	}
+}
+
+func newUpdateOptions(opts []UpdateOption) *updateOptions {
+	options := &updateOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+	return options
+}
+
+type updateOptions struct {
+	additionalFields map[string]any
+}
+
 // getDB returns the database adapter to use, checking in this order:
 //
 //  1. Transaction from context (if in a transaction )
@@ -36,19 +56,18 @@ func (core *LimenCore) FindOne(ctx context.Context, schema Schema, conditions []
 	return model, nil
 }
 
-func (core *LimenCore) buildCreatePayload(ctx context.Context, schema Schema, data any, additionalFields map[string]any) (map[string]any, error) {
-	payload := make(map[string]any)
+// resolveAdditionalFields runs the global and schema AdditionalFieldsFunc for the write,
+// with the schema fields taking precedence over the global ones.
+func (core *LimenCore) resolveAdditionalFields(ctx context.Context, schema Schema, operation Operation) (map[string]any, error) {
+	additionalFieldsContext := getAdditionalFieldsContext(ctx).forWrite(schema, operation)
 
-	additionalFieldsContext := getAdditionalFieldsContext(ctx)
-
-	// the order of the copy of the fields is important here!
-	// global additional fields -> schema additional fields -> directly passed additional fields -> data
+	fields := make(map[string]any)
 	if core.Schema.AdditionalFields != nil {
 		globalFields, err := core.Schema.AdditionalFields(additionalFieldsContext)
 		if err != nil {
 			return nil, err
 		}
-		maps.Copy(payload, globalFields)
+		maps.Copy(fields, globalFields)
 	}
 
 	if schema.GetAdditionalFields() != nil {
@@ -56,7 +75,18 @@ func (core *LimenCore) buildCreatePayload(ctx context.Context, schema Schema, da
 		if err != nil {
 			return nil, err
 		}
-		maps.Copy(payload, schemaFields)
+		maps.Copy(fields, schemaFields)
+	}
+
+	return fields, nil
+}
+
+func (core *LimenCore) buildCreatePayload(ctx context.Context, schema Schema, data any, additionalFields map[string]any) (map[string]any, error) {
+	// the order of the copy of the fields is important here!
+	// global additional fields -> schema additional fields -> directly passed additional fields -> data
+	payload, err := core.resolveAdditionalFields(ctx, schema, OperationCreate)
+	if err != nil {
+		return nil, err
 	}
 	maps.Copy(payload, additionalFields)
 
@@ -140,17 +170,17 @@ func ParseVerificationAction(action string) (string, string) {
 
 // Update changes matching rows. Use Model for patch-style updates,
 // or map[SchemaField]any when you need exact column control.
-func (core *LimenCore) Update(ctx context.Context, schema Schema, data any, conditions []Where) error {
-	_, err := core.UpdateWithResult(ctx, schema, data, conditions)
+func (core *LimenCore) Update(ctx context.Context, schema Schema, data any, conditions []Where, opts ...UpdateOption) error {
+	_, err := core.UpdateWithResult(ctx, schema, data, conditions, opts...)
 	return err
 }
 
-func (core *LimenCore) UpdateWithResult(ctx context.Context, schema Schema, data any, conditions []Where) (*DatabaseResult, error) {
+func (core *LimenCore) UpdateWithResult(ctx context.Context, schema Schema, data any, conditions []Where, opts ...UpdateOption) (*DatabaseResult, error) {
 	if len(conditions) == 0 {
 		return nil, fmt.Errorf("%w: conditions required to prevent accidental table-wide update", ErrMissingConditions)
 	}
 
-	payload, err := buildWritePayload(schema, data, false)
+	payload, err := core.buildUpdatePayload(ctx, schema, data, newUpdateOptions(opts))
 	if err != nil {
 		return nil, err
 	}
@@ -174,8 +204,45 @@ func (core *LimenCore) UpdateWithResult(ctx context.Context, schema Schema, data
 	return &result, err
 }
 
-func (core *LimenCore) UpdateAndReturn(ctx context.Context, schema Schema, data any, conditions []Where, id any) (Model, error) {
-	if err := core.Update(ctx, schema, data, conditions); err != nil {
+func (core *LimenCore) buildUpdatePayload(ctx context.Context, schema Schema, data any, options *updateOptions) (map[string]any, error) {
+	// the order of the copy of the fields is important here!
+	// global additional fields -> schema additional fields -> directly passed additional fields -> data
+	payload, err := core.resolveAdditionalFields(ctx, schema, OperationUpdate)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(payload, options.additionalFields)
+	core.dropImmutableFields(schema, payload)
+
+	payloadData, err := buildWritePayload(schema, data, false)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(payload, payloadData)
+
+	return payload, nil
+}
+
+func (core *LimenCore) dropImmutableFields(schema Schema, fields map[string]any) {
+	if len(fields) == 0 {
+		return
+	}
+
+	immutable := []string{
+		schema.GetIDField(),
+		schema.GetField(SchemaCreatedAtField),
+	}
+	if _, config, enabled := core.getPublicIDConfig(schema); enabled {
+		immutable = append(immutable, schema.GetField(config.field))
+	}
+
+	for _, column := range immutable {
+		delete(fields, column)
+	}
+}
+
+func (core *LimenCore) UpdateAndReturn(ctx context.Context, schema Schema, data any, conditions []Where, id any, opts ...UpdateOption) (Model, error) {
+	if err := core.Update(ctx, schema, data, conditions, opts...); err != nil {
 		return nil, err
 	}
 

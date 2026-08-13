@@ -14,6 +14,10 @@ func newTestLimen(t *testing.T, plugins ...Plugin) *Limen {
 	return l
 }
 
+func ptr[T any](value T) *T {
+	return &value
+}
+
 func seedUser(t *testing.T, l *Limen, email string) any {
 	t.Helper()
 	return SeedTestUser(t, l, email).ID

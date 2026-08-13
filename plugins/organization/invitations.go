@@ -11,9 +11,10 @@ import (
 )
 
 type CreateInvitationRequest struct {
-	Email  string `json:"email"`
-	Role   any    `json:"role"`
-	Resend bool   `json:"resend"`
+	Email            string         `json:"email"`
+	Role             any            `json:"role"`
+	Resend           bool           `json:"resend"`
+	AdditionalFields map[string]any `json:"-"`
 }
 
 type FindPendingInvitationOptions struct {
@@ -516,7 +517,7 @@ func (o *organizationPlugin) createNewInvitation(ctx context.Context, user *lime
 		payload.ExpiresAt = &expiresAt
 	}
 
-	invitation, err := o.core.CreateAndReturn(ctx, o.invitationSchema, payload, nil, InvitationSchemaTokenField)
+	invitation, err := o.core.CreateAndReturn(ctx, o.invitationSchema, payload, req.AdditionalFields, InvitationSchemaTokenField)
 	if err != nil {
 		return nil, err
 	}

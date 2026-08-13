@@ -1,5 +1,11 @@
 # limen-auth
 
+## 0.1.1
+
+### Patch Changes
+
+- f6150e7: add support for organization additional fields
+
 ## 0.1.0
 
 ### Minor Changes
