@@ -100,6 +100,7 @@ export type UpdateOrganizationInput = {
   slug?: string;
   logo?: string;
   metadata?: Record<string, unknown>;
+  additionalFields?: Record<string, unknown>;
 };
 
 export type DeleteOrganizationInput = {
@@ -141,6 +142,7 @@ export type CreateInvitationInput = {
   role: string;
   /** Extend the pending invitation for this email instead of rejecting it. */
   resend?: boolean;
+  additionalFields?: Record<string, unknown>;
 };
 
 export type InvitationTokenInput = {

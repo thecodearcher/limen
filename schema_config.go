@@ -10,16 +10,15 @@ type PluginSchemaConfig struct {
 type PluginSchemaConfigOption func(*PluginSchemaConfig)
 
 type SchemaConfig struct {
-	// A function to return a map of global fields to be added to all schemas when creating a record. e.g:
-	//  func(ctx context.Context) map[string]any {
+	// A function to return a map of global fields to be added to all schemas when writing a record. e.g:
+	//  func(ctx *AdditionalFieldsContext) (map[string]any, error) {
 	// 		return map[string]any{
 	//  		"uuid": uuid.New().String(),
 	//  		"created_at": time.Now(),
 	//  		"updated_at": time.Now(),
-	// 		 }
+	// 		 }, nil
 	//	 }
-	// this function will be called during the creation of any schema record.
-	// You can also set fields on supported schemas itself.
+	// this function will be called during the creation and the update of any schema record,
 	AdditionalFields AdditionalFieldsFunc
 	// IDGenerator generates IDs for all schemas
 	IDGenerator IDGenerator

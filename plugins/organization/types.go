@@ -19,10 +19,11 @@ type ListOrganizationsFilter struct {
 }
 
 type UpdateOrganizationRequest struct {
-	Name     *string        `json:"name,omitempty"`
-	Slug     *string        `json:"slug,omitempty"`
-	Logo     *string        `json:"logo,omitempty"`
-	Metadata map[string]any `json:"metadata,omitempty"`
+	Name             *string        `json:"name,omitempty"`
+	Slug             *string        `json:"slug,omitempty"`
+	Logo             *string        `json:"logo,omitempty"`
+	Metadata         map[string]any `json:"metadata,omitempty"`
+	AdditionalFields map[string]any `json:"-"`
 }
 
 type SendInvitationMailData struct {

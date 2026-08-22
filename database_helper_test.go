@@ -259,6 +259,175 @@ func TestDatabaseHelper_UpdateAndReturn(t *testing.T) {
 	assert.Equal(t, "returned@test.com", returned.(*User).Email)
 }
 
+func newTestLimenWithUserAdditionalFields(t *testing.T, fn AdditionalFieldsFunc) *Limen {
+	t.Helper()
+
+	l, _ := NewTestLimenWithSchema(t, NewDefaultSchemaConfig(
+		WithSchemaUser(WithUserAdditionalFields(fn)),
+	))
+	return l
+}
+
+func TestDatabaseHelper_AdditionalFields_RunOnCreateAndUpdate(t *testing.T) {
+	t.Parallel()
+
+	var updateTable SchemaTableName
+	l := newTestLimenWithUserAdditionalFields(t, func(ctx *AdditionalFieldsContext) (map[string]any, error) {
+		if ctx.IsCreate() {
+			return map[string]any{"first_name": "created"}, nil
+		}
+		updateTable = ctx.TableName()
+		return map[string]any{"first_name": "updated"}, nil
+	})
+
+	ctx := context.Background()
+	userSchema := l.core.Schema.User
+	conditions := []Where{Eq(userSchema.GetEmailField(), "both@test.com")}
+
+	require.NoError(t, l.core.Create(ctx, userSchema, &User{Email: "both@test.com"}, nil))
+
+	created, err := l.core.FindOne(ctx, userSchema, conditions, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "created", created.Raw()["first_name"])
+
+	require.NoError(t, l.core.Update(ctx, userSchema, &User{Password: ptr("hashed")}, conditions))
+
+	updated, err := l.core.FindOne(ctx, userSchema, conditions, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "updated", updated.Raw()["first_name"])
+	assert.Equal(t, userSchema.GetTableName(), updateTable, "the schema being written is exposed to the function")
+}
+
+func TestDatabaseHelper_Update_WritesAdditionalFieldsWithoutData(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimenWithUserAdditionalFields(t, func(ctx *AdditionalFieldsContext) (map[string]any, error) {
+		if ctx.IsCreate() {
+			return nil, nil
+		}
+		return map[string]any{"first_name": "from-func"}, nil
+	})
+
+	ctx := context.Background()
+	userSchema := l.core.Schema.User
+	conditions := []Where{Eq(userSchema.GetEmailField(), "nodata@test.com")}
+
+	require.NoError(t, l.core.Create(ctx, userSchema, &User{Email: "nodata@test.com"}, nil))
+	require.NoError(t, l.core.Update(ctx, userSchema, &User{}, conditions))
+
+	updated, err := l.core.FindOne(ctx, userSchema, conditions, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "from-func", updated.Raw()["first_name"], "additional fields alone are enough to write")
+}
+
+func TestDatabaseHelper_Update_AdditionalFieldsPrecedence(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimenWithUserAdditionalFields(t, func(ctx *AdditionalFieldsContext) (map[string]any, error) {
+		return map[string]any{"first_name": "from-func"}, nil
+	})
+
+	ctx := context.Background()
+	userSchema := l.core.Schema.User
+	conditions := []Where{Eq(userSchema.GetIDField(), int64(1))}
+
+	require.NoError(t, l.core.Create(ctx, userSchema, &User{Email: "order@test.com"}, nil))
+
+	err := l.core.Update(ctx, userSchema, &User{Email: "from-data@test.com"}, conditions,
+		WithUpdateAdditionalFields(map[string]any{
+			"first_name":               "from-option",
+			userSchema.GetEmailField(): "from-option@test.com",
+		}))
+	require.NoError(t, err)
+
+	updated, err := l.core.FindOne(ctx, userSchema, conditions, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "from-option", updated.Raw()["first_name"], "the option overrides the function")
+	assert.Equal(t, "from-data@test.com", updated.(*User).Email, "data overrides the option")
+}
+
+func TestDatabaseHelper_Update_SkipsImmutableAdditionalFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("id column", func(t *testing.T) {
+		t.Parallel()
+
+		var idColumn string
+		l := newTestLimenWithUserAdditionalFields(t, func(ctx *AdditionalFieldsContext) (map[string]any, error) {
+			if ctx.IsCreate() {
+				return nil, nil
+			}
+			return map[string]any{idColumn: int64(99), "first_name": "kept"}, nil
+		})
+
+		ctx := context.Background()
+		userSchema := l.core.Schema.User
+		idColumn = userSchema.GetIDField()
+		require.NoError(t, l.core.Create(ctx, userSchema, &User{Email: "immutable@test.com"}, nil))
+
+		conditions := []Where{Eq(userSchema.GetEmailField(), "immutable@test.com")}
+		require.NoError(t, l.core.Update(ctx, userSchema, &User{Password: ptr("hashed")}, conditions,
+			WithUpdateAdditionalFields(map[string]any{idColumn: int64(42)})))
+
+		updated, err := l.core.FindOne(ctx, userSchema, conditions, nil)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), updated.(*User).ID, "the id is not rewritten from either source")
+		assert.Equal(t, "kept", updated.Raw()["first_name"], "the remaining additional fields still apply")
+	})
+
+	t.Run("created at column", func(t *testing.T) {
+		t.Parallel()
+
+		createdAt := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+		var createdAtColumn string
+		l := newTestLimenWithUserAdditionalFields(t, func(ctx *AdditionalFieldsContext) (map[string]any, error) {
+			if ctx.IsCreate() {
+				return map[string]any{createdAtColumn: createdAt}, nil
+			}
+			return map[string]any{createdAtColumn: time.Now()}, nil
+		})
+
+		ctx := context.Background()
+		userSchema := l.core.Schema.User
+		createdAtColumn = userSchema.GetField(SchemaCreatedAtField)
+		conditions := []Where{Eq(userSchema.GetEmailField(), "stamp@test.com")}
+
+		require.NoError(t, l.core.Create(ctx, userSchema, &User{Email: "stamp@test.com"}, nil))
+		require.NoError(t, l.core.Update(ctx, userSchema, &User{Password: ptr("hashed")}, conditions,
+			WithUpdateAdditionalFields(map[string]any{createdAtColumn: time.Now()})))
+
+		updated, err := l.core.FindOne(ctx, userSchema, conditions, nil)
+		require.NoError(t, err)
+		assert.Equal(t, createdAt, updated.Raw()[createdAtColumn],
+			"the insert timestamp is not replayed from either source")
+	})
+
+	t.Run("public ID column", func(t *testing.T) {
+		t.Parallel()
+
+		var publicIDColumn string
+		l, userSchema := newPublicIDFixture(t, usersOnlyPublicIDConfig(noopPublicIDGenerator()),
+			WithSchemaUser(WithUserAdditionalFields(func(ctx *AdditionalFieldsContext) (map[string]any, error) {
+				if ctx.IsCreate() {
+					return map[string]any{publicIDColumn: "original"}, nil
+				}
+				return map[string]any{publicIDColumn: "rewritten"}, nil
+			})))
+		publicIDColumn = userSchema.GetField(SchemaPublicIDField)
+
+		ctx := context.Background()
+		conditions := []Where{Eq(l.core.Schema.User.GetEmailField(), "public@test.com")}
+		require.NoError(t, l.core.Create(ctx, userSchema, &User{Email: "public@test.com"}, nil))
+
+		require.NoError(t, l.core.Update(ctx, userSchema, &User{Password: ptr("hashed")}, conditions))
+
+		updated, err := l.core.FindOne(ctx, userSchema, conditions, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "original", updated.Raw()[publicIDColumn],
+			"the public ID supplied on insert is not rewritten on update")
+	})
+}
+
 func seedRateLimitRow(t *testing.T, l *Limen, key string, count int32, lastRequestAt int64) {
 	t.Helper()
 

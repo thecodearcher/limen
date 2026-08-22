@@ -197,13 +197,9 @@ func (o *organizationPlugin) UpdateOrganization(ctx context.Context, user *limen
 		payload[OrganizationSchemaMetadataField] = string(encoded)
 	}
 
-	if len(payload) == 0 {
-		return organization, nil
-	}
-
 	updated, err := o.core.UpdateAndReturn(ctx, o.organizationSchema, payload, []limen.Where{
 		limen.Eq(o.organizationSchema.GetIDField(), organization.ID),
-	}, organization.ID)
+	}, organization.ID, limen.WithUpdateAdditionalFields(request.AdditionalFields))
 	if err != nil {
 		return nil, err
 	}

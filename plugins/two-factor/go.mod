@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/pquerna/otp v1.4.0
 	github.com/stretchr/testify v1.11.1
-	github.com/thecodearcher/limen v0.2.0
+	github.com/thecodearcher/limen v0.2.1
 	github.com/thecodearcher/limen/plugins/credential-password v0.2.0
 )
 

@@ -2,21 +2,29 @@
 
 Where Limen is going, so contributors can see what's being built first-party, what's open, and what's out of scope **before writing code**. For anything non-trivial: open an issue first.
 
-Status legend: 🚧 in progress · 📋 planned (first-party) · 🙋 help wanted · 🤔 considering — may or may not happen · ⛔ not planned
+Status legend: ✅ shipped · 🚧 in progress · 📋 planned (first-party) · 🙋 help wanted · 🤔 considering — may or may not happen · ⛔ not planned
+
+## Recently shipped
+
+| item | notes |
+|---|---|
+| Access control package (`access`) | Statements, roles, permission checks. Used by organization and API keys. |
+| **Organizations** (memberships, roles, invitations, active org) | Multi-tenant foundation. |
+| Dynamic custom roles (runtime-defined, per-org) | Opt-in via `WithCustomRoles`. |
+| API keys | Including org-scoped keys. |
+| TypeScript client (`limen-auth`) | Plugin clients for credential, OAuth, 2FA, session JWT, organization, API keys. |
 
 ## Track 1: Core
 
 | item | status | notes |
 |---|---|---|
 | Native relation queries (joins + relation filtering) | 🚧 | |
-| Access control package (`access`) | 📋 | Statements, roles, permission checks. Shared by org/rbac/admin. |
 
 ## Track 2: Authentication methods (plugins)
 
 | item | status | notes |
 |---|---|---|
-| API keys | 🚧 | Done. Landing soon. |
-| Passkeys / WebAuthn | 📋 | 
+| Passkeys / WebAuthn | 📋 | |
 | Anonymous / guest sessions | 📋 | |
 | Additional OAuth providers | 🙋 | Follow the `oauth-*` pattern. Safest contribution lane in the repo. |
 
@@ -24,10 +32,7 @@ Status legend: 🚧 in progress · 📋 planned (first-party) · 🙋 help wante
 
 | item | status | notes |
 |---|---|---|
-| **Organizations** (memberships, roles, invitations, active org) | 🚧 | |
 | RBAC (global user roles) | 📋 | |
-| Dynamic custom roles (runtime-defined, per-org) | 🚧 | |
-| Org-scoped API keys | 🚧 | |
 | Teams (org sub-groups) | 📋 | |
 | Admin plugin (user management, impersonation, bans) | 📋 | |
 | Billing / seat management | 🤔 | Undecided. |
