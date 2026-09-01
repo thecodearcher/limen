@@ -3,8 +3,6 @@ package limen
 import (
 	"fmt"
 	"os"
-
-	"github.com/thecodearcher/limen/access"
 )
 
 // Config is the main configuration struct for the limen library
@@ -14,7 +12,6 @@ type Config struct {
 	CacheStore     CacheAdapter
 	CacheKeyPrefix string
 	Plugins        []Plugin
-	AccessControl  *access.AccessControl
 	Schema         *SchemaConfig
 	Session        *sessionConfig
 	HTTP           *httpConfig
