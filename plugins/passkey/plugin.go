@@ -21,7 +21,8 @@ type passkeyPlugin struct {
 // New creates a passkey plugin.
 func New(opts ...ConfigOption) *passkeyPlugin {
 	cfg := &config{
-		rpName: "limen-auth",
+		rpName:              "limen-auth",
+		challengeCookieName: "limen-passkey",
 		authenticatorSelection: AuthenticatorSelection{
 			UserVerification: UserVerificationRequired,
 			ResidentKey:      ResidentKeyPreferred,
@@ -57,15 +58,6 @@ func (p *passkeyPlugin) Initialize(core *limen.LimenCore) error {
 	p.webAuthn = webAuthn
 
 	return nil
-}
-
-func (p *passkeyPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
-	return limen.PluginHTTPConfig{
-		BasePath: "/passkey",
-	}
-}
-
-func (p *passkeyPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 }
 
 func (p *passkeyPlugin) GetSchemas(schema *limen.SchemaConfig) []limen.SchemaIntrospector {

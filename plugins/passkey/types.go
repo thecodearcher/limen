@@ -47,12 +47,15 @@ type config struct {
 	allowedOrigins []string
 
 	authenticatorSelection AuthenticatorSelection
+	challengeCookieName    string
 }
 
 type ConfigOption func(*config)
 
 // WithRPID sets the domain passkeys are tied to. Defaults to the host of your
-// base URL. Point it at the parent domain (e.g. "example.com" while auth runs on
+// base URL.
+//
+// Point it at the parent domain (e.g. "example.com" while auth runs on
 // "auth.example.com") so one passkey works across all your subdomains.
 func WithRPID(rpID string) ConfigOption {
 	return func(c *config) {
@@ -83,5 +86,13 @@ func WithAllowedOrigins(origins ...string) ConfigOption {
 func WithAuthenticatorSelection(selection AuthenticatorSelection) ConfigOption {
 	return func(c *config) {
 		c.authenticatorSelection = selection
+	}
+}
+
+// WithChallengeCookieName sets the name of the cookie that stores the challenge
+// for the passkey authentication. Defaults to "limen-passkey".
+func WithChallengeCookieName(cookieName string) ConfigOption {
+	return func(c *config) {
+		c.challengeCookieName = cookieName
 	}
 }
