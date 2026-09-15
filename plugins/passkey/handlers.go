@@ -28,6 +28,10 @@ func routes(h *passkeyHandlers, routeBuilder *limen.RouteBuilder) {
 
 	routeBuilder.GET("/begin-authentication", "passkey:begin-authentication", h.BeginAuthentication)
 	routeBuilder.POST("/finish-authentication", "passkey:finish-authentication", h.FinishAuthentication)
+
+	routeBuilder.ProtectedGET("/", "passkey:list", h.ListPasskeys)
+	routeBuilder.ProtectedPATCH("/:id", "passkey:update", h.UpdatePasskey)
+	routeBuilder.ProtectedDELETE("/:id", "passkey:delete", h.DeletePasskey)
 }
 
 func newPasskeyHandlers(plugin *passkeyPlugin, httpCore *limen.LimenHTTPCore) *passkeyHandlers {
@@ -35,6 +39,12 @@ func newPasskeyHandlers(plugin *passkeyPlugin, httpCore *limen.LimenHTTPCore) *p
 		plugin:    plugin,
 		responder: httpCore.Responder,
 	}
+}
+
+func (h *passkeyHandlers) validatePasskeyIDParam(v *limen.Validator) {
+	v.Param("id").Required().Custom(func(value any, _ map[string]any) error {
+		return limen.ValidateClientIDValue(h.plugin.core, h.plugin.passkeySchema, value)
+	})
 }
 
 func (h *passkeyHandlers) BeginRegistration(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +99,7 @@ func (h *passkeyHandlers) FinishRegistration(w http.ResponseWriter, r *http.Requ
 	}
 
 	h.plugin.deleteSessionDataFromCookie(w)
-	h.responder.JSON(w, r, http.StatusOK, passkey)
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.core.SerializeModel(h.plugin.passkeySchema, passkey))
 }
 
 func (h *passkeyHandlers) BeginAuthentication(w http.ResponseWriter, r *http.Request) {
@@ -125,4 +135,64 @@ func (h *passkeyHandlers) FinishAuthentication(w http.ResponseWriter, r *http.Re
 	}
 	h.plugin.deleteSessionDataFromCookie(w)
 	h.responder.SessionResponse(w, r, h.plugin.core, authResult, sessionResult)
+}
+
+func (h *passkeyHandlers) ListPasskeys(w http.ResponseWriter, r *http.Request) {
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	page, err := h.plugin.ListPasskeys(r.Context(), session.User, limen.ParsePagination(r))
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, limen.SerializePage(h.plugin.core, h.plugin.passkeySchema, page))
+}
+
+func (h *passkeyHandlers) UpdatePasskey(w http.ResponseWriter, r *http.Request) {
+	body := limen.BindAndValidate[UpdatePasskeyRequest](w, r, h.responder, func(v *limen.Validator) {
+		h.validatePasskeyIDParam(v)
+		v.Field("name").Required().String().MinLength(1).MaxLength(100)
+	})
+
+	if body == nil {
+		return
+	}
+
+	user, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	passkey, err := h.plugin.UpdatePasskey(r.Context(), user.User, limen.GetParam(r, "id"), body)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.core.SerializeModel(h.plugin.passkeySchema, passkey))
+}
+
+func (h *passkeyHandlers) DeletePasskey(w http.ResponseWriter, r *http.Request) {
+	if limen.ValidateRequest(w, r, h.responder, h.validatePasskeyIDParam) == nil {
+		return
+	}
+
+	user, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	if err := h.plugin.DeletePasskey(r.Context(), user.User, limen.GetParam(r, "id")); err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }

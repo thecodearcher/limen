@@ -325,3 +325,16 @@ func SerializeModels[T Model](c *LimenCore, schema Schema, models []T) []map[str
 	}
 	return result
 }
+
+func SerializePage[T Model](c *LimenCore, schema Schema, page *Page[T]) *Page[map[string]any] {
+	if page == nil {
+		return nil
+	}
+	return &Page[map[string]any]{
+		Items:      SerializeModels(c, schema, page.Items),
+		Total:      page.Total,
+		Page:       page.Page,
+		PerPage:    page.PerPage,
+		TotalPages: page.TotalPages,
+	}
+}

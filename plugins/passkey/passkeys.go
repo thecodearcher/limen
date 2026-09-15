@@ -20,6 +20,10 @@ type FinishRegistrationRequest struct {
 	AdditionalData map[string]any `json:"-"`
 }
 
+type UpdatePasskeyRequest struct {
+	Name string `json:"name"`
+}
+
 func (p *passkeyPlugin) BeginRegistration(ctx context.Context, user *limen.User, request *RegisterPasskeyRequest) (*protocol.CredentialCreation, *webauthn.SessionData, error) {
 	passkeys, err := p.FindPasskeysByUserID(ctx, user.ID)
 	if err != nil {
@@ -83,6 +87,59 @@ func (p *passkeyPlugin) FindPasskeysByUserID(ctx context.Context, userID any) ([
 	}
 
 	return limen.MapToSliceOfType[*Passkey](passkeys), nil
+}
+
+func (p *passkeyPlugin) ListPasskeys(ctx context.Context, user *limen.User, opts *limen.QueryOptions) (*limen.Page[*Passkey], error) {
+	page, err := p.core.FindWithOptions(ctx, p.passkeySchema, []limen.Where{
+		limen.Eq(p.passkeySchema.GetUserIDField(), user.ID),
+	}, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return limen.MapPage[*Passkey](page), nil
+}
+
+func (p *passkeyPlugin) UpdatePasskey(ctx context.Context, user *limen.User, id any, request *UpdatePasskeyRequest) (*Passkey, error) {
+	if err := p.ensureUserPasskeyExists(ctx, user, id); err != nil {
+		return nil, err
+	}
+
+	passkey, err := p.core.UpdateAndReturn(ctx, p.passkeySchema, map[limen.SchemaField]any{
+		PasskeySchemaNameField: request.Name,
+	}, p.userPasskeyConditions(user, id), id)
+	if err != nil {
+		return nil, err
+	}
+
+	return passkey.(*Passkey), nil
+}
+
+func (p *passkeyPlugin) DeletePasskey(ctx context.Context, user *limen.User, id any) error {
+	if err := p.ensureUserPasskeyExists(ctx, user, id); err != nil {
+		return err
+	}
+
+	return p.core.Delete(ctx, p.passkeySchema, p.userPasskeyConditions(user, id))
+}
+
+func (p *passkeyPlugin) ensureUserPasskeyExists(ctx context.Context, user *limen.User, id any) error {
+	exists, err := p.core.Exists(ctx, p.passkeySchema, p.userPasskeyConditions(user, id))
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrPasskeyNotFound
+	}
+
+	return nil
+}
+
+func (p *passkeyPlugin) userPasskeyConditions(user *limen.User, id any) []limen.Where {
+	return []limen.Where{
+		limen.Eq(p.passkeySchema.GetIDField(), id),
+		limen.Eq(p.passkeySchema.GetUserIDField(), user.ID),
+	}
 }
 
 func (p *passkeyPlugin) getSessionDataFromCookie(r *http.Request) (*webauthn.SessionData, error) {

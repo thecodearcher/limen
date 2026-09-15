@@ -15,6 +15,7 @@ var (
 	ErrChallengeInvalid   = limen.NewLimenError("passkey challenge is missing or expired", http.StatusBadRequest, nil)
 	ErrVerificationFailed = limen.NewLimenError("passkey verification failed", http.StatusBadRequest, nil)
 	ErrUnknownPasskey     = limen.NewLimenError("passkey not recognized", http.StatusUnauthorized, nil)
+	ErrPasskeyNotFound    = limen.NewLimenError("passkey not found", http.StatusNotFound, nil)
 )
 
 func toPasskeyError(err error) error {
