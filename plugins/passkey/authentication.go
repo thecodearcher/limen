@@ -41,7 +41,7 @@ func (p *passkeyPlugin) FinishAuthentication(r *http.Request) (*limen.User, erro
 		PasskeySchemaLastUsedAtField:     time.Now(),
 	}
 
-	if err = p.core.Update(r.Context(), p.passkeySchema, updateData, []limen.Where{
+	if err := p.core.Update(r.Context(), p.passkeySchema, updateData, []limen.Where{
 		limen.Eq(p.passkeySchema.GetCredentialIDField(), base64.RawURLEncoding.EncodeToString(credential.ID)),
 	}); err != nil {
 		return nil, err
