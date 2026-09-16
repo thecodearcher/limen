@@ -24,8 +24,8 @@ type UpdatePasskeyRequest struct {
 	Name string `json:"name"`
 }
 
-func (p *passkeyPlugin) BeginRegistration(ctx context.Context, user *limen.User, request *RegisterPasskeyRequest) (*protocol.CredentialCreation, *webauthn.SessionData, error) {
-	passkeys, err := p.FindPasskeysByUserID(ctx, user.ID)
+func (p *passkeyPlugin) BeginRegistration(r *http.Request, user *limen.User, request *RegisterPasskeyRequest) (*protocol.CredentialCreation, *webauthn.SessionData, error) {
+	passkeys, err := p.FindPasskeysByUserID(r.Context(), user.ID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -44,6 +44,13 @@ func (p *passkeyPlugin) BeginRegistration(ctx context.Context, user *limen.User,
 		selection.AuthenticatorAttachment = protocol.AuthenticatorAttachment(request.AuthenticatorAttachment)
 		opts = append(opts, webauthn.WithAuthenticatorSelection(selection))
 	}
+
+	ext, err := p.resolveExtensions(r, protocol.CreateCeremony)
+	if err != nil {
+		return nil, nil, err
+	}
+	opts = append(opts, webauthn.WithExtensions(webauthn.WithExtensionInputs(ext)))
+
 	webAuthnUser := newWebAuthnUser(p.core, user, passkeys)
 	credentialCreation, sessionData, err := p.webAuthn.BeginRegistration(webAuthnUser, opts...)
 	if err != nil {

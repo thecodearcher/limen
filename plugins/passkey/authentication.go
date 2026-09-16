@@ -12,13 +12,13 @@ import (
 	"github.com/thecodearcher/limen"
 )
 
-func (p *passkeyPlugin) BeginAuthentication(ctx context.Context) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
-	opts, sessionData, err := p.webAuthn.BeginDiscoverableLogin()
+func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+	ext, err := p.resolveExtensions(r, protocol.AssertCeremony)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return opts, sessionData, nil
+	return p.webAuthn.BeginDiscoverableLogin(webauthn.WithAssertionExtensions(webauthn.WithExtensionInputs(ext)))
 }
 
 func (p *passkeyPlugin) FinishAuthentication(r *http.Request) (*limen.User, error) {

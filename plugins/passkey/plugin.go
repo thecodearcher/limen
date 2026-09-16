@@ -3,6 +3,7 @@ package passkey
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/go-webauthn/webauthn/protocol"
@@ -24,7 +25,7 @@ func New(opts ...ConfigOption) *passkeyPlugin {
 		rpName:              "limen-auth",
 		challengeCookieName: "limen-passkey",
 		authenticatorSelection: AuthenticatorSelection{
-			UserVerification: UserVerificationRequired,
+			UserVerification: UserVerificationPreferred,
 			ResidentKey:      ResidentKeyPreferred,
 		},
 	}
@@ -81,4 +82,21 @@ func parseHost(raw string) string {
 		return ""
 	}
 	return parsed.Hostname()
+}
+
+// resolveExtensions returns the extension inputs configured for a ceremony.
+func (p *passkeyPlugin) resolveExtensions(r *http.Request, ceremony protocol.CeremonyType) (AuthenticationExtensions, error) {
+	configured := p.config.registrationExtensions
+	if ceremony == protocol.AssertCeremony {
+		configured = p.config.authenticationExtensions
+	}
+
+	switch value := configured.(type) {
+	case AuthenticationExtensions:
+		return value, nil
+	case ExtensionsResolver:
+		return value(r.Context(), r)
+	default:
+		return AuthenticationExtensions{}, nil
+	}
 }

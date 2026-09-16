@@ -1,10 +1,23 @@
 package passkey
 
-import "github.com/go-webauthn/webauthn/protocol"
+import (
+	"context"
+	"net/http"
+
+	"github.com/go-webauthn/webauthn/protocol"
+)
 
 // AuthenticatorSelection narrows which authenticators may create a passkey, and
 // how they must behave while doing it. It applies to registration only.
 type AuthenticatorSelection = protocol.AuthenticatorSelection
+
+// AuthenticationExtensions is the WebAuthn AuthenticationExtensionsClientInputs
+// bag passed through to begin-registration / begin-authentication options.
+type AuthenticationExtensions = protocol.AuthenticationExtensions
+
+// ExtensionsResolver builds extension inputs per request (e.g. PRF eval salts),
+// for callers whose extensions depend on who is asking.
+type ExtensionsResolver func(ctx context.Context, r *http.Request) (AuthenticationExtensions, error)
 
 // UserVerification says how hard an authenticator has to work to confirm who the
 // user is, rather than just that somebody is standing there.
@@ -48,6 +61,10 @@ type config struct {
 
 	authenticatorSelection AuthenticatorSelection
 	challengeCookieName    string
+
+	// Either an AuthenticationExtensions or an ExtensionsResolver.
+	registrationExtensions   any
+	authenticationExtensions any
 }
 
 type ConfigOption func(*config)
@@ -94,5 +111,37 @@ func WithAuthenticatorSelection(selection AuthenticatorSelection) ConfigOption {
 func WithChallengeCookieName(cookieName string) ConfigOption {
 	return func(c *config) {
 		c.challengeCookieName = cookieName
+	}
+}
+
+// WithRegistrationExtensions sets static WebAuthn extension inputs for
+// registration ceremonies (e.g. credProps, largeBlob support, PRF probe).
+func WithRegistrationExtensions(ext AuthenticationExtensions) ConfigOption {
+	return func(c *config) {
+		c.registrationExtensions = ext
+	}
+}
+
+// WithAuthenticationExtensions sets static WebAuthn extension inputs for
+// authentication ceremonies (e.g. PRF eval, largeBlob read/write).
+func WithAuthenticationExtensions(ext AuthenticationExtensions) ConfigOption {
+	return func(c *config) {
+		c.authenticationExtensions = ext
+	}
+}
+
+// WithRegistrationExtensionsResolver sets a per-request resolver for
+// registration extension inputs.
+func WithRegistrationExtensionsResolver(resolver ExtensionsResolver) ConfigOption {
+	return func(c *config) {
+		c.registrationExtensions = resolver
+	}
+}
+
+// WithAuthenticationExtensionsResolver sets a per-request resolver for
+// authentication extension inputs.
+func WithAuthenticationExtensionsResolver(resolver ExtensionsResolver) ConfigOption {
+	return func(c *config) {
+		c.authenticationExtensions = resolver
 	}
 }

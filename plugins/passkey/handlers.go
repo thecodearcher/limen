@@ -62,7 +62,7 @@ func (h *passkeyHandlers) BeginRegistration(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	credentialCreation, sessionData, err := h.plugin.BeginRegistration(r.Context(), user.User, body)
+	credentialCreation, sessionData, err := h.plugin.BeginRegistration(r, user.User, body)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
@@ -103,7 +103,7 @@ func (h *passkeyHandlers) FinishRegistration(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *passkeyHandlers) BeginAuthentication(w http.ResponseWriter, r *http.Request) {
-	credentialAssertion, sessionData, err := h.plugin.BeginAuthentication(r.Context())
+	credentialAssertion, sessionData, err := h.plugin.BeginAuthentication(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
