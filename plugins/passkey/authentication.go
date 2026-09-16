@@ -17,8 +17,29 @@ func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*protocol.Credenti
 	if err != nil {
 		return nil, nil, err
 	}
+	loginOpts := []webauthn.LoginOption{
+		webauthn.WithAssertionExtensions(webauthn.WithExtensionInputs(ext)),
+	}
 
-	return p.webAuthn.BeginDiscoverableLogin(webauthn.WithAssertionExtensions(webauthn.WithExtensionInputs(ext)))
+	if user, passkeys, ok := p.sessionPasskeysForLogin(r); ok {
+		return p.webAuthn.BeginLogin(newWebAuthnUser(p.core, user, passkeys), loginOpts...)
+	}
+
+	return p.webAuthn.BeginDiscoverableLogin(loginOpts...)
+}
+
+func (p *passkeyPlugin) sessionPasskeysForLogin(r *http.Request) (*limen.User, []*Passkey, bool) {
+	session, err := p.core.SessionManager.ValidateSession(r.Context(), r)
+	if err != nil {
+		return nil, nil, false
+	}
+
+	passkeys, err := p.FindPasskeysByUserID(r.Context(), session.User.ID)
+	if err != nil || len(passkeys) == 0 {
+		return nil, nil, false
+	}
+
+	return session.User, passkeys, true
 }
 
 func (p *passkeyPlugin) FinishAuthentication(r *http.Request) (*limen.User, error) {
@@ -27,12 +48,10 @@ func (p *passkeyPlugin) FinishAuthentication(r *http.Request) (*limen.User, erro
 		return nil, err
 	}
 
-	passkeyUser, credential, err := p.webAuthn.FinishPasskeyLogin(p.discoverableUserHandler(r.Context()), *sessionData, r)
+	user, credential, err := p.finishAuthenticationCeremony(r, sessionData)
 	if err != nil {
 		return nil, toPasskeyError(err)
 	}
-
-	user := passkeyUser.(*webAuthnUser).User()
 
 	updateData := map[limen.SchemaField]any{
 		PasskeySchemaSignCountField:      credential.Authenticator.SignCount,
@@ -48,6 +67,28 @@ func (p *passkeyPlugin) FinishAuthentication(r *http.Request) (*limen.User, erro
 	}
 
 	return user, nil
+}
+
+func (p *passkeyPlugin) finishAuthenticationCeremony(r *http.Request, sessionData *webauthn.SessionData) (*limen.User, *webauthn.Credential, error) {
+	handler := p.discoverableUserHandler(r.Context())
+
+	if len(sessionData.UserID) > 0 {
+		passkeyUser, err := handler(nil, sessionData.UserID)
+		if err != nil {
+			return nil, nil, err
+		}
+		credential, err := p.webAuthn.FinishLogin(passkeyUser, *sessionData, r)
+		if err != nil {
+			return nil, nil, err
+		}
+		return passkeyUser.(*webAuthnUser).User(), credential, nil
+	}
+
+	passkeyUser, credential, err := p.webAuthn.FinishPasskeyLogin(handler, *sessionData, r)
+	if err != nil {
+		return nil, nil, err
+	}
+	return passkeyUser.(*webAuthnUser).User(), credential, nil
 }
 
 func (p *passkeyPlugin) discoverableUserHandler(ctx context.Context) webauthn.DiscoverableUserHandler {
