@@ -24,6 +24,7 @@ func New(opts ...ConfigOption) *passkeyPlugin {
 	cfg := &config{
 		rpName:              "limen-auth",
 		challengeCookieName: "limen-passkey",
+		requireSession:      true,
 		authenticatorSelection: AuthenticatorSelection{
 			UserVerification: UserVerificationPreferred,
 			ResidentKey:      ResidentKeyPreferred,
@@ -44,6 +45,16 @@ func (p *passkeyPlugin) Name() limen.PluginName {
 func (p *passkeyPlugin) Initialize(core *limen.LimenCore) error {
 	p.core = core
 	p.resolveRelyingParty(core.GetBaseURL())
+
+	if err := p.validateHandleConfig(); err != nil {
+		return err
+	}
+
+	if !p.config.requireSession {
+		if p.config.prepareRegistration == nil || p.config.createRegistrationUser == nil {
+			return ErrRegistrationHooksRequired
+		}
+	}
 
 	webAuthn, err := webauthn.New(&webauthn.Config{
 		RPID:                   p.config.rpID,

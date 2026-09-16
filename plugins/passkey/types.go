@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-webauthn/webauthn/protocol"
+
+	"github.com/thecodearcher/limen"
 )
 
 // AuthenticatorSelection narrows which authenticators may create a passkey, and
@@ -54,6 +56,25 @@ const (
 	AuthenticatorCrossPlatform = protocol.CrossPlatform
 )
 
+// RegistrationIntent is the validated signup intent returned by PrepareRegistration.
+type RegistrationIntent struct {
+	Email       string
+	Name        string // WebAuthn name; default Email
+	DisplayName string // default Name
+	// ID is an optional app-minted public id or opaque primary key. When set, it
+	// becomes the reserved WebAuthn userHandle.
+	ID             string
+	AdditionalData map[string]any
+}
+
+// PrepareRegistrationFunc validates opaque registration context at begin.
+// It must not create a user.
+type PrepareRegistrationFunc func(ctx context.Context, r *http.Request, registrationContext string) (*RegistrationIntent, error)
+
+// CreateRegistrationUserFunc runs after attestation verifies. Create the account
+// in your store with reservedHandle as the user's permanent id, and return it.
+type CreateRegistrationUserFunc func(ctx context.Context, r *http.Request, intent *RegistrationIntent, reservedHandle string) (*limen.User, error)
+
 type config struct {
 	rpID           string
 	rpName         string
@@ -61,6 +82,11 @@ type config struct {
 
 	authenticatorSelection AuthenticatorSelection
 	challengeCookieName    string
+
+	requireSession              bool
+	allowInternalUserIDAsHandle bool
+	prepareRegistration         PrepareRegistrationFunc
+	createRegistrationUser      CreateRegistrationUserFunc
 
 	// Either an AuthenticationExtensions or an ExtensionsResolver.
 	registrationExtensions   any
@@ -111,6 +137,42 @@ func WithAuthenticatorSelection(selection AuthenticatorSelection) ConfigOption {
 func WithChallengeCookieName(cookieName string) ConfigOption {
 	return func(c *config) {
 		c.challengeCookieName = cookieName
+	}
+}
+
+// WithRequireSession controls whether registration requires a signed-in session.
+// Defaults to true. When false, passkey-first signup is enabled and
+// PrepareRegistration and CreateRegistrationUser are required.
+func WithRequireSession(require bool) ConfigOption {
+	return func(c *config) {
+		c.requireSession = require
+	}
+}
+
+// WithAllowInternalUserIDAsHandle opts into using your user primary key as the
+// WebAuthn userHandle when public IDs are off. Use this only if those IDs are
+// already opaque (e.g. UUID via an ID generator), not auto-increment. Defaults to false.
+func WithAllowInternalUserIDAsHandle(allow bool) ConfigOption {
+	return func(c *config) {
+		c.allowInternalUserIDAsHandle = allow
+	}
+}
+
+// WithPrepareRegistration sets the callback that validates the client's opaque
+// registration context and returns a RegistrationIntent. Do not create a user
+// here. Required when requireSession is false.
+func WithPrepareRegistration(fn PrepareRegistrationFunc) ConfigOption {
+	return func(c *config) {
+		c.prepareRegistration = fn
+	}
+}
+
+// WithCreateRegistrationUser sets the callback that creates the account after
+// attestation verifies. Persist reservedHandle as the user's permanent id and
+// return the created user. Required when requireSession is false.
+func WithCreateRegistrationUser(fn CreateRegistrationUserFunc) ConfigOption {
+	return func(c *config) {
+		c.createRegistrationUser = fn
 	}
 }
 

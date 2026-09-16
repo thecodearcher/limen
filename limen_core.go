@@ -36,7 +36,7 @@ func (c *LimenCore) getPublicIDConfig(schema Schema) (SchemaName, *PublicIDConfi
 }
 
 func (c *LimenCore) EncodePublicID(schema Schema, model Model) (string, bool) {
-	schemaName, config, ok := c.getPublicIDConfig(schema)
+	_, config, ok := c.getPublicIDConfig(schema)
 	if !ok || model == nil {
 		return "", false
 	}
@@ -46,7 +46,8 @@ func (c *LimenCore) EncodePublicID(schema Schema, model Model) (string, bool) {
 	if !ok || value == "" {
 		return "", false
 	}
-	return config.Encoder(schemaName, value), true
+	encoded := c.encodePublicIDValue(schema, value)
+	return encoded, encoded != ""
 }
 
 func (c *LimenCore) IsPublicID(schema Schema, value string) bool {
@@ -63,6 +64,33 @@ func (c *LimenCore) DecodePublicID(schema Schema, value string) (string, error) 
 		return "", fmt.Errorf("failed to get public ID config for schema %s", schema.GetSchemaName())
 	}
 	return config.Decoder(schemaName, value)
+}
+
+// GeneratePublicID calls the configured public-ID Generator for schema.
+func (c *LimenCore) GeneratePublicID(ctx context.Context, schema Schema) (string, error) {
+	schemaName, config, ok := c.getPublicIDConfig(schema)
+	if !ok || config.Generator == nil {
+		return "", fmt.Errorf("public ID generator is not configured for schema %s", schema.GetSchemaName())
+	}
+	return config.Generator(ctx, schemaName)
+}
+
+func (c *LimenCore) encodePublicIDValue(schema Schema, value string) string {
+	schemaName, config, ok := c.getPublicIDConfig(schema)
+	if !ok || value == "" {
+		return ""
+	}
+	return config.Encoder(schemaName, value)
+}
+
+// PublicIDColumn returns the database column name for schema's public ID field,
+// or "" when public IDs are not enabled.
+func (c *LimenCore) PublicIDColumn(schema Schema) string {
+	_, config, ok := c.getPublicIDConfig(schema)
+	if !ok {
+		return ""
+	}
+	return schema.GetField(config.field)
 }
 
 func (c *LimenCore) SerializeModel(schema Schema, model Model) map[string]any {

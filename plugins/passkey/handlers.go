@@ -3,6 +3,8 @@ package passkey
 import (
 	"net/http"
 
+	"github.com/go-webauthn/webauthn/protocol"
+
 	"github.com/thecodearcher/limen"
 )
 
@@ -23,8 +25,13 @@ func (p *passkeyPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuild
 }
 
 func routes(h *passkeyHandlers, routeBuilder *limen.RouteBuilder) {
-	routeBuilder.ProtectedGET("/begin-registration", "passkey:begin-registration", h.BeginRegistration)
-	routeBuilder.ProtectedPOST("/finish-registration", "passkey:finish-registration", h.FinishRegistration)
+	if h.plugin.config.requireSession {
+		routeBuilder.ProtectedGET("/begin-registration", "passkey:begin-registration", h.BeginRegistration)
+		routeBuilder.ProtectedPOST("/finish-registration", "passkey:finish-registration", h.FinishRegistration)
+	} else {
+		routeBuilder.GET("/begin-registration", "passkey:begin-registration", h.BeginRegistration)
+		routeBuilder.POST("/finish-registration", "passkey:finish-registration", h.FinishRegistration)
+	}
 
 	routeBuilder.GET("/begin-authentication", "passkey:begin-authentication", h.BeginAuthentication)
 	routeBuilder.POST("/finish-authentication", "passkey:finish-authentication", h.FinishAuthentication)
@@ -50,26 +57,35 @@ func (h *passkeyHandlers) validatePasskeyIDParam(v *limen.Validator) {
 func (h *passkeyHandlers) BeginRegistration(w http.ResponseWriter, r *http.Request) {
 	body := limen.BindAndValidate[RegisterPasskeyRequest](w, r, h.responder, func(v *limen.Validator) {
 		v.Field("authenticator_attachment").Optional().String().In([]string{"platform", "cross-platform"})
+		if !h.plugin.config.requireSession {
+			v.Field("context").Optional().String()
+		}
 	})
 
 	if body == nil {
 		return
 	}
 
-	user, err := limen.GetCurrentSessionFromCtx(r.Context())
+	user, err := h.optionalSessionUser(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	credentialCreation, sessionData, err := h.plugin.BeginRegistration(r, user.User, body)
+	var credentialCreation *protocol.CredentialCreation
+	var cookie *challengeCookie
+
+	if user != nil {
+		credentialCreation, cookie, err = h.plugin.BeginRegistration(r, user, body)
+	} else {
+		credentialCreation, cookie, err = h.plugin.BeginPublicRegistration(r, body)
+	}
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	err = h.plugin.setSessionDataToCookie(w, sessionData)
-	if err != nil {
+	if err := h.plugin.setChallengeCookie(w, cookie); err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
@@ -80,37 +96,71 @@ func (h *passkeyHandlers) BeginRegistration(w http.ResponseWriter, r *http.Reque
 func (h *passkeyHandlers) FinishRegistration(w http.ResponseWriter, r *http.Request) {
 	body := limen.BindAndValidate[FinishRegistrationRequest](w, r, h.responder, func(v *limen.Validator) {
 		v.Field("name").Optional().String().MinLength(1).MaxLength(100)
+		v.Field("create_session").Optional().Boolean()
 	})
 
 	if body == nil {
 		return
 	}
 
-	user, err := limen.GetCurrentSessionFromCtx(r.Context())
+	user, err := h.optionalSessionUser(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	passkey, err := h.plugin.FinishRegistration(r, user.User, body)
+	var passkey *Passkey
+	var createdUser *limen.User
+	if user != nil {
+		passkey, err = h.plugin.FinishRegistration(r, user, body)
+	} else {
+		createdUser, passkey, err = h.plugin.FinishPublicRegistration(r, body)
+	}
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	h.plugin.deleteSessionDataFromCookie(w)
+	h.plugin.deleteChallengeCookie(w)
+
+	if createdUser != nil && body.CreateSession {
+		authResult := &limen.AuthenticationResult{User: createdUser}
+		sessionResult, err := h.plugin.core.CreateSession(r.Context(), r, w, authResult)
+		if err != nil {
+			h.responder.Error(w, r, err)
+			return
+		}
+		h.responder.SessionResponse(w, r, h.plugin.core, authResult, sessionResult)
+		return
+	}
+
 	h.responder.JSON(w, r, http.StatusOK, h.plugin.core.SerializeModel(h.plugin.passkeySchema, passkey))
 }
 
+func (h *passkeyHandlers) optionalSessionUser(r *http.Request) (*limen.User, error) {
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err == nil {
+		return session.User, nil
+	}
+	if h.plugin.config.requireSession {
+		return nil, ErrSessionRequired
+	}
+
+	validated, validateErr := h.plugin.core.SessionManager.ValidateSession(r.Context(), r)
+	if validateErr != nil {
+		return nil, nil
+	}
+	return validated.User, nil
+}
+
 func (h *passkeyHandlers) BeginAuthentication(w http.ResponseWriter, r *http.Request) {
-	credentialAssertion, sessionData, err := h.plugin.BeginAuthentication(r)
+	credentialAssertion, cookie, err := h.plugin.BeginAuthentication(r)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	err = h.plugin.setSessionDataToCookie(w, sessionData)
-	if err != nil {
+	if err := h.plugin.setChallengeCookie(w, cookie); err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
@@ -133,7 +183,7 @@ func (h *passkeyHandlers) FinishAuthentication(w http.ResponseWriter, r *http.Re
 		h.responder.Error(w, r, err)
 		return
 	}
-	h.plugin.deleteSessionDataFromCookie(w)
+	h.plugin.deleteChallengeCookie(w)
 	h.responder.SessionResponse(w, r, h.plugin.core, authResult, sessionResult)
 }
 

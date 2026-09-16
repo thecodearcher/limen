@@ -12,7 +12,7 @@ import (
 	"github.com/thecodearcher/limen"
 )
 
-func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
+func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*protocol.CredentialAssertion, *challengeCookie, error) {
 	ext, err := p.resolveExtensions(r, protocol.AssertCeremony)
 	if err != nil {
 		return nil, nil, err
@@ -22,10 +22,18 @@ func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*protocol.Credenti
 	}
 
 	if user, passkeys, ok := p.sessionPasskeysForLogin(r); ok {
-		return p.webAuthn.BeginLogin(newWebAuthnUser(p.core, user, passkeys), loginOpts...)
+		assertion, sessionData, err := p.webAuthn.BeginLogin(newWebAuthnUser(p, user, passkeys), loginOpts...)
+		if err != nil {
+			return nil, nil, err
+		}
+		return assertion, &challengeCookie{Session: *sessionData}, nil
 	}
 
-	return p.webAuthn.BeginDiscoverableLogin(loginOpts...)
+	assertion, sessionData, err := p.webAuthn.BeginDiscoverableLogin(loginOpts...)
+	if err != nil {
+		return nil, nil, err
+	}
+	return assertion, &challengeCookie{Session: *sessionData}, nil
 }
 
 func (p *passkeyPlugin) sessionPasskeysForLogin(r *http.Request) (*limen.User, []*Passkey, bool) {
@@ -43,12 +51,12 @@ func (p *passkeyPlugin) sessionPasskeysForLogin(r *http.Request) (*limen.User, [
 }
 
 func (p *passkeyPlugin) FinishAuthentication(r *http.Request) (*limen.User, error) {
-	sessionData, err := p.getSessionDataFromCookie(r)
+	cookie, err := p.getChallengeCookie(r)
 	if err != nil {
 		return nil, err
 	}
 
-	user, credential, err := p.finishAuthenticationCeremony(r, sessionData)
+	user, credential, err := p.finishAuthenticationCeremony(r, &cookie.Session)
 	if err != nil {
 		return nil, toPasskeyError(err)
 	}
@@ -70,21 +78,24 @@ func (p *passkeyPlugin) FinishAuthentication(r *http.Request) (*limen.User, erro
 }
 
 func (p *passkeyPlugin) finishAuthenticationCeremony(r *http.Request, sessionData *webauthn.SessionData) (*limen.User, *webauthn.Credential, error) {
-	handler := p.discoverableUserHandler(r.Context())
-
 	if len(sessionData.UserID) > 0 {
-		passkeyUser, err := handler(nil, sessionData.UserID)
+		user, err := p.core.DBAction.FindUserByID(r.Context(), string(sessionData.UserID))
 		if err != nil {
 			return nil, nil, err
 		}
+		passkeys, err := p.FindPasskeysByUserID(r.Context(), user.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		passkeyUser := newWebAuthnUser(p, user, passkeys)
 		credential, err := p.webAuthn.FinishLogin(passkeyUser, *sessionData, r)
 		if err != nil {
 			return nil, nil, err
 		}
-		return passkeyUser.(*webAuthnUser).User(), credential, nil
+		return user, credential, nil
 	}
 
-	passkeyUser, credential, err := p.webAuthn.FinishPasskeyLogin(handler, *sessionData, r)
+	passkeyUser, credential, err := p.webAuthn.FinishPasskeyLogin(p.discoverableUserHandler(r.Context()), *sessionData, r)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,18 +103,26 @@ func (p *passkeyPlugin) finishAuthenticationCeremony(r *http.Request, sessionDat
 }
 
 func (p *passkeyPlugin) discoverableUserHandler(ctx context.Context) webauthn.DiscoverableUserHandler {
-	return func(rawID, userHandle []byte) (user webauthn.User, err error) {
-		userModel, err := p.core.DBAction.FindUser(ctx, []limen.Where{
-			limen.Eq(p.core.Schema.User.GetIDField(), string(userHandle)),
-		})
+	return func(rawID, _ []byte) (user webauthn.User, err error) {
+		if len(rawID) == 0 {
+			return nil, ErrUnknownPasskey
+		}
+
+		passkey, err := p.FindPasskeyByCredentialID(ctx, base64.RawURLEncoding.EncodeToString(rawID))
 		if err != nil {
 			return nil, err
 		}
+
+		userModel, err := p.core.DBAction.FindUserByID(ctx, passkey.UserID)
+		if err != nil {
+			return nil, err
+		}
+
 		passkeys, err := p.FindPasskeysByUserID(ctx, userModel.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		return newWebAuthnUser(p.core, userModel, passkeys), nil
+		return newWebAuthnUser(p, userModel, passkeys), nil
 	}
 }

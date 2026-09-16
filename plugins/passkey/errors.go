@@ -16,6 +16,23 @@ var (
 	ErrVerificationFailed = limen.NewLimenError("passkey verification failed", http.StatusBadRequest, nil)
 	ErrUnknownPasskey     = limen.NewLimenError("passkey not recognized", http.StatusUnauthorized, nil)
 	ErrPasskeyNotFound    = limen.NewLimenError("passkey not found", http.StatusNotFound, nil)
+
+	ErrHandleModeRequired = limen.NewLimenError(
+		"passkey needs opaque user IDs: enable public IDs or WithAllowInternalUserIDAsHandle",
+		http.StatusInternalServerError,
+		nil,
+	)
+	ErrIDGeneratorRequired       = limen.NewLimenError("passkey registration needs RegistrationIntent.ID or an ID generator", http.StatusInternalServerError, nil)
+	ErrRegistrationHooksRequired = limen.NewLimenError(
+		"passkey public registration requires WithPrepareRegistration and WithCreateRegistrationUser",
+		http.StatusInternalServerError,
+		nil,
+	)
+	ErrRegistrationContextRequired = limen.NewLimenError("passkey registration context is required", http.StatusBadRequest, nil)
+	ErrRegistrationIntentInvalid   = limen.NewLimenError("passkey registration intent is invalid", http.StatusBadRequest, nil)
+	ErrRegistrationUserMissing     = limen.NewLimenError("passkey registration did not create a user", http.StatusInternalServerError, nil)
+	ErrHandleMismatch              = limen.NewLimenError("passkey user handle is missing or does not match the reserved handle", http.StatusInternalServerError, nil)
+	ErrSessionRequired             = limen.NewLimenError("passkey registration requires a session", http.StatusUnauthorized, nil)
 )
 
 func toPasskeyError(err error) error {
