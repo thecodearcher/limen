@@ -73,7 +73,7 @@ func (h *passkeyHandlers) BeginRegistration(w http.ResponseWriter, r *http.Reque
 	}
 
 	var credentialCreation *protocol.CredentialCreation
-	var cookie *challengeCookie
+	var cookie *PasskeyChallenge
 
 	if user != nil {
 		credentialCreation, cookie, err = h.plugin.BeginRegistration(r, user, body)

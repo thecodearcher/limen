@@ -17,6 +17,12 @@ type AuthenticatorSelection = protocol.AuthenticatorSelection
 // bag passed through to begin-registration / begin-authentication options.
 type AuthenticationExtensions = protocol.AuthenticationExtensions
 
+// CredentialCreation is the WebAuthn registration options payload.
+type CredentialCreation = protocol.CredentialCreation
+
+// CredentialAssertion is the WebAuthn authentication options payload.
+type CredentialAssertion = protocol.CredentialAssertion
+
 // ExtensionsResolver builds extension inputs per request (e.g. PRF eval salts),
 // for callers whose extensions depend on who is asking.
 type ExtensionsResolver func(ctx context.Context, r *http.Request) (AuthenticationExtensions, error)

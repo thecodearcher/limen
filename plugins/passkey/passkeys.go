@@ -28,14 +28,14 @@ type UpdatePasskeyRequest struct {
 	Name string `json:"name"`
 }
 
-type challengeCookie struct {
+type PasskeyChallenge struct {
 	Session        webauthn.SessionData `json:"session"`
 	Context        string               `json:"context,omitempty"`
 	ReservedHandle string               `json:"reserved_handle,omitempty"`
 	Intent         *RegistrationIntent  `json:"intent,omitempty"`
 }
 
-func (p *passkeyPlugin) BeginRegistration(r *http.Request, user *limen.User, request *RegisterPasskeyRequest) (*protocol.CredentialCreation, *challengeCookie, error) {
+func (p *passkeyPlugin) BeginRegistration(r *http.Request, user *limen.User, request *RegisterPasskeyRequest) (*CredentialCreation, *PasskeyChallenge, error) {
 	var passkeys []*Passkey
 	if user.ID != nil {
 		found, err := p.FindPasskeysByUserID(r.Context(), user.ID)
@@ -76,10 +76,10 @@ func (p *passkeyPlugin) BeginRegistration(r *http.Request, user *limen.User, req
 		return nil, nil, err
 	}
 
-	return credentialCreation, &challengeCookie{Session: *sessionData}, nil
+	return credentialCreation, &PasskeyChallenge{Session: *sessionData}, nil
 }
 
-func (p *passkeyPlugin) BeginPublicRegistration(r *http.Request, request *RegisterPasskeyRequest) (*protocol.CredentialCreation, *challengeCookie, error) {
+func (p *passkeyPlugin) BeginPublicRegistration(r *http.Request, request *RegisterPasskeyRequest) (*CredentialCreation, *PasskeyChallenge, error) {
 	registrationContext := strings.TrimSpace(request.Context)
 	if registrationContext == "" {
 		return nil, nil, ErrRegistrationContextRequired
@@ -226,7 +226,7 @@ func (p *passkeyPlugin) userPasskeyConditions(user *limen.User, id any) []limen.
 	}
 }
 
-func (p *passkeyPlugin) finishRegistrationCeremony(r *http.Request, user *limen.User, cookie *challengeCookie) (*webauthn.Credential, error) {
+func (p *passkeyPlugin) finishRegistrationCeremony(r *http.Request, user *limen.User, cookie *PasskeyChallenge) (*webauthn.Credential, error) {
 	credential, err := p.webAuthn.FinishRegistration(newWebAuthnUser(p, user, nil), cookie.Session, r)
 	if err != nil {
 		return nil, toPasskeyError(err)
@@ -266,13 +266,13 @@ func (p *passkeyPlugin) resolveRegistrationIntent(r *http.Request, registrationC
 	return intent, nil
 }
 
-func (p *passkeyPlugin) getChallengeCookie(r *http.Request) (*challengeCookie, error) {
+func (p *passkeyPlugin) getChallengeCookie(r *http.Request) (*PasskeyChallenge, error) {
 	value, err := p.core.Cookies().GetSignedCookie(r, p.config.challengeCookieName)
 	if err != nil {
 		return nil, ErrChallengeMissing
 	}
 
-	var cookie challengeCookie
+	var cookie PasskeyChallenge
 	if err := json.Unmarshal([]byte(value), &cookie); err != nil {
 		return nil, ErrChallengeInvalid
 	}
@@ -282,7 +282,7 @@ func (p *passkeyPlugin) getChallengeCookie(r *http.Request) (*challengeCookie, e
 	return &cookie, nil
 }
 
-func (p *passkeyPlugin) setChallengeCookie(w http.ResponseWriter, cookie *challengeCookie) error {
+func (p *passkeyPlugin) setChallengeCookie(w http.ResponseWriter, cookie *PasskeyChallenge) error {
 	value, err := json.Marshal(cookie)
 	if err != nil {
 		return err

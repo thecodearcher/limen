@@ -12,7 +12,7 @@ import (
 	"github.com/thecodearcher/limen"
 )
 
-func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*protocol.CredentialAssertion, *challengeCookie, error) {
+func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*CredentialAssertion, *PasskeyChallenge, error) {
 	ext, err := p.resolveExtensions(r, protocol.AssertCeremony)
 	if err != nil {
 		return nil, nil, err
@@ -26,14 +26,14 @@ func (p *passkeyPlugin) BeginAuthentication(r *http.Request) (*protocol.Credenti
 		if err != nil {
 			return nil, nil, err
 		}
-		return assertion, &challengeCookie{Session: *sessionData}, nil
+		return assertion, &PasskeyChallenge{Session: *sessionData}, nil
 	}
 
 	assertion, sessionData, err := p.webAuthn.BeginDiscoverableLogin(loginOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
-	return assertion, &challengeCookie{Session: *sessionData}, nil
+	return assertion, &PasskeyChallenge{Session: *sessionData}, nil
 }
 
 func (p *passkeyPlugin) sessionPasskeysForLogin(r *http.Request) (*limen.User, []*Passkey, bool) {
