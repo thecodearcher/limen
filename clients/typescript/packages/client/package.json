@@ -91,12 +91,16 @@
     "nanostores": "^1.3.0"
   },
   "peerDependencies": {
+    "@simplewebauthn/browser": "^14.0.0",
     "react": ">=18",
     "solid-js": ">=1",
     "svelte": ">=4",
     "vue": ">=3"
   },
   "peerDependenciesMeta": {
+    "@simplewebauthn/browser": {
+      "optional": true
+    },
     "react": {
       "optional": true
     },
@@ -111,6 +115,7 @@
     }
   },
   "devDependencies": {
+    "@simplewebauthn/browser": "^14.0.0",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.0",
     "happy-dom": "^20.10.5",

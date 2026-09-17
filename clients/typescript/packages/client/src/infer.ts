@@ -1,7 +1,7 @@
+import type { DataStore, StoreState } from "./data-store";
 import type { ClientPlugin, FieldsOf, PluginSchema } from "./define-plugin";
 import type { InputOf, OutputOf, RouteCallOptions } from "./route";
 import type { SessionState } from "./session-store";
-import type { DataStore, StoreState } from "./data-store";
 import type { PluginStores } from "./stores";
 import type { IsAny, KebabToCamel, Prettify, Split, UnionToIntersection } from "./type-utils";
 import type { User } from "./types";
@@ -61,7 +61,7 @@ type IsExposed<R> = R extends { expose: false } ? false : true;
 type RouteFn<R> = InferRouteFn<InputOf<R>, OutputOf<R>>;
 
 type InferOneRoute<R, BasePrefix extends readonly string[]> =
-  IsExposed<R> extends false ? unknown : Nest<ChainSegments<R, BasePrefix>, RouteFn<R>>;
+  IsExposed<R> extends false ? never : Nest<ChainSegments<R, BasePrefix>, RouteFn<R>>;
 
 /**
  * Infer the public API tree for a list of route descriptors, given the owning
