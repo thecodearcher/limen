@@ -30,7 +30,7 @@ export type Passkey = {
 
 export type AuthenticatorAttachment = "platform" | "cross-platform";
 
-export type PasskeyExtensionName = keyof AuthenticationExtensionsClientInputs;
+export type PasskeyExtensionName = keyof AuthenticationExtensionsClientInputs | string;
 
 export type BeginPasskeyResult<TPublicKey> = {
   publicKey: TPublicKey;
