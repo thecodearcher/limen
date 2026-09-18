@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -94,7 +93,7 @@ func mapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
 	return &oauth.ProviderUserInfo{
 		ID:            id,
 		Email:         stringClaim(raw, "email"),
-		EmailVerified: boolClaim(raw, "email_verified"),
+		EmailVerified: oauth.BoolClaim(raw, "email_verified"),
 		Name:          name,
 		AvatarURL:     stringClaim(raw, "picture"),
 		Raw:           raw,
@@ -104,16 +103,4 @@ func mapUserInfo(raw map[string]any) (*oauth.ProviderUserInfo, error) {
 func stringClaim(raw map[string]any, key string) string {
 	value, _ := raw[key].(string)
 	return value
-}
-
-func boolClaim(raw map[string]any, key string) bool {
-	switch value := raw[key].(type) {
-	case bool:
-		return value
-	case string:
-		parsed, err := strconv.ParseBool(value)
-		return err == nil && parsed
-	default:
-		return false
-	}
 }

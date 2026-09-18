@@ -87,7 +87,7 @@ func (s *spotifyProvider) GetUserInfo(ctx context.Context, token *oauth.TokenRes
 	return &oauth.ProviderUserInfo{
 		ID:            id,
 		Email:         email,
-		EmailVerified: email != "",
+		EmailVerified: false,
 		Name:          name,
 		AvatarURL:     extractAvatarURL(raw),
 		Raw:           raw,

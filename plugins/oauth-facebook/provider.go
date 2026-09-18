@@ -82,7 +82,7 @@ func (f *facebookProvider) GetUserInfo(ctx context.Context, token *oauth.TokenRe
 	return &oauth.ProviderUserInfo{
 		ID:            id,
 		Email:         email,
-		EmailVerified: email != "",
+		EmailVerified: false,
 		Name:          name,
 		AvatarURL:     avatarURL,
 		Raw:           raw,

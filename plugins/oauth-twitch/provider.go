@@ -84,20 +84,10 @@ func (t *twitchProvider) GetUserInfo(_ context.Context, token *oauth.TokenRespon
 	name, _ := claims["preferred_username"].(string)
 	picture, _ := claims["picture"].(string)
 
-	emailVerified := false
-	if v, ok := claims["email_verified"]; ok {
-		switch b := v.(type) {
-		case bool:
-			emailVerified = b
-		case string:
-			emailVerified = b == "true" || b == "1"
-		}
-	}
-
 	return &oauth.ProviderUserInfo{
 		ID:            id,
 		Email:         email,
-		EmailVerified: emailVerified,
+		EmailVerified: oauth.BoolClaim(claims, "email_verified"),
 		Name:          name,
 		AvatarURL:     picture,
 		Raw:           claims,

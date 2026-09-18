@@ -95,7 +95,7 @@ func (m *microsoftProvider) GetUserInfo(_ context.Context, token *oauth.TokenRes
 	return &oauth.ProviderUserInfo{
 		ID:            oid,
 		Email:         email,
-		EmailVerified: email != "",
+		EmailVerified: false,
 		Name:          name,
 		Raw:           claims,
 	}, nil

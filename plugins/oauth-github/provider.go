@@ -71,9 +71,10 @@ func (g *githubProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResp
 		return nil, err
 	}
 
-	email := raw["email"]
-	if email == nil || email == "" {
-		email, _ = g.fetchPrimaryEmail(ctx, token.AccessToken)
+	email, _ := raw["email"].(string)
+	verified := false
+	if email == "" {
+		email, verified, _ = g.fetchPrimaryEmail(ctx, token.AccessToken)
 	}
 
 	id, _ := raw["id"].(float64)
@@ -81,28 +82,28 @@ func (g *githubProvider) GetUserInfo(ctx context.Context, token *oauth.TokenResp
 	avatarURL, _ := raw["avatar_url"].(string)
 	return &oauth.ProviderUserInfo{
 		ID:            fmt.Sprintf("%d", int64(id)),
-		Email:         email.(string),
-		EmailVerified: email != "",
+		Email:         email,
+		EmailVerified: verified,
 		Name:          name,
 		AvatarURL:     avatarURL,
 		Raw:           raw,
 	}, nil
 }
 
-func (g *githubProvider) fetchPrimaryEmail(ctx context.Context, accessToken string) (string, error) {
+func (g *githubProvider) fetchPrimaryEmail(ctx context.Context, accessToken string) (string, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user/emails", nil)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
 	resp, err := g.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", nil
+		return "", false, nil
 	}
 	var emails []struct {
 		Email    string `json:"email"`
@@ -110,20 +111,20 @@ func (g *githubProvider) fetchPrimaryEmail(ctx context.Context, accessToken stri
 		Verified bool   `json:"verified"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
-		return "", err
+		return "", false, err
 	}
 	for _, e := range emails {
 		if e.Primary && e.Verified {
-			return e.Email, nil
+			return e.Email, true, nil
 		}
 	}
 	for _, e := range emails {
 		if e.Verified {
-			return e.Email, nil
+			return e.Email, true, nil
 		}
 	}
 	if len(emails) > 0 {
-		return emails[0].Email, nil
+		return emails[0].Email, emails[0].Verified, nil
 	}
-	return "", nil
+	return "", false, nil
 }

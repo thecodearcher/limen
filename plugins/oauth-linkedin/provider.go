@@ -85,15 +85,10 @@ func (l *linkedInProvider) GetUserInfo(_ context.Context, token *oauth.TokenResp
 	name, _ := claims["name"].(string)
 	picture, _ := claims["picture"].(string)
 
-	emailVerified := false
-	if verified, ok := claims["email_verified"].(string); ok {
-		emailVerified = verified == "true"
-	}
-
 	return &oauth.ProviderUserInfo{
 		ID:            id,
 		Email:         email,
-		EmailVerified: emailVerified,
+		EmailVerified: oauth.BoolClaim(claims, "email_verified"),
 		Name:          name,
 		AvatarURL:     picture,
 		Raw:           claims,

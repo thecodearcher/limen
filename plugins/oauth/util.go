@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +17,24 @@ import (
 
 	"github.com/thecodearcher/limen"
 )
+
+// BoolClaim reads a boolean claim from a JSON object map.
+// Accepts JSON booleans and common string forms ("true", "false", "1", "0").
+// Missing or unrecognized values return false.
+func BoolClaim(raw map[string]any, key string) bool {
+	if raw == nil {
+		return false
+	}
+	switch value := raw[key].(type) {
+	case bool:
+		return value
+	case string:
+		parsed, err := strconv.ParseBool(value)
+		return err == nil && parsed
+	default:
+		return false
+	}
+}
 
 type callbackParamsContextKey struct{}
 

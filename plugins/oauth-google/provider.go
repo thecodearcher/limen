@@ -79,14 +79,13 @@ func (g *googleProvider) GetUserInfo(_ context.Context, token *oauth.TokenRespon
 	if email == "" {
 		return nil, errors.New("google: id token missing email claim")
 	}
-	emailVerified, _ := claims["email_verified"].(bool)
 	name, _ := claims["name"].(string)
 	picture, _ := claims["picture"].(string)
 
 	return &oauth.ProviderUserInfo{
 		ID:            sub,
 		Email:         email,
-		EmailVerified: emailVerified,
+		EmailVerified: oauth.BoolClaim(claims, "email_verified"),
 		Name:          name,
 		AvatarURL:     picture,
 		Raw:           claims,

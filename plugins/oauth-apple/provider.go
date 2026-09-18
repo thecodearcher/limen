@@ -85,19 +85,12 @@ func (a *appleProvider) GetUserInfo(ctx context.Context, token *oauth.TokenRespo
 		return nil, errors.New("apple: missing email claim")
 	}
 
-	emailVerified := false
-	if v, ok := claims["email_verified"].(string); ok {
-		emailVerified = v == "true"
-	} else if v, ok := claims["email_verified"].(bool); ok {
-		emailVerified = v
-	}
-
 	name := extractNameFromParams(oauth.CallbackParams(ctx))
 
 	return &oauth.ProviderUserInfo{
 		ID:            sub,
 		Email:         email,
-		EmailVerified: emailVerified,
+		EmailVerified: oauth.BoolClaim(claims, "email_verified"),
 		Name:          name,
 		Raw:           claims,
 	}, nil

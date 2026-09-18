@@ -79,7 +79,7 @@ func (d *discordProvider) GetUserInfo(ctx context.Context, token *oauth.TokenRes
 	return &oauth.ProviderUserInfo{
 		ID:            id,
 		Email:         email,
-		EmailVerified: email != "",
+		EmailVerified: oauth.BoolClaim(raw, "verified"),
 		Name:          username,
 		AvatarURL:     avatarURL,
 		Raw:           raw,

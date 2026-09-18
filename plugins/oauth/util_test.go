@@ -64,6 +64,37 @@ func TestDecodeIDTokenClaims(t *testing.T) {
 	}
 }
 
+func TestBoolClaim(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		raw  map[string]any
+		key  string
+		want bool
+	}{
+		{name: "nil map", raw: nil, key: "email_verified", want: false},
+		{name: "missing key", raw: map[string]any{}, key: "email_verified", want: false},
+		{name: "bool true", raw: map[string]any{"email_verified": true}, key: "email_verified", want: true},
+		{name: "bool false", raw: map[string]any{"email_verified": false}, key: "email_verified", want: false},
+		{name: "string true", raw: map[string]any{"email_verified": "true"}, key: "email_verified", want: true},
+		{name: "string True", raw: map[string]any{"email_verified": "True"}, key: "email_verified", want: true},
+		{name: "string 1", raw: map[string]any{"email_verified": "1"}, key: "email_verified", want: true},
+		{name: "string false", raw: map[string]any{"email_verified": "false"}, key: "email_verified", want: false},
+		{name: "string 0", raw: map[string]any{"email_verified": "0"}, key: "email_verified", want: false},
+		{name: "invalid string", raw: map[string]any{"email_verified": "yes"}, key: "email_verified", want: false},
+		{name: "wrong type", raw: map[string]any{"email_verified": 1}, key: "email_verified", want: false},
+		{name: "discord verified", raw: map[string]any{"verified": true}, key: "verified", want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, BoolClaim(tt.raw, tt.key))
+		})
+	}
+}
+
 func TestBuildAuthCodeURL(t *testing.T) {
 	t.Parallel()
 
