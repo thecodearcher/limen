@@ -57,12 +57,16 @@ export function buildPasskeyActions<TFields>(
         if (!rpID) {
           return;
         }
-        const { sendSignal } = await loadWebAuthn();
-        await sendSignal({
-          signalName: "unknownCredential",
-          rpID,
-          credentialID: input.credentialId,
-        });
+        try {
+          const { sendSignal } = await loadWebAuthn();
+          await sendSignal({
+            signalName: "unknownCredential",
+            rpID,
+            credentialID: input.credentialId,
+          });
+        } catch {
+          // Best-effort: browsers may not support Signal API yet.
+        }
       },
       isSupported: async () => {
         const { browserSupportsWebAuthn } = await loadWebAuthn();
