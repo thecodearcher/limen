@@ -27,8 +27,8 @@ func New(opts ...ConfigOption) *sessionJWTPlugin {
 		refreshTokenRotation: true,
 		blacklistEnabled:     false,
 		refreshTokenEnabled:  true,
-		subjectEncoder:       func(user *limen.User) string { return fmt.Sprintf("%v", user.ID) },
 		subjectResolver:      func(subject string) (any, error) { return subject, nil },
+		usePublicIDAsSubject: true,
 		refreshUser:          true,
 		blacklistStoreType:   limen.StoreTypeCache,
 	}
@@ -45,6 +45,17 @@ func (p *sessionJWTPlugin) Name() limen.PluginName {
 
 func (p *sessionJWTPlugin) Initialize(core *limen.LimenCore) error {
 	p.core = core
+
+	if p.config.subjectEncoder == nil {
+		p.config.subjectEncoder = func(user *limen.User) string {
+			if p.config.usePublicIDAsSubject {
+				if encoded, ok := core.EncodePublicID(core.Schema.User, user); ok {
+					return encoded
+				}
+			}
+			return fmt.Sprintf("%v", user.ID)
+		}
+	}
 
 	if p.config.accessTokenDuration <= 0 {
 		return fmt.Errorf("session-jwt: accessTokenDuration must be positive")

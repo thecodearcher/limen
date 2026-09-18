@@ -14,4 +14,5 @@ var (
 	ErrStaleAccessToken      = limen.NewLimenError("access token has been superseded, refresh and retry", http.StatusConflict, nil)
 	ErrMissingRefreshToken   = limen.NewLimenError("refresh token is required", http.StatusBadRequest, nil)
 	ErrRefreshTokensDisabled = limen.NewLimenError("refresh tokens are not enabled", http.StatusBadRequest, nil)
+	ErrMissingUserID         = limen.NewLimenError("user id is required when reconstructing the user from claims", http.StatusInternalServerError, nil)
 )

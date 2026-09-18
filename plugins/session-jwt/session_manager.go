@@ -78,7 +78,10 @@ func (m *jwtSessionManager) ValidateSession(ctx context.Context, r *http.Request
 				return nil, limen.ErrSessionNotFound
 			}
 		} else {
-			user = m.plugin.claimsToUser(claims, v)
+			user, err = m.plugin.claimsToUser(claims, v)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -299,17 +302,42 @@ func (p *sessionJWTPlugin) claimsToSession(claims *LimenClaims, rawToken string,
 	return session
 }
 
-func (p *sessionJWTPlugin) claimsToUser(claims *LimenClaims, userID any) *limen.User {
+func (p *sessionJWTPlugin) claimsToUser(claims *LimenClaims, subject any) (*limen.User, error) {
 	schema := p.core.Schema.User
 	raw := map[string]any{}
 	if p.config.userFromClaims != nil {
 		maps.Copy(raw, p.config.userFromClaims(claims))
 	}
-	raw[schema.GetIDField()] = userID
+
+	idField := schema.GetIDField()
+	if s, ok := subject.(string); ok && p.core.IsPublicID(schema, s) {
+		decoded, err := p.core.DecodePublicID(schema, s)
+		if err != nil {
+			return nil, ErrInvalidAccessToken
+		}
+		raw[p.core.PublicIDColumn(schema)] = decoded
+	} else if _, ok := raw[idField]; !ok {
+		raw[idField] = subject
+	}
+
 	raw[schema.GetEmailField()] = claims.Email
 	raw[schema.GetEmailVerifiedAtField()] = claims.EmailVerifiedAt
 
-	return schema.FromStorage(raw).(*limen.User)
+	user := schema.FromStorage(raw).(*limen.User)
+	if isEmptyUserID(user.ID) {
+		return nil, ErrMissingUserID
+	}
+	return user, nil
+}
+
+func isEmptyUserID(id any) bool {
+	if id == nil {
+		return true
+	}
+	if s, ok := id.(string); ok {
+		return s == ""
+	}
+	return false
 }
 
 func claimsMetadata(claims *LimenClaims) map[string]any {

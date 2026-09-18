@@ -26,6 +26,7 @@ type config struct {
 	refreshTokenEnabled  bool
 	subjectEncoder       func(user *limen.User) string
 	subjectResolver      func(subject string) (any, error)
+	usePublicIDAsSubject bool
 	refreshUser          bool
 }
 
@@ -100,9 +101,11 @@ func WithCustomClaims(fn func(user *limen.User) map[string]any) ConfigOption {
 	}
 }
 
-// WithUserFromClaims projects verified JWT claims onto the reconstructed user (no DB
-// lookup when refreshUser is false). Keys must match serialized column names; id, email,
-// and email_verified_at always come from the token. Pair with WithCustomClaims.
+// WithUserFromClaims maps claim fields onto the reconstructed user when
+// WithRefreshUser(false). Keys must be user column names. Pair with
+// WithCustomClaims.
+//
+// When the subject is a public ID, include the primary-key column as ID in the map.
 func WithUserFromClaims(fn func(claims *LimenClaims) map[string]any) ConfigOption {
 	return func(c *config) {
 		c.userFromClaims = fn
@@ -125,7 +128,9 @@ func WithAudience(audience []string) ConfigOption {
 
 // WithBlacklistEnabled enables an optional JWT blacklist. When a session is revoked
 // the JWT's jti is recorded so that ValidateSession can reject it before its
-// natural expiry. This adds a cache or DB lookup on every validation call depending on the store type.
+// natural expiry.
+//
+// This adds a cache or DB lookup on every validation call depending on the store type.
 func WithBlacklistEnabled(enabled bool) ConfigOption {
 	return func(c *config) {
 		c.blacklistEnabled = enabled
@@ -150,12 +155,21 @@ func WithRefreshToken(enabled bool) ConfigOption {
 }
 
 // WithSubject sets a custom function to derive the JWT "sub" claim from a
-// user. By default the raw user.ID is used, which may expose internal
-// database identifiers. Use this to substitute a public UUID or other
-// opaque value.
+// user. By default the user's public ID is used when public IDs are enabled
+// and WithSubjectPublicID is true (the default), falling back to user.ID
+// when a public ID is unavailable.
 func WithSubject(fn func(user *limen.User) string) ConfigOption {
 	return func(c *config) {
 		c.subjectEncoder = fn
+	}
+}
+
+// WithSubjectPublicID controls whether the default subject encoder prefers
+// the user's public ID when public IDs are enabled (default: true). Set false
+// to always use user.ID as "sub". Ignored when WithSubject is set.
+func WithSubjectPublicID(enabled bool) ConfigOption {
+	return func(c *config) {
+		c.usePublicIDAsSubject = enabled
 	}
 }
 
