@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/go-webauthn/webauthn v0.18.0
 	github.com/stretchr/testify v1.12.1
-	github.com/thecodearcher/limen v0.2.1
+	github.com/thecodearcher/limen v0.2.2
 )
 
 require (

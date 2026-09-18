@@ -1,10 +1,14 @@
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
-github.com/thecodearcher/limen v0.2.1 h1:QFSbWAyMhouBDlrvPAjMuBR7uCuDj5YqvzBRKHt7HzQ=
-github.com/thecodearcher/limen v0.2.1/go.mod h1:JCYwREDExWflPtKRNjWCV1K0WfN0ZfQTsP6ZVTHT+pE=
+github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
+github.com/thecodearcher/limen v0.2.2 h1:ABDOiBaJKnPff9izWlVy44nJqbE3dWNJ/XA9u+c2CGc=
+github.com/thecodearcher/limen v0.2.2/go.mod h1:8ag1/QLtO2FpsKDs+gP/JiXUBTP0uTsV0lMQhJLerDg=
 github.com/thecodearcher/limen/plugins/oauth v0.2.0 h1:e5QRTF0D+vkgrh8q05iSF1SrIj+3J5//h/kgz3rP4tM=
 github.com/thecodearcher/limen/plugins/oauth v0.2.0/go.mod h1:BZd2/QhZMCNczU4Rn8uLj8zukt5r0zLoVWEsOZrE9YY=
 go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
+go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
+golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
 golang.org/x/oauth2 v0.35.0 h1:Mv2mzuHuZuY2+bkyWXIHMfhNdJAdwW3FuWeCPYN5GVQ=
 golang.org/x/oauth2 v0.35.0/go.mod h1:lzm5WQJQwKZ3nwavOZ3IS5Aulzxi68dUSgRHujetwEA=
 golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
+golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=

@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/stretchr/testify v1.12.1
-	github.com/thecodearcher/limen v0.2.1
+	github.com/thecodearcher/limen v0.2.2
 	golang.org/x/oauth2 v0.35.0
 )
 
