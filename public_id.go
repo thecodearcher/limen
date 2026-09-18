@@ -27,12 +27,12 @@ func ValidateClientIDValue(core *LimenCore, schema Schema, value any) error {
 }
 
 func (core *LimenCore) assignPublicID(ctx context.Context, schema Schema, payload map[string]any) error {
-	schemaName, config, enabled := core.getPublicIDConfig(schema)
+	_, config, enabled := core.getPublicIDConfig(schema)
 	if !enabled {
 		return nil
 	}
 
-	field := schema.GetField(config.field)
+	field := core.PublicIDColumn(schema)
 	if field == "" {
 		return fmt.Errorf("failed to resolve public-ID field for schema %q", schema.GetTableName())
 	}
@@ -45,7 +45,7 @@ func (core *LimenCore) assignPublicID(ctx context.Context, schema Schema, payloa
 		return nil
 	}
 
-	value, err := config.Generator(ctx, schemaName)
+	value, err := core.GeneratePublicID(ctx, schema)
 	if err != nil {
 		return err
 	}

@@ -105,9 +105,5 @@ func (p *credentialPasswordPlugin) Initialize(core *limen.LimenCore) error {
 		return fmt.Errorf("config is required")
 	}
 
-	if p.config.passwordMinLength < defaultMinPasswordLength {
-		return fmt.Errorf("password min length must be at least 4")
-	}
-
 	return nil
 }

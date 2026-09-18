@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
@@ -53,4 +54,21 @@ func TestNew(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewUserBuildsUserFromColumnMap(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	emailField := l.core.Schema.User.GetEmailField()
+
+	user := l.NewUser(map[string]any{
+		emailField: "newuser@example.com",
+		"custom":   "value",
+	})
+	require.NotNil(t, user)
+	assert.Equal(t, "newuser@example.com", user.Email)
+	require.NotNil(t, user.Raw())
+	assert.Equal(t, "newuser@example.com", user.Raw()[emailField])
+	assert.Equal(t, "value", user.Raw()["custom"])
 }

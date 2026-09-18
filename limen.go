@@ -113,6 +113,11 @@ func (a *Limen) Handler() http.Handler {
 	return router
 }
 
+// NewUser builds a User from data you already have, so you can pass it back into Limen.
+func (a *Limen) NewUser(row map[string]any) *User {
+	return a.core.Schema.User.FromStorage(row).(*User)
+}
+
 func (a *Limen) GetSession(req *http.Request) (*ValidatedSession, error) {
 	return a.core.SessionManager.ValidateSession(req.Context(), req)
 }

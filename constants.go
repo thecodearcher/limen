@@ -39,6 +39,7 @@ const (
 	PluginMagicLink          PluginName = "magic-link"
 	PluginAPIKey             PluginName = "api-key"
 	PluginOrganization       PluginName = "organization"
+	PluginPasskey            PluginName = "passkey"
 )
 
 // ============================================================================
