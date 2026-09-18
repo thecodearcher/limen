@@ -13,6 +13,7 @@ Status legend: ✅ shipped · 🚧 in progress · 📋 planned (first-party) · 
 | Dynamic custom roles (runtime-defined, per-org) | Opt-in via `WithCustomRoles`. |
 | API keys | Including org-scoped keys. |
 | TypeScript client (`limen-auth`) | Plugin clients for credential, OAuth, 2FA, session JWT, organization, API keys. |
+| Passkeys / WebAuthn | Go plugin + TypeScript client. |
 
 ## Track 1: Core
 
@@ -24,7 +25,6 @@ Status legend: ✅ shipped · 🚧 in progress · 📋 planned (first-party) · 
 
 | item | status | notes |
 |---|---|---|
-| Passkeys / WebAuthn | 📋 | |
 | Anonymous / guest sessions | 📋 | |
 | Additional OAuth providers | 🙋 | Follow the `oauth-*` pattern. Safest contribution lane in the repo. |
 
