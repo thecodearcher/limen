@@ -1,5 +1,11 @@
 # limen-auth
 
+## 0.2.0
+
+### Minor Changes
+
+- 68de12d: add support passkey plugin
+
 ## 0.1.1
 
 ### Patch Changes
