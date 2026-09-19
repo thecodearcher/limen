@@ -19,7 +19,7 @@ type Migration struct {
 
 func generateMigrations(db *sql.DB, driver Driver, config *cliConfig) ([]Migration, error) {
 	migrations := make([]Migration, 0, len(config.Schemas))
-	baseTime := time.Now()
+	baseTime := time.Now().UTC()
 
 	introspector := newSchemaIntrospector(db, driver)
 	tableNames := make([]string, 0, len(config.Schemas))
