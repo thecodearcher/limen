@@ -2,7 +2,9 @@ package limen
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -43,6 +45,30 @@ func newTestLimenWithSessionConfig(t *testing.T, opts ...SessionConfigOption) *L
 	})
 	require.NoError(t, err)
 	return l
+}
+
+func jsonRequest(t *testing.T, method, path, body string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequestWithContext(t.Context(), method, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func copyResponseCookies(t *testing.T, rec *httptest.ResponseRecorder, req *http.Request) {
+	t.Helper()
+	for _, cookie := range rec.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
+}
+
+func findCookie(rec *httptest.ResponseRecorder, name string) *http.Cookie {
+	var found *http.Cookie
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == name {
+			found = cookie
+		}
+	}
+	return found
 }
 
 func newTestHTTPCore(t *testing.T, l *Limen) *LimenHTTPCore {

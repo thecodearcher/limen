@@ -42,8 +42,9 @@ func TestRequestEmailVerification_AlreadyVerified(t *testing.T) {
 	verification, err := l.RequestEmailVerification(context.Background(), &User{Email: "verified@test.com"}, false)
 	require.NoError(t, err)
 
-	err = l.VerifyEmail(context.Background(), verification.Value)
+	email, err := l.VerifyEmail(context.Background(), verification.Value)
 	require.NoError(t, err)
+	require.Equal(t, "verified@test.com", email)
 
 	_, err = l.RequestEmailVerification(context.Background(), &User{Email: "verified@test.com"}, false)
 	assert.ErrorIs(t, err, ErrEmailAlreadyVerified)
@@ -53,7 +54,8 @@ func TestVerifyEmail_InvalidToken(t *testing.T) {
 	t.Parallel()
 
 	l := newTestLimenWithEmailVerification(t)
-	err := l.VerifyEmail(context.Background(), "bad-token")
+	email, err := l.VerifyEmail(context.Background(), "bad-token")
+	require.Empty(t, email)
 	assert.ErrorIs(t, err, ErrEmailVerificationTokenInvalid)
 }
 
@@ -66,10 +68,13 @@ func TestVerifyEmail_TokenConsumed(t *testing.T) {
 	verification, err := l.RequestEmailVerification(context.Background(), &User{Email: "consumed@test.com"}, false)
 	require.NoError(t, err)
 
-	err = l.VerifyEmail(context.Background(), verification.Value)
+	email, err := l.VerifyEmail(context.Background(), verification.Value)
+	require.NoError(t, err)
+	require.Equal(t, "consumed@test.com", email)
 	require.NoError(t, err)
 
-	err = l.VerifyEmail(context.Background(), verification.Value)
+	email, err = l.VerifyEmail(context.Background(), verification.Value)
+	require.Empty(t, email)
 	assert.ErrorIs(t, err, ErrEmailVerificationTokenInvalid, "reusing a consumed token should fail")
 }
 

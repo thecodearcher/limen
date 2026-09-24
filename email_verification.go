@@ -56,29 +56,35 @@ func (c *LimenCore) SendEmailVerificationMail(user *User, verification *Verifica
 }
 
 // VerifyEmail validates the token, marks the user's email as verified, and
-// deletes the consumed token
-func (c *LimenCore) VerifyEmail(ctx context.Context, token string) error {
+// deletes the consumed token. It returns the verified email address.
+func (c *LimenCore) VerifyEmail(ctx context.Context, token string) (string, error) {
 	verification, err := c.DBAction.FindValidVerificationByToken(ctx, token)
 	if err != nil {
-		return ErrEmailVerificationTokenInvalid
+		return "", ErrEmailVerificationTokenInvalid
 	}
 
 	action, identifier := ParseVerificationAction(verification.Subject)
 	if action != EmailVerificationAction {
-		return ErrEmailVerificationTokenInvalid
+		return "", ErrEmailVerificationTokenInvalid
 	}
 
+	email := NormalizeEmail(identifier)
 	now := time.Now()
-	return c.WithTransaction(ctx, func(ctx context.Context) error {
+	err = c.WithTransaction(ctx, func(ctx context.Context) error {
 		if err := c.DBAction.UpdateUser(ctx, &User{EmailVerifiedAt: &now},
 			[]Where{
-				Eq(c.Schema.User.GetEmailField(), NormalizeEmail(identifier)),
+				Eq(c.Schema.User.GetEmailField(), email),
 			}); err != nil {
 			return err
 		}
 
 		return c.DBAction.DeleteVerificationToken(ctx, verification.Value)
 	})
+	if err != nil {
+		return "", err
+	}
+
+	return email, nil
 }
 
 func (c *LimenCore) generateEmailVerificationToken(user *User) (string, error) {
