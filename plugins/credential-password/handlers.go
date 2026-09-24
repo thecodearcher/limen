@@ -69,6 +69,12 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 
 	result, err := p.plugin.SignInWithCredentialAndPassword(r.Context(), body["credential"].(string), body["password"].(string))
 	if err != nil {
+		var unverified emailNotVerifiedError
+		if errors.As(err, &unverified) {
+			p.handleUnverifiedSignIn(w, r, unverified.email)
+			return
+		}
+
 		p.responder.Error(w, r, limen.NewLimenError(ErrInvalidCredential.Error(), ErrInvalidCredential.Status(), nil))
 		return
 	}
@@ -84,6 +90,34 @@ func (p *credentialPasswordHandlers) SignInWithCredentialAndPassword(w http.Resp
 	}
 
 	p.responder.SessionResponse(w, r, p.plugin.core, result, sessionResult)
+}
+
+// handleUnverifiedSignIn keeps the 403 and, when configured, issues a waiting-room
+// cookie and resends the verification email.
+func (p *credentialPasswordHandlers) handleUnverifiedSignIn(w http.ResponseWriter, r *http.Request, email string) {
+	if err := p.issueVerificationChallenge(w, email); err != nil {
+		p.responder.Error(w, r, err)
+		return
+	}
+
+	if p.plugin.config.sendEmailVerificationOnSignIn {
+		_, err := p.plugin.core.RequestEmailVerification(r.Context(), &limen.User{Email: email}, true)
+		if err != nil && !errors.Is(err, limen.ErrEmailAlreadyVerified) {
+			p.responder.Error(w, r, err)
+			return
+		}
+	}
+
+	p.responder.Error(w, r, ErrEmailNotVerified)
+}
+
+// issueVerificationChallenge sets the waiting-room cookie when the session is
+// withheld until the email is verified.
+func (p *credentialPasswordHandlers) issueVerificationChallenge(w http.ResponseWriter, email string) error {
+	if !p.plugin.config.requireEmailVerification || !p.plugin.core.EmailVerificationChallengeEnabled() {
+		return nil
+	}
+	return p.plugin.core.IssueEmailVerificationChallenge(w, email)
 }
 
 func (p *credentialPasswordHandlers) isUsernameRequiredOnSignup() bool {
@@ -125,7 +159,11 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 		return
 	}
 
-	if !p.plugin.config.autoSignInOnSignUp {
+	if !p.plugin.config.autoSignInOnSignUp || p.plugin.config.requireEmailVerification {
+		if err := p.issueVerificationChallenge(w, result.User.Email); err != nil {
+			p.responder.Error(w, r, err)
+			return
+		}
 		p.responder.SessionResponse(w, r, p.plugin.core, result, nil)
 		return
 	}

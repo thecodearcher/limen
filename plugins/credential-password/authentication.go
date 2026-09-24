@@ -42,6 +42,10 @@ func (p *credentialPasswordPlugin) authenticateUser(user *limen.User, password s
 		return nil, ErrInvalidPassword
 	}
 
+	if p.config.requireEmailVerification && !user.IsEmailVerified() {
+		return nil, emailNotVerifiedError{email: user.Email}
+	}
+
 	return &limen.AuthenticationResult{User: user}, nil
 }
 

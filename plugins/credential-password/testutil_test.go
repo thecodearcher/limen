@@ -2,6 +2,9 @@ package credentialpassword
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,4 +47,21 @@ func seedOAuthTestUser(t *testing.T, plugin *credentialPasswordPlugin, email str
 	user, err := plugin.dbAction.FindUserByEmail(context.Background(), email)
 	require.NoError(t, err)
 	return user
+}
+
+func newJSONRequest(t *testing.T, path, body string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+// liveCookie returns the named cookie unless the response deletes it.
+func liveCookie(rec *httptest.ResponseRecorder, name string) *http.Cookie {
+	for _, cookie := range rec.Result().Cookies() {
+		if cookie.Name == name && cookie.MaxAge >= 0 && cookie.Value != "" {
+			return cookie
+		}
+	}
+	return nil
 }
