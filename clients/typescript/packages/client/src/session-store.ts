@@ -37,7 +37,7 @@ export function createSessionStore<TFields = unknown>(options: CreateSessionStor
         return options.parseSession(raw);
       } catch (error) {
         // Not an error — the user is simply signed out.
-        if (error instanceof LimenError && error.isUnauthorized) {
+        if (error instanceof LimenError && error.is("unauthorized")) {
           return null;
         }
         throw error;

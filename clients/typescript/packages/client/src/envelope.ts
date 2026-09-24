@@ -27,6 +27,14 @@ export function unwrapPayload(body: unknown, envelope: EnvelopeConfig): unknown 
   return body;
 }
 
+export function unwrapErrorCode(body: unknown): string | undefined {
+  if (body === null || typeof body !== "object") {
+    return undefined;
+  }
+  const value = (body as Record<string, unknown>).code;
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
 /**
  * Pull the human-readable error message out of a non-2xx body.
  *
