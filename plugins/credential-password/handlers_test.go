@@ -47,6 +47,9 @@ func TestRequireEmailVerification_IssuesChallengeWithoutSession(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, w.Code)
 			assert.NotNil(t, liveCookie(w, "limen_email_verify"))
 			assert.Nil(t, liveCookie(w, "limen_session"))
+			if tt.wantStatus == http.StatusForbidden {
+				assert.Contains(t, w.Body.String(), `"code":"email_not_verified"`)
+			}
 		})
 	}
 }
