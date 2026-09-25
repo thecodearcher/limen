@@ -61,4 +61,16 @@ export class LimenError extends Error {
   is(code: LimenErrorCode): boolean {
     return this.code === code;
   }
+
+  get isUnauthorized(): boolean {
+    return this.code === "unauthorized";
+  }
+
+  get isRateLimited(): boolean {
+    return this.code === "rate_limited";
+  }
+
+  get isTimeout(): boolean {
+    return this.code === "timeout";
+  }
 }
