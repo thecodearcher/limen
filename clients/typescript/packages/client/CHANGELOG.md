@@ -1,5 +1,11 @@
 # limen-auth
 
+## 0.2.1
+
+### Patch Changes
+
+- 98aa1bd: Support resending an email verification without a session, and error codes such as `email_not_verified`.
+
 ## 0.2.0
 
 ### Minor Changes
