@@ -14,6 +14,10 @@ type Driver interface {
 	IntrospectColumnsQuery(tableName string) (string, []any)
 	IntrospectIndexesQuery(tableName string) (string, []any)
 	IntrospectForeignKeysQuery(tableName string) (string, []any)
+	// QuoteIdentifier quotes a table, column, index or constraint name for this
+	// database, so that reserved words and case-sensitive names survive into
+	// the generated DDL. Must agree with how the runtime adapter quotes.
+	QuoteIdentifier(name string) string
 	MapGoTypeToSQL(goType limen.ColumnType, isAutoIncrement bool) string
 	MapSQLTypeToGoType(dataType string) limen.ColumnType
 	GetAutoIncrementSuffix() string

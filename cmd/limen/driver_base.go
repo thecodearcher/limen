@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/thecodearcher/limen"
@@ -40,10 +39,6 @@ func (d *baseDriver) ParseForeignKeyRow(scan func(dest ...any) error) (limen.For
 	return limen.ForeignKeyDefinition{
 		Name: fkName,
 	}, nil
-}
-
-func (d *baseDriver) DropColumnSQL(tableName, columnName string) string {
-	return fmt.Sprintf("DROP COLUMN %s", columnName)
 }
 
 func (d *baseDriver) ParseColumnRow(scan func(dest ...any) error) (limen.ColumnDefinition, error) {
