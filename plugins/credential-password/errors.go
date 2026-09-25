@@ -27,4 +27,14 @@ var (
 	ErrPasswordNotSet            = limen.NewLimenError("password is not set", http.StatusForbidden, nil)
 	ErrPasswordAlreadySet        = limen.NewLimenError("password is already set", http.StatusForbidden, nil)
 	ErrUsernameNotEnabled        = limen.NewLimenError("username support is not enabled", http.StatusBadRequest, nil)
+	ErrEmailNotVerified          = limen.NewLimenErrorWithCode("email_not_verified", "email is not verified", http.StatusForbidden, nil)
 )
+
+// emailNotVerifiedError wraps ErrEmailNotVerified with the address that failed
+// sign-in.
+type emailNotVerifiedError struct {
+	email string
+}
+
+func (e emailNotVerifiedError) Error() string { return ErrEmailNotVerified.Error() }
+func (e emailNotVerifiedError) Unwrap() error { return ErrEmailNotVerified }

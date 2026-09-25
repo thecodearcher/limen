@@ -1,13 +1,34 @@
-export type LimenErrorCode =
-  | "unauthorized"
-  | "forbidden"
-  | "not_found"
-  | "rate_limited"
-  | "validation_error"
-  | "conflict"
-  | "server_error"
-  | "timeout"
-  | "unknown";
+import { unwrapErrorCode } from "./envelope";
+
+const LIMEN_ERROR_CODES = [
+  "unauthorized",
+  "forbidden",
+  "not_found",
+  "rate_limited",
+  "validation_error",
+  "conflict",
+  "server_error",
+  "timeout",
+  "email_not_verified",
+  "unknown",
+] as const;
+
+export type LimenErrorCode = (typeof LIMEN_ERROR_CODES)[number];
+
+const LIMEN_ERROR_CODE_SET = new Set<string>(LIMEN_ERROR_CODES);
+
+export function isLimenErrorCode(code: string): code is LimenErrorCode {
+  return LIMEN_ERROR_CODE_SET.has(code);
+}
+
+/** Prefer a known server code on the body; otherwise derive one from the HTTP status. */
+export function resolveErrorCode(status: number, body: unknown): LimenErrorCode {
+  const serverCode = unwrapErrorCode(body);
+  if (serverCode !== undefined && isLimenErrorCode(serverCode)) {
+    return serverCode;
+  }
+  return deriveErrorCode(status);
+}
 
 /** Map HTTP status → typed code. Anything unmapped becomes `"unknown"`. */
 // prettier-ignore
@@ -35,6 +56,10 @@ export class LimenError extends Error {
     super(message);
     this.status = status;
     this.code = code ?? deriveErrorCode(status);
+  }
+
+  is(code: LimenErrorCode): boolean {
+    return this.code === code;
   }
 
   get isUnauthorized(): boolean {

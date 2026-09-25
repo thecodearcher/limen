@@ -22,6 +22,10 @@ func (c User) TableName() string {
 	return string(UserSchemaTableName)
 }
 
+func (u User) IsEmailVerified() bool {
+	return u.EmailVerifiedAt != nil
+}
+
 type UserSchema struct {
 	BaseSchema
 	// If true, the schema will include the first name and last name fields

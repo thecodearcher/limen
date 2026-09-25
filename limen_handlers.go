@@ -1,6 +1,7 @@
 package limen
 
 import (
+	"errors"
 	"net/http"
 )
 
@@ -35,7 +36,7 @@ func (h *limenHandlers) RegisterRoutes(routeBuilder *RouteBuilder) {
 
 	if h.core.EmailVerificationEnabled() {
 		routeBuilder.POST("/verify-email", "verify-email", h.VerifyEmail)
-		routeBuilder.ProtectedPOST("/email-verifications", "email-verifications", h.RequestEmailVerification)
+		routeBuilder.POST("/email-verifications", "email-verifications", h.RequestEmailVerification)
 	}
 }
 
@@ -90,31 +91,79 @@ func (h *limenHandlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.core.VerifyEmail(r.Context(), body["token"].(string))
+	email, err := h.core.VerifyEmail(r.Context(), body["token"].(string))
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusOK, "email verified successfully")
+	h.core.ClearEmailVerificationChallenge(w)
+	if !h.core.config.Email.verification.autoSignInAfterVerification {
+		h.responder.JSON(w, r, http.StatusOK, "email verified successfully")
+		return
+	}
+
+	user, err := h.core.DBAction.FindUserByEmail(r.Context(), email)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	sessionResult, err := h.core.CreateSession(r.Context(), r, w, &AuthenticationResult{User: user})
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+	h.responder.SessionResponse(w, r, h.core, &AuthenticationResult{User: user}, sessionResult)
 }
 
 func (h *limenHandlers) RequestEmailVerification(w http.ResponseWriter, r *http.Request) {
-	session, err := GetCurrentSessionFromCtx(r.Context())
-	if err != nil {
-		h.responder.Error(w, r, err)
+	body := ValidateRequest(w, r, h.responder, func(v *Validator) {
+		v.Field("email").Optional().Email()
+	})
+	if body == nil {
 		return
 	}
 
-	_, err = h.core.RequestEmailVerification(r.Context(), &User{
-		Email: session.User.Email,
-	}, true)
-	if err != nil {
-		h.responder.Error(w, r, err)
+	user, refreshed := h.provenEmailVerificationUser(r)
+	if user != nil {
+		_, err := h.core.RequestEmailVerification(r.Context(), &User{Email: user.Email}, true)
+		if err != nil {
+			h.responder.ErrorWithSession(w, r, err, refreshed)
+			return
+		}
+		h.responder.JSONWithSession(w, r, http.StatusOK, "email verification requested successfully", refreshed)
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusOK, "email verification requested successfully")
+	if !h.core.config.Email.verification.requestByEmailEnabled {
+		h.responder.Error(w, r, ErrUnauthorized)
+		return
+	}
+
+	if email, _ := body["email"].(string); email != "" {
+		_, err := h.core.RequestEmailVerification(r.Context(), &User{Email: email}, true)
+		if err != nil && !errors.Is(err, ErrRecordNotFound) && !errors.Is(err, ErrEmailAlreadyVerified) {
+			h.responder.Error(w, r, err)
+			return
+		}
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, "if the email address is associated with an account, "+
+		"you will receive an email with instructions to verify it")
+}
+
+func (h *limenHandlers) provenEmailVerificationUser(r *http.Request) (*User, *SessionResult) {
+	session, err := h.core.SessionManager.ValidateSession(r.Context(), r)
+	if err == nil && session != nil && session.User != nil {
+		return session.User, session.Refreshed
+	}
+
+	user, err := h.core.ResolveEmailVerificationChallenge(r)
+	if err != nil {
+		return nil, nil
+	}
+	return user, nil
 }
 
 func (h *limenHandlers) SignOut(w http.ResponseWriter, r *http.Request) {

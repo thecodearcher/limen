@@ -10,8 +10,15 @@ import type { QueryParams, Session } from "./types";
 /**
  * Run the default HTTP steps for a route — merge defaults, resolve path params,
  * serialize, dispatch, parse — without applying session effects.
+ * `onSession` receives a session `parseSession` accepted. Handlers omit it.
  */
-async function runHttp(ctx: AnyRouteContext, def: AnyRoute, input: unknown, callInit?: FetchOptions): Promise<unknown> {
+async function runHttp(
+  ctx: AnyRouteContext,
+  def: AnyRoute,
+  input: unknown,
+  callInit?: FetchOptions,
+  onSession?: (session: Session<unknown>) => void,
+): Promise<unknown> {
   let merged = input;
   if (def.defaults !== undefined) {
     merged = { ...(def.defaults as Record<string, unknown>), ...((input ?? {}) as Record<string, unknown>) };
@@ -29,8 +36,12 @@ async function runHttp(ctx: AnyRouteContext, def: AnyRoute, input: unknown, call
 
   const raw = await ctx.fetch<unknown>(path, init);
 
-  if (def.parseSession === true && isSessionResponse(raw)) {
-    return ctx.parseSession(raw);
+  if (def.parseSession === true) {
+    const session = ctx.parseSession(raw);
+    if (session !== false) {
+      onSession?.(session);
+      return session;
+    }
   }
 
   if (def.parse !== undefined) {
@@ -42,13 +53,17 @@ async function runHttp(ctx: AnyRouteContext, def: AnyRoute, input: unknown, call
   return Array.isArray(raw) ? camelizeEach(raw) : camelizeKeys(raw);
 }
 
-async function applyEffects(ctx: AnyRouteContext, def: AnyRoute, result: unknown): Promise<void> {
+async function applyEffects(
+  ctx: AnyRouteContext,
+  def: AnyRoute,
+  session: Session<unknown> | undefined,
+): Promise<void> {
   if (def.clearSession === true) {
     ctx.store.setData(null);
   }
 
-  if (def.parseSession === true && def.skipStore !== true && isSessionResponse(result)) {
-    ctx.store.setData(result);
+  if (session !== undefined && def.skipStore !== true) {
+    ctx.store.setData(session);
   }
 
   if (def.refetchSession === true) {
@@ -67,10 +82,6 @@ function makeHttpRunner(
   return run as HttpRunner<unknown>;
 }
 
-function isSessionResponse(raw: unknown): raw is Session<unknown> {
-  return typeof raw === "object" && raw !== null && "user" in raw;
-}
-
 /**
  * Execute a route's behaviour: delegate to its `handler` when present (handler
  * owns all behaviour, including any effects), otherwise run the default
@@ -85,8 +96,11 @@ async function dispatchRoute(
   if (def.handler !== undefined) {
     return def.handler(ctx, input, makeHttpRunner(ctx, def, input, callInit));
   }
-  const result = await runHttp(ctx, def, input, callInit);
-  await applyEffects(ctx, def, result);
+  let session: Session<unknown> | undefined;
+  const result = await runHttp(ctx, def, input, callInit, (parsed) => {
+    session = parsed;
+  });
+  await applyEffects(ctx, def, session);
   return result;
 }
 

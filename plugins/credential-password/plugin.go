@@ -46,6 +46,9 @@ type config struct {
 	usernameValidationRegex  *regexp.Regexp                                   // Custom regex pattern for username validation
 	usernameRequiredOnSignup bool                                             // require username during sign up
 	usernameValidationFunc   func(username string) error                      // custom function to validate the username
+	requireEmailVerification bool
+
+	sendEmailVerificationOnSignIn bool
 }
 
 // New returns a new config with the default values.
@@ -64,6 +67,7 @@ func New(opts ...ConfigOption) *credentialPasswordPlugin {
 		usernameMaxLength:        defaultMaxUsernameLength,
 		usernameValidationRegex:  regexp.MustCompile(`^[a-zA-Z0-9_-]+$`), // alphanumeric, underscore, hyphen
 		usernameRequiredOnSignup: false,
+		requireEmailVerification: false,
 	}
 
 	for _, opt := range opts {
@@ -103,6 +107,10 @@ func (p *credentialPasswordPlugin) Initialize(core *limen.LimenCore) error {
 	p.dbAction = core.DBAction
 	if p.config == nil {
 		return fmt.Errorf("config is required")
+	}
+
+	if !p.core.EmailVerificationEnabled() && p.config.requireEmailVerification {
+		return fmt.Errorf("credential-password: WithRequireEmailVerification needs limen.WithEmailVerification enabled")
 	}
 
 	return nil

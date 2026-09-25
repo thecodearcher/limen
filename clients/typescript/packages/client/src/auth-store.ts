@@ -34,7 +34,7 @@ export function createAuthStore<T>(options: CreateAuthStoreOptions<T>): DataStor
         const raw = await ctx.fetch<unknown>(path, { method: "GET", ...init });
         return parse === undefined ? (raw as T) : parse(raw);
       } catch (error) {
-        if (error instanceof LimenError && error.isUnauthorized) {
+        if (error instanceof LimenError && error.is("unauthorized")) {
           return null;
         }
         throw error;

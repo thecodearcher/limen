@@ -34,10 +34,11 @@ export function createSessionStore<TFields = unknown>(options: CreateSessionStor
     loader: async () => {
       try {
         const raw = await options.fetch<unknown>("/me", { method: "GET" });
-        return options.parseSession(raw);
+        const session = options.parseSession(raw);
+        return session === false ? null : session;
       } catch (error) {
         // Not an error — the user is simply signed out.
-        if (error instanceof LimenError && error.isUnauthorized) {
+        if (error instanceof LimenError && error.is("unauthorized")) {
           return null;
         }
         throw error;

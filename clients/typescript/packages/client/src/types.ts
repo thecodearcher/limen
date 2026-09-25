@@ -16,10 +16,11 @@ export type CreateAuthClientOptions<Plugins extends readonly AnyClientPlugin[], 
   /** Options that modify how the SDK performs HTTP requests. */
   fetchOptions?: ClientFetchOptions;
   /**
-   * Optional transformer for non-default session payloads.
+   * Optional transformer for session payloads.
    *
-   * Provide this when your server returns custom user/session fields. It must
-   * map the raw response into `Session`.
+   * Provide this when your server returns a custom shape. Return a `Session`
+   * when the body is a session, or `false` when it is not. `false` leaves the
+   * store unchanged on a route call;
    */
   parseSession?: ParseSession<PrettyUserFields<Plugins, TFields>>;
   /**
@@ -130,7 +131,7 @@ export type EnvelopeConfig = {
   fields?: EnvelopeFields;
 };
 
-export type ParseSession<TFields = unknown> = (raw: unknown) => Session<TFields>;
+export type ParseSession<TFields = unknown> = (raw: unknown) => Session<TFields> | false;
 
 export type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
 

@@ -146,8 +146,23 @@ func (a *Limen) RequestEmailVerification(ctx context.Context, user *User, should
 
 // VerifyEmail validates the token, marks the email as verified, and deletes
 // the consumed token.
-func (a *Limen) VerifyEmail(ctx context.Context, token string) error {
+func (a *Limen) VerifyEmail(ctx context.Context, token string) (string, error) {
 	return a.core.VerifyEmail(ctx, token)
+}
+
+// IssueEmailVerificationChallenge sets the waiting-room cookie for user.
+func (a *Limen) IssueEmailVerificationChallenge(w http.ResponseWriter, email string) error {
+	return a.core.IssueEmailVerificationChallenge(w, email)
+}
+
+// ClearEmailVerificationChallenge removes the waiting-room cookie.
+func (a *Limen) ClearEmailVerificationChallenge(w http.ResponseWriter) {
+	a.core.ClearEmailVerificationChallenge(w)
+}
+
+// ResolveEmailVerificationChallenge loads the user bound to a valid waiting-room cookie.
+func (a *Limen) ResolveEmailVerificationChallenge(r *http.Request) (*User, error) {
+	return a.core.ResolveEmailVerificationChallenge(r)
 }
 
 // Use retrieves a registered plugin by name and returns it as type T.

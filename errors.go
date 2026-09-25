@@ -7,6 +7,7 @@ import (
 
 type LimenError struct {
 	message string
+	code    string
 	details any
 	status  int
 }
@@ -52,8 +53,16 @@ func NewLimenError(message string, status int, details any) *LimenError {
 	return &LimenError{message: message, details: details, status: status}
 }
 
+func NewLimenErrorWithCode(code, message string, status int, details any) *LimenError {
+	return &LimenError{code: code, message: message, details: details, status: status}
+}
+
 func (e *LimenError) Error() string {
 	return e.message
+}
+
+func (e *LimenError) Code() string {
+	return e.code
 }
 
 func (e *LimenError) Details() any {

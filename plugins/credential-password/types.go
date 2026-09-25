@@ -144,3 +144,20 @@ func WithUsernameField(columnName string) limen.SchemaConfigOption {
 		limen.WithPluginFieldName(CredentialPasswordUserSchemaUsernameField, columnName),
 	)
 }
+
+// WithRequireEmailVerification sets whether to require email verification during sign in
+//
+// When enabled, the user will be required to verify their email before signing in.
+func WithRequireEmailVerification(requireEmailVerification bool) ConfigOption {
+	return func(c *config) {
+		c.requireEmailVerification = requireEmailVerification
+	}
+}
+
+// WithSendEmailVerificationOnSignIn resends the verification email when sign-in
+// is blocked because the address is not verified.
+func WithSendEmailVerificationOnSignIn() ConfigOption {
+	return func(c *config) {
+		c.sendEmailVerificationOnSignIn = true
+	}
+}

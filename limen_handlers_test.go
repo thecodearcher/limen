@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestHandlersFromLimen(t *testing.T, l *Limen) *limenHandlers {
@@ -166,4 +167,131 @@ func TestSignOut_WithoutSession(t *testing.T) {
 	handlers.SignOut(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestRequestEmailVerificationHandler_RejectsBareEmailByDefault(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimenWithEmailVerification(t)
+	req := jsonRequest(t, http.MethodPost, "/auth/email-verifications", `{"email":"ghost@test.com"}`)
+	w := httptest.NewRecorder()
+	l.Handler().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestRequestEmailVerificationHandler_RequestByEmailAlwaysOK(t *testing.T) {
+	t.Parallel()
+
+	var sentTo string
+	l := newTestLimenWithEmailVerification(t,
+		WithEmailVerification(
+			WithEmailVerificationRequestByEmail(),
+			WithSendEmailVerificationMail(func(email, _ string) {
+				sentTo = email
+			}),
+		),
+	)
+	SeedTestUser(t, l, "unverified@test.com")
+	verified := SeedTestUser(t, l, "verified@test.com")
+	verification, err := l.RequestEmailVerification(t.Context(), verified, false)
+	require.NoError(t, err)
+	email, err := l.VerifyEmail(t.Context(), verification.Value)
+	require.NoError(t, err)
+	require.Equal(t, verified.Email, email)
+
+	tests := []struct {
+		name       string
+		email      string
+		wantSentTo string
+	}{
+		{name: "unverified account", email: "unverified@test.com", wantSentTo: "unverified@test.com"},
+		{name: "unknown email", email: "ghost@test.com"},
+		{name: "verified account", email: "verified@test.com"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sentTo = ""
+			req := jsonRequest(t, http.MethodPost, "/auth/email-verifications", `{"email":"`+tt.email+`"}`)
+			w := httptest.NewRecorder()
+			l.Handler().ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, tt.wantSentTo, sentTo)
+		})
+	}
+}
+
+func TestRequestEmailVerificationHandler_ProofOverridesBodyEmail(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		attachProof func(t *testing.T, l *Limen, owner *User, req *http.Request)
+	}{
+		{
+			name: "challenge cookie",
+			attachProof: func(t *testing.T, l *Limen, owner *User, req *http.Request) {
+				issued := httptest.NewRecorder()
+				require.NoError(t, l.IssueEmailVerificationChallenge(issued, owner.Email))
+				copyResponseCookies(t, issued, req)
+			},
+		},
+		{
+			name: "session",
+			attachProof: func(t *testing.T, l *Limen, owner *User, req *http.Request) {
+				req.AddCookie(SeedTestSession(t, l, owner.ID, owner.Email).Cookie)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var sentTo string
+			l := newTestLimenWithEmailVerification(t,
+				WithEmailVerification(
+					WithEmailVerificationRequestByEmail(),
+					WithSendEmailVerificationMail(func(email, _ string) {
+						sentTo = email
+					}),
+				),
+			)
+			owner := SeedTestUser(t, l, "owner@test.com")
+			SeedTestUser(t, l, "other@test.com")
+
+			req := jsonRequest(t, http.MethodPost, "/auth/email-verifications", `{"email":"other@test.com"}`)
+			tt.attachProof(t, l, owner, req)
+			w := httptest.NewRecorder()
+			l.Handler().ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, "owner@test.com", sentTo)
+		})
+	}
+}
+
+func TestVerifyEmailHandler_ClearsChallengeAndAutoSignsIn(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimenWithEmailVerification(t,
+		WithEmailVerification(WithAutoSignInAfterVerification()),
+	)
+	user := SeedTestUser(t, l, "autosign@test.com")
+	verification, err := l.RequestEmailVerification(t.Context(), user, false)
+	require.NoError(t, err)
+
+	issued := httptest.NewRecorder()
+	require.NoError(t, l.IssueEmailVerificationChallenge(issued, user.Email))
+
+	req := jsonRequest(t, http.MethodPost, "/auth/verify-email", `{"token":"`+verification.Value+`"}`)
+	copyResponseCookies(t, issued, req)
+	w := httptest.NewRecorder()
+	l.Handler().ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.NotNil(t, findCookie(w, "limen_session"))
+	cleared := findCookie(w, defaultEmailVerificationChallengeCookieName)
+	require.NotNil(t, cleared)
+	assert.Negative(t, cleared.MaxAge)
 }

@@ -40,7 +40,7 @@ export type { DeclaredFields, FieldsOf, ModelFields, PluginSchema, RunRoute, Str
 export type { RouteCallOptions, RouteHandler } from "./route";
 
 export { coreClientPlugin } from "./routes";
-export type { ActiveSession, CoreContribution, VerifyEmailInput } from "./routes";
+export type { ActiveSession, CoreContribution, RequestEmailVerificationInput, VerifyEmailInput } from "./routes";
 
 export type { CoreStores, StoresOf, StoreValues } from "./infer";
 

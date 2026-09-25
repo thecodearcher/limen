@@ -121,6 +121,9 @@ func (rs *Responder) Error(w http.ResponseWriter, r *http.Request, err error) er
 			rs.cfg.fields.Message: errMsg,
 		}
 	}
+	if code := ae.Code(); code != "" {
+		out["code"] = code
+	}
 
 	return json.NewEncoder(w).Encode(out)
 }

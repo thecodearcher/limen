@@ -1,6 +1,6 @@
 import { DEFAULT_TIMEOUT_MS } from "./constants";
 import { unwrapErrorMessage, unwrapPayload } from "./envelope";
-import { LimenError, deriveErrorCode } from "./errors";
+import { LimenError, resolveErrorCode } from "./errors";
 import { ensureLeadingSlash, joinURL, stripTrailingSlash } from "./helpers";
 import type { HookRunner } from "./hooks";
 import type { FetchInit, FetchOptions, RequestContext, ResponseContext } from "./plugin";
@@ -129,7 +129,7 @@ export class Fetcher {
         : (unwrapErrorMessage(resCtx.body, this.opts.envelope) ??
           response.statusText ??
           `Request failed with status ${response.status}`);
-    this.fail(reqCtx, response.status, new LimenError(message, response.status, deriveErrorCode(response.status)));
+    this.fail(reqCtx, response.status, new LimenError(message, response.status, resolveErrorCode(response.status, resCtx.body)));
   }
 
   private fail(reqCtx: RequestContext, status: number, error: LimenError): never {

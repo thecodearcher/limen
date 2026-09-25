@@ -37,14 +37,33 @@ describe("fetcher — timeout", () => {
     const err = (await auth.sessions().catch((e) => e)) as LimenError;
     expect(err).toBeInstanceOf(LimenError);
     expect(err.code).toBe("timeout");
-    expect(err.isTimeout).toBe(true);
+    expect(err.is("timeout")).toBe(true);
   });
 
   it("per-call timeout overrides the client default", async () => {
     const auth = makeClient(hangingImpl(), { timeout: 0 }); // client default disabled
     const err = (await auth.sessions(undefined, { timeout: 20 }).catch((e) => e)) as LimenError;
     expect(err).toBeInstanceOf(LimenError);
-    expect(err.isTimeout).toBe(true);
+    expect(err.is("timeout")).toBe(true);
+  });
+});
+
+describe("fetcher — error codes", () => {
+  it("uses a known server code instead of the status-derived code", async () => {
+    const auth = makeClient(
+      staticImpl(JSON.stringify({ message: "email is not verified", code: "email_not_verified" }), { status: 403 }),
+      { timeout: 0 },
+    );
+    const err = (await auth.sessions().catch((e) => e)) as LimenError;
+    expect(err).toBeInstanceOf(LimenError);
+    expect(err.status).toBe(403);
+    expect(err.code).toBe("email_not_verified");
+  });
+
+  it("derives forbidden when a 403 body has no code", async () => {
+    const auth = makeClient(staticImpl(JSON.stringify({ message: "nope" }), { status: 403 }), { timeout: 0 });
+    const err = (await auth.sessions().catch((e) => e)) as LimenError;
+    expect(err.code).toBe("forbidden");
   });
 });
 
