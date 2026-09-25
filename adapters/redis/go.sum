@@ -12,8 +12,8 @@ github.com/redis/go-redis/v9 v9.21.0 h1:FPBE4hhbAke+TLmcY3WkpbDffJEomdqPn3HYiqAt
 github.com/redis/go-redis/v9 v9.21.0/go.mod h1:v/M13XI1PVCDcm01VtPFOADfZtHf8YW3baQf57KlIkA=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/thecodearcher/limen v0.2.2 h1:ABDOiBaJKnPff9izWlVy44nJqbE3dWNJ/XA9u+c2CGc=
-github.com/thecodearcher/limen v0.2.2/go.mod h1:8ag1/QLtO2FpsKDs+gP/JiXUBTP0uTsV0lMQhJLerDg=
+github.com/thecodearcher/limen v0.2.3 h1:ahsCgwWnl321E1L7csugu5atK03RLQeZULlVm0JIDRs=
+github.com/thecodearcher/limen v0.2.3/go.mod h1:8ag1/QLtO2FpsKDs+gP/JiXUBTP0uTsV0lMQhJLerDg=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=
 github.com/yuin/gopher-lua v1.1.1/go.mod h1:GBR0iDaNXjAgGg9zfCvksxSRnQx76gclCIb7kdAd1Pw=
 github.com/zeebo/xxh3 v1.1.0 h1:s7DLGDK45Dyfg7++yxI0khrfwq9661w9EN78eP/UZVs=

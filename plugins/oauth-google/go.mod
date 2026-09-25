@@ -9,7 +9,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
-	github.com/thecodearcher/limen v0.2.2 // indirect
+	github.com/thecodearcher/limen v0.2.3 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )
