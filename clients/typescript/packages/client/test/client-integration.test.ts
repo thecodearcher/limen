@@ -60,6 +60,55 @@ describe("createAuthClient — session effects", () => {
     expect(session?.user.id).toBe("u1");
     expect(auth.$session.get().data?.user.id).toBe("u1");
   });
+
+  it("does not store a non-session sign-in body", async () => {
+    const { auth } = setup(() => ({ body: { two_factor_required: true } }));
+
+    const result = await auth.signIn.credential({ credential: "ada@example.com", password: "pw" });
+
+    expect(result).toEqual({ twoFactorRequired: true });
+    expect(auth.$session.get().data).toBeNull();
+  });
+
+  it("stores a custom session shape when parseSession returns one", async () => {
+    const { impl } = mockFetch(() => ({
+      body: { account: { id: "u9", email: "ada@example.com" } },
+    }));
+    const auth = createAuthClient({
+      baseURL: "http://localhost:8080",
+      plugins: [credentialPasswordPlugin()],
+      fetchOptions: { impl },
+      crossTabSync: false,
+      refetchOnWindowFocus: false,
+      parseSession: (raw) => {
+        if (typeof raw !== "object" || raw === null || !("account" in raw)) {
+          return false;
+        }
+        const account = (raw as { account: { id: string; email: string } }).account;
+        return { user: { id: account.id, email: account.email, emailVerifiedAt: null } };
+      },
+    });
+
+    const session = await auth.signIn.credential({ credential: "ada@example.com", password: "pw" });
+
+    expect(session.user.id).toBe("u9");
+    expect(auth.$session.get().data?.user.id).toBe("u9");
+  });
+
+  it("treats a false parse of /me as signed out", async () => {
+    const { impl } = mockFetch(() => ({ body: { status: "anonymous" } }));
+    const auth = createAuthClient({
+      baseURL: "http://localhost:8080",
+      plugins: [credentialPasswordPlugin()],
+      fetchOptions: { impl },
+      crossTabSync: false,
+      refetchOnWindowFocus: false,
+      parseSession: () => false,
+    });
+
+    await expect(auth.getSession()).resolves.toBeNull();
+    expect(auth.$session.get().data).toBeNull();
+  });
 });
 
 describe("createAuthClient — custom parse / handlers", () => {

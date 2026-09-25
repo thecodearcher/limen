@@ -45,11 +45,11 @@ export type RouteDef<I, O> = {
   defaults?: Partial<I>;
   /** SDK input → wire body/query. Defaults to shallow camelCase → snake_case. */
   serialize?: (input: I) => unknown;
-  /** Raw response → typed output. Ignored when `parseSession` is set. */
+  /** Raw response → typed output. Used when `parseSession` is unset or returns `false`. */
   parse?: (raw: unknown) => O;
   /**
-   * Parse the response as a session and store it when it contains a `user`.
-   * Set `skipStore` to return the parsed session without writing it.
+   * Parse the response with the client's `parseSession`. A returned session is
+   * stored unless `skipStore` is set.
    */
   parseSession?: boolean;
   /** Resolve `path` from the client base path instead of the plugin base path. */

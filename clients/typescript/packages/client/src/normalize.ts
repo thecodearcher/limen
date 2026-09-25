@@ -14,11 +14,18 @@ export function normalizeUser<F = unknown>(raw: Record<string, unknown>): User<F
   return out as User<F>;
 }
 
-export function defaultSessionParse<F = unknown>(raw: unknown): Session<F> {
-  if (!raw || typeof raw !== "object") {
-    throw new TypeError(`Expected session response to be an object, got ${raw === null ? "null" : typeof raw}`);
+/**
+ * Map a default Limen session body into a `Session`. Returns `false` unless
+ * `user` is a non-null object, so non-session payloads (a pending two-factor
+ * challenge, a plain message) are not stored.
+ */
+export function defaultSessionParse<F = unknown>(raw: unknown): Session<F> | false {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return false;
   }
-  const obj = raw as Record<string, unknown>;
-  const userRaw = (obj["user"] ?? obj) as Record<string, unknown>;
-  return { user: normalizeUser<F>(userRaw) };
+  const userRaw = (raw as Record<string, unknown>)["user"];
+  if (typeof userRaw !== "object" || userRaw === null || Array.isArray(userRaw)) {
+    return false;
+  }
+  return { user: normalizeUser<F>(userRaw as Record<string, unknown>) };
 }
