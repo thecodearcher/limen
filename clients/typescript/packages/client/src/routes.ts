@@ -7,6 +7,10 @@ export type VerifyEmailInput = {
   token: string;
 };
 
+export type RequestEmailVerificationInput = {
+  email?: string;
+};
+
 export type ActiveSession = {
   id: string | number;
   token: string;
@@ -36,12 +40,13 @@ export function coreClientPlugin<TFields = unknown>() {
       path: "/revoke-sessions",
       clearSession: true,
     }),
-    route<VerifyEmailInput, string>()({
+    route<VerifyEmailInput, string | Session<TFields>>()({
       method: "POST",
       path: "/verify-email",
+      parseSession: true,
       refetchSession: true,
     }),
-    route<void, string>()({
+    route<RequestEmailVerificationInput | void, string>()({
       method: "POST",
       path: "/email-verifications",
       as: "requestEmailVerification",
