@@ -179,7 +179,7 @@ func (t *twoFactorPlugin) GetSchemas(schema *limen.SchemaConfig) []limen.SchemaI
 			Column:           TwoFactorSchemaUserIDField,
 			ReferencedSchema: limen.CoreSchemaUsers,
 			ReferencedField:  limen.SchemaIDField,
-			OnDelete:         limen.FKActionRestrict,
+			OnDelete:         limen.FKActionCascade,
 			OnUpdate:         limen.FKActionCascade,
 		}),
 		limen.WithSchemaUniqueIndex("idx_two_factors_user_id", []limen.SchemaField{TwoFactorSchemaUserIDField}),
