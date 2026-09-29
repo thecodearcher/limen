@@ -1,5 +1,7 @@
 package limen
 
+import "context"
+
 // Plugin is the interface that all plugins must implement.
 type Plugin interface {
 	// Unique identifier for the plugin.
@@ -28,6 +30,13 @@ type SchemaProvider interface {
 // initialization and wires the session manager automatically.
 type SessionManagerProvider interface {
 	SessionManager() SessionManager
+}
+
+// SessionCreateGuard is an optional interface that plugins can implement
+// to reject a session before it is created. An error from BeforeSessionCreate
+// is returned by CreateSession.
+type SessionCreateGuard interface {
+	BeforeSessionCreate(ctx context.Context, auth *AuthenticationResult) error
 }
 
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.

@@ -42,6 +42,42 @@ func TestLimenCore_CreateSession(t *testing.T) {
 	assert.NotNil(t, result.Cookie)
 }
 
+type guardPlugin struct {
+	testPlugin
+	blockedUserID any
+}
+
+func (p *guardPlugin) Name() PluginName { return "guard-test" }
+
+func (p *guardPlugin) BeforeSessionCreate(_ context.Context, auth *AuthenticationResult) error {
+	if auth.User.ID == p.blockedUserID {
+		return ErrForbidden
+	}
+	return nil
+}
+
+func TestLimenCore_CreateSession_Guard(t *testing.T) {
+	t.Parallel()
+
+	guard := &guardPlugin{}
+	l := newTestLimen(t, guard)
+	blocked := seedUser(t, l, "blocked@test.com")
+	allowed := seedUser(t, l, "allowed@test.com")
+	guard.blockedUserID = blocked
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
+
+	_, err := l.core.CreateSession(context.Background(), req, httptest.NewRecorder(), &AuthenticationResult{User: &User{ID: blocked}})
+	assert.ErrorIs(t, err, ErrForbidden)
+	sessions, err := l.core.SessionManager.ListSessions(context.Background(), blocked)
+	assert.NoError(t, err)
+	assert.Empty(t, sessions)
+
+	result, err := l.core.CreateSession(context.Background(), req, httptest.NewRecorder(), &AuthenticationResult{User: &User{ID: allowed}})
+	require.NoError(t, err)
+	assert.NotEmpty(t, result.Token)
+}
+
 func TestLimen_Use_Panics_NotRegistered(t *testing.T) {
 	t.Parallel()
 

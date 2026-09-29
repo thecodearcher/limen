@@ -19,6 +19,7 @@ type LimenCore struct {
 	cookies        *cookieManager
 	schemaResolver *SchemaResolver
 	plugins        map[PluginName]Plugin
+	sessionGuards  []SessionCreateGuard
 	secret         []byte
 }
 
@@ -184,16 +185,17 @@ func (c *LimenCore) GetBaseURLWithPluginPath(pluginName PluginName, pathToJoin s
 
 // CreateSession creates a session for the auth result.
 // This should be called instead of SessionManager.CreateSession so that plugins
-// can pass options (e.g. remember_me) via SessionCreateOption.
+// can pass options (e.g. remember_me) via SessionCreateOption and registered
+// SessionCreateGuards can veto the session.
 func (c *LimenCore) CreateSession(ctx context.Context, r *http.Request, w http.ResponseWriter, auth *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error) {
-	createOpts := &SessionCreateOptions{ShortSession: false}
-	if c.cookies.checkIsShortSession(r) {
-		createOpts.ShortSession = true
+	for _, guard := range c.sessionGuards {
+		if err := guard.BeforeSessionCreate(ctx, auth); err != nil {
+			return nil, err
+		}
 	}
-	for _, opt := range opts {
-		opt(createOpts)
-	}
-	return c.SessionManager.CreateSession(ctx, r, auth, createOpts.ShortSession)
+
+	opts = append([]SessionCreateOption{WithShortSession(c.cookies.checkIsShortSession(r))}, opts...)
+	return c.SessionManager.CreateSession(ctx, r, auth, opts...)
 }
 
 // RotateSession revokes the caller's current session (or all of the user's

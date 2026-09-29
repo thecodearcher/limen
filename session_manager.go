@@ -3,6 +3,7 @@ package limen
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -53,23 +54,33 @@ func (m *opaqueSessionManager) resolveSessionPolicy(session *Session) sessionPol
 	return p
 }
 
-func (m *opaqueSessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult, shortSession bool) (*SessionResult, error) {
+func (m *opaqueSessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error) {
+	o := ResolveSessionCreateOptions(opts...)
+
 	duration := m.config.Duration
-	if m.config.ShortSessionDuration > 0 && shortSession {
+	switch {
+	case o.ExpiresIn > 0:
+		duration = o.ExpiresIn
+	case o.ShortSession && m.config.ShortSessionDuration > 0:
 		duration = m.config.ShortSessionDuration
+	}
+
+	data := unwrapInternalSessionValues(o.Data)
+	if _, err := m.core.Schema.Session.sessionColumns(data); err != nil {
+		return nil, err
 	}
 
 	token := generateCryptoSecureRandomString()
 	clock := time.Now()
 	expiresAt := clock.Add(duration)
-	if err := m.storeSession(ctx, request, authResult.User.ID, token, clock, expiresAt); err != nil {
+	if err := m.storeSession(ctx, request, authResult.User.ID, token, clock, expiresAt, data); err != nil {
 		return nil, fmt.Errorf("failed to store session: %w", err)
 	}
 
 	result := &SessionResult{
 		Token:        token,
 		Cookie:       m.createSessionCookie(token, expiresAt),
-		ShortSession: &shortSession,
+		ShortSession: &o.ShortSession,
 	}
 
 	return result, nil
@@ -142,6 +153,7 @@ func (m *opaqueSessionManager) UpdateSession(ctx context.Context, session *Sessi
 		return nil, err
 	}
 	payload[SessionSchemaTokenField] = session.Token
+	payload[SchemaIDField] = session.ID
 
 	if err := m.store.Set(ctx, payload); err != nil {
 		return nil, err
@@ -198,7 +210,7 @@ func (m *opaqueSessionManager) createSessionCookie(token string, expiresAt time.
 	return m.cookies.NewCookie(m.cookieName, token, int(time.Until(expiresAt).Seconds()))
 }
 
-func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, clock, expiresAt time.Time) error {
+func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, clock, expiresAt time.Time, data map[SchemaField]any) error {
 	session := &Session{
 		Token:      token,
 		UserID:     userID,
@@ -211,7 +223,8 @@ func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.R
 		},
 	}
 
-	return m.store.Set(ctx, session)
+	maps.Copy(data, m.core.Schema.Session.storageFields(session))
+	return m.store.Set(ctx, data)
 }
 
 func (m *opaqueSessionManager) extractToken(request *http.Request) (string, error) {

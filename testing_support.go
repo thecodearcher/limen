@@ -505,7 +505,7 @@ func SeedTestSession(t *testing.T, l *Limen, userID any, email string) *SessionR
 	t.Helper()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: email}}
-	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, false)
+	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth)
 	if err != nil {
 		t.Fatalf("SeedTestSession: %v", err)
 	}

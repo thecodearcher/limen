@@ -73,6 +73,10 @@ func New(config *Config) (*Limen, error) {
 		}
 		core.plugins[plugin.Name()] = plugin
 
+		if g, ok := plugin.(SessionCreateGuard); ok {
+			core.sessionGuards = append(core.sessionGuards, g)
+		}
+
 		if sp, ok := plugin.(SessionManagerProvider); ok {
 			if smProvider != "" {
 				return nil, fmt.Errorf("multiple session manager plugins: %s and %s", smProvider, plugin.Name())

@@ -27,6 +27,10 @@ type OAuthAccountProfile struct {
 
 type SessionCreateOptions struct {
 	ShortSession bool
+	// ExpiresIn overrides the session lifetime when positive.
+	ExpiresIn time.Duration
+	// Data holds values for registered session fields. SessionValue is accepted.
+	Data map[SchemaField]any
 }
 
 type SessionCreateOption func(*SessionCreateOptions)
@@ -38,9 +42,32 @@ func WithShortSession(shortSession bool) SessionCreateOption {
 	}
 }
 
+// WithSessionExpiresIn sets a fixed lifetime for the session.
+func WithSessionExpiresIn(expiresIn time.Duration) SessionCreateOption {
+	return func(o *SessionCreateOptions) {
+		o.ExpiresIn = expiresIn
+	}
+}
+
+// WithSessionData sets registered session fields at creation.
+func WithSessionData(data map[SchemaField]any) SessionCreateOption {
+	return func(o *SessionCreateOptions) {
+		o.Data = data
+	}
+}
+
+// ResolveSessionCreateOptions resolves options for SessionManager implementations.
+func ResolveSessionCreateOptions(opts ...SessionCreateOption) SessionCreateOptions {
+	var o SessionCreateOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return o
+}
+
 // SessionManager defines the interface for session lifecycle management.
 type SessionManager interface {
-	CreateSession(ctx context.Context, r *http.Request, auth *AuthenticationResult, shortSession bool) (*SessionResult, error)
+	CreateSession(ctx context.Context, r *http.Request, auth *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error)
 	ValidateSession(ctx context.Context, r *http.Request) (*ValidatedSession, error)
 	RevokeSession(ctx context.Context, token string) error
 	RevokeAllSessions(ctx context.Context, userID any) error

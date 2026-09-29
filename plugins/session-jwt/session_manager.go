@@ -17,10 +17,26 @@ type jwtSessionManager struct {
 	plugin *sessionJWTPlugin
 }
 
-func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, auth *limen.AuthenticationResult, shortSession bool) (*limen.SessionResult, error) {
+func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, auth *limen.AuthenticationResult, opts ...limen.SessionCreateOption) (*limen.SessionResult, error) {
 	p := m.plugin
+	o := limen.ResolveSessionCreateOptions(opts...)
 
-	signed, jti, err := p.GenerateAccessToken(auth.User, nil)
+	sessionData, err := p.mergeSessionData(nil, o.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	var expiresAt *time.Time
+	switch {
+	case o.ExpiresIn > 0:
+		exp := time.Now().Add(o.ExpiresIn)
+		expiresAt = &exp
+	case o.ShortSession:
+		exp := time.Now().Add(min(p.config.refreshTokenDuration, 24*time.Hour))
+		expiresAt = &exp
+	}
+
+	signed, jti, err := p.generateAccessToken(auth.User, sessionData, expiresAt)
 	if err != nil {
 		return nil, err
 	}
@@ -29,15 +45,8 @@ func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, 
 		return p.buildSessionResult(signed, nil), nil
 	}
 
-	var expiresAt *time.Time
-	if shortSession {
-		shortDuration := min(p.config.refreshTokenDuration, 24*time.Hour)
-		exp := time.Now().Add(shortDuration)
-		expiresAt = &exp
-	}
-
 	family := generateJTI()
-	rt, err := p.CreateRefreshToken(ctx, auth.User.ID, jti, family, expiresAt, nil)
+	rt, err := p.CreateRefreshToken(ctx, auth.User.ID, jti, family, expiresAt, sessionData)
 	if err != nil {
 		return nil, err
 	}

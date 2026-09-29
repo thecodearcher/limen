@@ -23,8 +23,12 @@ type LimenClaims struct {
 }
 
 func (p *sessionJWTPlugin) GenerateAccessToken(user *limen.User, sessionData map[string]any) (string, string, error) {
+	return p.generateAccessToken(user, sessionData, nil)
+}
+
+func (p *sessionJWTPlugin) generateAccessToken(user *limen.User, sessionData map[string]any, sessionExpiresAt *time.Time) (string, string, error) {
 	claims := LimenClaims{
-		RegisteredClaims: p.newRegisteredClaims(),
+		RegisteredClaims: p.newRegisteredClaims(sessionExpiresAt),
 		Session:          sessionData,
 	}
 	claims.Subject = p.config.subjectEncoder(user)
@@ -45,7 +49,7 @@ func (p *sessionJWTPlugin) GenerateAccessToken(user *limen.User, sessionData map
 // claims with the given session data.
 func (p *sessionJWTPlugin) reissueAccessToken(prior *LimenClaims, sessionData map[string]any) (string, *LimenClaims, error) {
 	claims := LimenClaims{
-		RegisteredClaims: p.newRegisteredClaims(),
+		RegisteredClaims: p.newRegisteredClaims(nil),
 		Email:            prior.Email,
 		EmailVerifiedAt:  prior.EmailVerifiedAt,
 		Custom:           prior.Custom,
@@ -60,12 +64,16 @@ func (p *sessionJWTPlugin) reissueAccessToken(prior *LimenClaims, sessionData ma
 	return signed, &claims, nil
 }
 
-func (p *sessionJWTPlugin) newRegisteredClaims() jwt.RegisteredClaims {
+func (p *sessionJWTPlugin) newRegisteredClaims(sessionExpiresAt *time.Time) jwt.RegisteredClaims {
 	now := time.Now()
+	expiresAt := now.Add(p.config.accessTokenDuration)
+	if sessionExpiresAt != nil && sessionExpiresAt.Before(expiresAt) {
+		expiresAt = *sessionExpiresAt
+	}
 	return jwt.RegisteredClaims{
 		ID:        generateJTI(),
 		IssuedAt:  jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(p.config.accessTokenDuration)),
+		ExpiresAt: jwt.NewNumericDate(expiresAt),
 		Issuer:    p.config.issuer,
 		Audience:  jwt.ClaimStrings(p.config.audience),
 	}
@@ -142,7 +150,7 @@ func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken s
 		return nil, nil, fmt.Errorf("session-jwt: user not found: %w", err)
 	}
 
-	signed, jti, err := p.GenerateAccessToken(user, rt.SessionData)
+	signed, jti, err := p.generateAccessToken(user, rt.SessionData, &rt.ExpiresAt)
 	if err != nil {
 		return nil, nil, err
 	}
