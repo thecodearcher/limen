@@ -72,7 +72,7 @@ func (p *credentialPasswordPlugin) ResetPassword(ctx context.Context, token stri
 	}
 	identifier = limen.NormalizeEmail(identifier)
 
-	if err := p.validatePassword(newPassword); err != nil {
+	if err := p.ValidatePassword(newPassword); err != nil {
 		return err
 	}
 
@@ -114,7 +114,7 @@ func (p *credentialPasswordPlugin) SetPassword(ctx context.Context, user *limen.
 		return ErrPasswordAlreadySet
 	}
 
-	if err := p.validatePassword(newPassword); err != nil {
+	if err := p.ValidatePassword(newPassword); err != nil {
 		return err
 	}
 
@@ -142,7 +142,7 @@ func (p *credentialPasswordPlugin) SetPassword(ctx context.Context, user *limen.
 //
 // Note: If revokeOtherSessions is true, the current session will be revoked and a new session should be created.
 func (p *credentialPasswordPlugin) UpdatePassword(ctx context.Context, user *limen.User, currentPassword string, newPassword string, revokeOtherSessions bool) error {
-	if err := p.validatePassword(newPassword); err != nil {
+	if err := p.ValidatePassword(newPassword); err != nil {
 		return err
 	}
 

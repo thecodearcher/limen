@@ -17,6 +17,9 @@ type API interface {
 
 	ComparePassword(password string, hash *string) (bool, error)
 
+	// ValidatePassword checks password against the configured password policy.
+	ValidatePassword(password string) error
+
 	RequestPasswordReset(ctx context.Context, email string) (*limen.Verification, error)
 
 	ResetPassword(ctx context.Context, token string, newPassword string) error
