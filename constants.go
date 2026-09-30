@@ -40,6 +40,7 @@ const (
 	PluginAPIKey             PluginName = "api-key"
 	PluginOrganization       PluginName = "organization"
 	PluginPasskey            PluginName = "passkey"
+	PluginAdmin              PluginName = "admin"
 )
 
 // ============================================================================
