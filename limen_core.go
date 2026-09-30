@@ -225,3 +225,30 @@ func (c *LimenCore) RotateSession(r *http.Request, w http.ResponseWriter, sessio
 
 	return authResult, sessionResult, nil
 }
+
+// DeleteUser revokes the user's sessions, deletes the user's accounts and
+// deletes the user. Returns ErrRecordNotFound when no user matches userID.
+func (c *LimenCore) DeleteUser(ctx context.Context, userID any) error {
+	return c.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := c.SessionManager.RevokeAllSessions(ctx, userID); err != nil {
+			return err
+		}
+
+		if err := c.Delete(ctx, c.Schema.Account, []Where{
+			Eq(c.Schema.Account.GetUserIDField(), userID),
+		}); err != nil {
+			return err
+		}
+
+		result, err := c.DeleteWithResult(ctx, c.Schema.User, []Where{
+			Eq(c.Schema.User.GetIDField(), userID),
+		})
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected == 0 {
+			return ErrRecordNotFound
+		}
+		return nil
+	})
+}

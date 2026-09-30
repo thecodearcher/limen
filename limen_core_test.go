@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,13 +68,13 @@ func TestLimenCore_CreateSession_Guard(t *testing.T) {
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 
-	_, err := l.core.CreateSession(context.Background(), req, httptest.NewRecorder(), &AuthenticationResult{User: &User{ID: blocked}})
+	_, err := l.core.CreateSession(t.Context(), req, httptest.NewRecorder(), &AuthenticationResult{User: &User{ID: blocked}})
 	assert.ErrorIs(t, err, ErrForbidden)
-	sessions, err := l.core.SessionManager.ListSessions(context.Background(), blocked)
+	sessions, err := l.core.SessionManager.ListSessions(t.Context(), blocked)
 	assert.NoError(t, err)
 	assert.Empty(t, sessions)
 
-	result, err := l.core.CreateSession(context.Background(), req, httptest.NewRecorder(), &AuthenticationResult{User: &User{ID: allowed}})
+	result, err := l.core.CreateSession(t.Context(), req, httptest.NewRecorder(), &AuthenticationResult{User: &User{ID: allowed}})
 	require.NoError(t, err)
 	assert.NotEmpty(t, result.Token)
 }
@@ -180,4 +181,41 @@ func TestRotateSession(t *testing.T) {
 			assert.NoError(t, err, "newly issued session must be valid")
 		})
 	}
+}
+
+func TestLimenCore_DeleteUser(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	userID := seedUser(t, l, "delete@test.com")
+	seedSession(t, l, userID, "delete@test.com")
+	err := l.core.Create(t.Context(), l.core.Schema.Account, &Account{
+		UserID:            userID,
+		Provider:          "github",
+		ProviderAccountID: "1",
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
+	}, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, l.core.DeleteUser(t.Context(), userID))
+
+	_, err = l.core.DBAction.FindUserByID(t.Context(), userID)
+	assert.ErrorIs(t, err, ErrRecordNotFound)
+	sessions, err := l.core.SessionManager.ListSessions(t.Context(), userID)
+	assert.NoError(t, err)
+	assert.Empty(t, sessions)
+	_, err = l.core.FindOne(t.Context(), l.core.Schema.Account, []Where{
+		Eq(l.core.Schema.Account.GetUserIDField(), userID),
+	}, nil)
+	assert.ErrorIs(t, err, ErrRecordNotFound)
+}
+
+func TestLimenCore_DeleteUser_NotFound(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+
+	err := l.core.DeleteUser(t.Context(), "missing")
+	assert.ErrorIs(t, err, ErrRecordNotFound)
 }

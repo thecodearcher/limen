@@ -277,17 +277,17 @@ func TestOpaqueSessionManager_CreateSession_Data(t *testing.T) {
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 			auth := &AuthenticationResult{User: &User{ID: userID}}
 
-			result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, WithSessionData(map[SchemaField]any{
+			result, err := l.core.SessionManager.CreateSession(t.Context(), req, auth, WithSessionData(map[SchemaField]any{
 				testSessionTagField: SessionValue{Internal: "internal", Client: "client"},
 			}))
 			require.NoError(t, err)
 
 			validateReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
 			validateReq.AddCookie(result.Cookie)
-			validated, err := l.core.SessionManager.ValidateSession(context.Background(), validateReq)
+			validated, err := l.core.SessionManager.ValidateSession(t.Context(), validateReq)
 			require.NoError(t, err)
 
-			tag, err := l.core.SessionManager.GetSessionData(context.Background(), validated.Session, testSessionTagField)
+			tag, err := l.core.SessionManager.GetSessionData(t.Context(), validated.Session, testSessionTagField)
 			assert.NoError(t, err)
 			assert.Equal(t, "internal", tag)
 		})
@@ -303,14 +303,14 @@ func TestOpaqueSessionManager_CreateSession_DataCannotOverrideCoreFields(t *test
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID}}
 
-	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, WithSessionData(map[SchemaField]any{
+	result, err := l.core.SessionManager.CreateSession(t.Context(), req, auth, WithSessionData(map[SchemaField]any{
 		SessionSchemaUserIDField: otherID,
 	}))
 	require.NoError(t, err)
 
 	validateReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
 	validateReq.AddCookie(result.Cookie)
-	validated, err := l.core.SessionManager.ValidateSession(context.Background(), validateReq)
+	validated, err := l.core.SessionManager.ValidateSession(t.Context(), validateReq)
 	assert.NoError(t, err)
 	assert.Equal(t, userID, validated.User.ID)
 }
@@ -323,7 +323,7 @@ func TestOpaqueSessionManager_CreateSession_ExpiresIn(t *testing.T) {
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID}}
 
-	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth,
+	result, err := l.core.SessionManager.CreateSession(t.Context(), req, auth,
 		WithShortSession(true),
 		WithSessionExpiresIn(30*time.Minute),
 	)
@@ -331,7 +331,7 @@ func TestOpaqueSessionManager_CreateSession_ExpiresIn(t *testing.T) {
 
 	validateReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
 	validateReq.AddCookie(result.Cookie)
-	validated, err := l.core.SessionManager.ValidateSession(context.Background(), validateReq)
+	validated, err := l.core.SessionManager.ValidateSession(t.Context(), validateReq)
 	assert.NoError(t, err)
 	ttl := validated.Session.ExpiresAt.Sub(validated.Session.CreatedAt)
 	assert.InDelta(t, (30 * time.Minute).Seconds(), ttl.Seconds(), 1)
@@ -344,12 +344,12 @@ func TestOpaqueSessionManager_CreateSession_UnknownDataField(t *testing.T) {
 	userID := seedUser(t, l, "unknown@test.com")
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 
-	_, err := l.core.SessionManager.CreateSession(context.Background(), req, &AuthenticationResult{User: &User{ID: userID}},
+	_, err := l.core.SessionManager.CreateSession(t.Context(), req, &AuthenticationResult{User: &User{ID: userID}},
 		WithSessionData(map[SchemaField]any{"missing": "x"}),
 	)
 	assert.ErrorIs(t, err, ErrUnknownSessionField)
 
-	sessions, err := l.core.SessionManager.ListSessions(context.Background(), userID)
+	sessions, err := l.core.SessionManager.ListSessions(t.Context(), userID)
 	assert.NoError(t, err)
 	assert.Empty(t, sessions)
 }
