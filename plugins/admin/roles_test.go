@@ -10,27 +10,6 @@ import (
 	"github.com/thecodearcher/limen/access"
 )
 
-func newTestAdminPlugin(t *testing.T, opts ...ConfigOption) (*limen.Limen, *adminPlugin) {
-	t.Helper()
-	plugin := New(opts...)
-	l, _ := limen.NewTestLimen(t, plugin)
-	return l, plugin
-}
-
-func assignRole(t *testing.T, plugin *adminPlugin, userID any, role string) {
-	t.Helper()
-	err := plugin.core.Create(t.Context(), plugin.userRoleSchema, &UserRole{UserID: userID, Role: role}, nil)
-	require.NoError(t, err)
-}
-
-func roleNames(roles []access.Role) []string {
-	names := make([]string, 0, len(roles))
-	for _, role := range roles {
-		names = append(names, role.Name())
-	}
-	return names
-}
-
 func TestAdminPlugin_GetRoles(t *testing.T) {
 	t.Parallel()
 
@@ -65,6 +44,20 @@ func TestAdminPlugin_GetRoles_AdminUserIDs(t *testing.T) {
 
 	_, plugin := newTestAdminPlugin(t, WithAdminUserIDs("root-admin"))
 	err := plugin.core.DBAction.CreateUser(t.Context(), &limen.User{Email: "root@test.com"}, map[string]any{"id": "root-admin"})
+	require.NoError(t, err)
+	user, err := plugin.core.DBAction.FindUserByEmail(t.Context(), "root@test.com")
+	require.NoError(t, err)
+
+	roles, err := plugin.GetRoles(t.Context(), user)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"user", "admin"}, roleNames(roles))
+}
+
+func TestAdminPlugin_GetRoles_AdminUserIDsPublicID(t *testing.T) {
+	t.Parallel()
+
+	_, plugin := newTestAdminPluginWithPublicIDs(t, WithAdminUserIDs("usr_root"))
+	err := plugin.core.DBAction.CreateUser(t.Context(), &limen.User{Email: "root@test.com"}, map[string]any{"public_id": "usr_root"})
 	require.NoError(t, err)
 	user, err := plugin.core.DBAction.FindUserByEmail(t.Context(), "root@test.com")
 	require.NoError(t, err)

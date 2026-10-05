@@ -23,7 +23,7 @@ func (p *adminPlugin) GetRoles(ctx context.Context, user *limen.User) ([]access.
 	if len(names) == 0 {
 		names = append(names, p.config.defaultRoles...)
 	}
-	if p.adminUserIDs[fmt.Sprint(user.ID)] {
+	if p.isConfiguredAdmin(user) {
 		names = append(names, p.config.adminRole)
 	}
 
@@ -62,4 +62,12 @@ func (p *adminPlugin) HasPermission(ctx context.Context, user *limen.User, permi
 		return ErrInsufficientPermission
 	}
 	return nil
+}
+
+func (p *adminPlugin) isConfiguredAdmin(user *limen.User) bool {
+	if p.adminUserIDs[fmt.Sprint(user.ID)] {
+		return true
+	}
+	publicID, ok := p.core.EncodePublicID(p.core.Schema.User, user)
+	return ok && p.adminUserIDs[publicID]
 }
