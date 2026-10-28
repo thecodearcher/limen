@@ -14,6 +14,17 @@ type API interface {
 	GetPermissions(ctx context.Context, user *limen.User) (access.Permissions, error)
 	// HasPermission returns ErrInsufficientPermission unless the user holds every permission.
 	HasPermission(ctx context.Context, user *limen.User, permissions access.Permissions) error
+
+	// ListUsers returns a page of users matching query. Requires user:list.
+	ListUsers(ctx context.Context, actor *limen.User, query *ListUsersQuery, opts *limen.QueryOptions) (*limen.Page[*limen.User], error)
+	// GetUser returns a user by ID or public ID. Requires user:read.
+	GetUser(ctx context.Context, actor *limen.User, userID any) (*limen.User, error)
+	// CreateUser creates a user without a password. Requires user:create.
+	CreateUser(ctx context.Context, actor *limen.User, req *CreateUserRequest) (*limen.User, error)
+	// UpdateUser updates a user's profile fields. Requires user:update.
+	UpdateUser(ctx context.Context, actor *limen.User, userID any, req *UpdateUserRequest) (*limen.User, error)
+	// DeleteUser deletes a user and their sessions and accounts. Requires user:delete.
+	DeleteUser(ctx context.Context, actor *limen.User, userID any) error
 }
 
 // Use returns the admin plugin API. Panics if the plugin is not registered.

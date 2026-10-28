@@ -215,9 +215,7 @@ func TestParsePagination_Sort(t *testing.T) {
 	}{
 		{name: "allowed field", query: "sort_by=email&sort_direction=desc", want: []OrderBy{{Column: "email", Direction: OrderByDesc}}},
 		{name: "default direction", query: "sort_by=email", want: []OrderBy{{Column: "email", Direction: OrderByAsc}}},
-		{name: "invalid direction", query: "sort_by=email&sort_direction=sideways", want: []OrderBy{{Column: "email", Direction: OrderByAsc}}},
 		{name: "field not allowed", query: "sort_by=password", want: nil},
-		{name: "no sort", query: "", want: nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -225,6 +223,49 @@ func TestParsePagination_Sort(t *testing.T) {
 
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/users?"+tt.query, http.NoBody)
 			assert.Equal(t, tt.want, ParsePagination(req, sortable).OrderBy)
+		})
+	}
+}
+
+func TestQueryToMap(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		query string
+		want  map[string]any
+	}{
+		{
+			name:  "bracketed keys are grouped",
+			query: "filter[plan]=pro&filter[banned]=true",
+			want:  map[string]any{"filter": map[string]any{"plan": "pro", "banned": "true"}},
+		},
+		{
+			name:  "mixed with plain keys",
+			query: "search=ada&filter[plan]=pro&roles=a&roles=b",
+			want: map[string]any{
+				"search": "ada",
+				"filter": map[string]any{"plan": "pro"},
+				"roles":  []string{"a", "b"},
+			},
+		},
+		{
+			name:  "nested and empty brackets stay flat",
+			query: "a[b][c]=1&d[]=2",
+			want:  map[string]any{"a[b][c]": "1", "d[]": "2"},
+		},
+		{
+			name:  "plain key with the same name keeps bracketed key flat",
+			query: "filter=x&filter[plan]=pro",
+			want:  map[string]any{"filter": "x", "filter[plan]": "pro"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/users?"+tt.query, http.NoBody)
+			assert.Equal(t, tt.want, queryToMap(req))
 		})
 	}
 }

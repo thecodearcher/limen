@@ -1,6 +1,29 @@
 package admin
 
-import "github.com/thecodearcher/limen/access"
+import (
+	"github.com/thecodearcher/limen"
+	"github.com/thecodearcher/limen/access"
+)
+
+type ListUsersQuery struct {
+	Search  string            `json:"search"`
+	Filters map[string]string `json:"filter"`
+}
+
+type CreateUserRequest struct {
+	Email            string         `json:"email"`
+	FirstName        *string        `json:"first_name,omitempty"`
+	LastName         *string        `json:"last_name,omitempty"`
+	EmailVerified    bool           `json:"email_verified"`
+	AdditionalFields map[string]any `json:"-"`
+}
+
+type UpdateUserRequest struct {
+	FirstName        *string        `json:"first_name,omitempty"`
+	LastName         *string        `json:"last_name,omitempty"`
+	EmailVerified    *bool          `json:"email_verified,omitempty"`
+	AdditionalFields map[string]any `json:"-"`
+}
 
 type config struct {
 	accessControl        *access.AccessControl
@@ -8,6 +31,9 @@ type config struct {
 	defaultRoles         []string
 	adminRole            string
 	adminUserIDs         []any
+	userFilters          map[string]UserFilterFunc
+	sortableUserFields   []limen.SchemaField
+	searchColumns        []string
 	bansEnabled          bool
 	impersonationEnabled bool
 }
@@ -46,6 +72,31 @@ func WithAdminRole(name string) ConfigOption {
 func WithAdminUserIDs(ids ...any) ConfigOption {
 	return func(c *config) {
 		c.adminUserIDs = ids
+	}
+}
+
+// WithUserFilter registers a filter clients can use as filter[name]=value.
+// A filter with a built-in name replaces the built-in.
+func WithUserFilter(name string, fn UserFilterFunc) ConfigOption {
+	return func(c *config) {
+		if c.userFilters == nil {
+			c.userFilters = make(map[string]UserFilterFunc)
+		}
+		c.userFilters[name] = fn
+	}
+}
+
+// WithSortableUserFields allows sort_by to name these fields on top of created_at and email.
+func WithSortableUserFields(fields ...limen.SchemaField) ConfigOption {
+	return func(c *config) {
+		c.sortableUserFields = fields
+	}
+}
+
+// WithUserSearchColumns adds columns that search matches on top of email, first name and last name.
+func WithUserSearchColumns(columns ...string) ConfigOption {
+	return func(c *config) {
+		c.searchColumns = columns
 	}
 }
 

@@ -3,6 +3,7 @@ package admin
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/thecodearcher/limen"
@@ -18,6 +19,7 @@ type adminPlugin struct {
 	userSchema     *userSchema
 
 	adminUserIDs map[string]bool
+	userFilters  map[string]UserFilterFunc
 }
 
 func New(opts ...ConfigOption) *adminPlugin {
@@ -90,6 +92,9 @@ func (p *adminPlugin) Initialize(core *limen.LimenCore) error {
 	if p.findRole(p.config.adminRole) == nil {
 		return fmt.Errorf("admin: admin role %q is not among the configured roles", p.config.adminRole)
 	}
+
+	p.userFilters = p.builtinUserFilters()
+	maps.Copy(p.userFilters, p.config.userFilters)
 
 	return nil
 }
