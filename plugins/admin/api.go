@@ -8,8 +8,10 @@ import (
 )
 
 type API interface {
-	// GetRoles returns the user's assigned roles, or the default roles when none are assigned.
-	GetRoles(ctx context.Context, user *limen.User) ([]access.Role, error)
+	// ListRoles returns each configured role's permissions with wildcards expanded to the declared actions. Requires user:set-role.
+	ListRoles(ctx context.Context, actor *limen.User) (map[string]access.Permissions, error)
+	// GetUserRoles returns the user's assigned roles, or the default roles when none are assigned.
+	GetUserRoles(ctx context.Context, user *limen.User) ([]access.Role, error)
 	// GetPermissions returns the union of the user's role permissions.
 	GetPermissions(ctx context.Context, user *limen.User) (access.Permissions, error)
 	// HasPermission returns ErrInsufficientPermission unless the user holds every permission.

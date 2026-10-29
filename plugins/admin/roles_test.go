@@ -10,7 +10,7 @@ import (
 	"github.com/thecodearcher/limen/access"
 )
 
-func TestAdminPlugin_GetRoles(t *testing.T) {
+func TestAdminPlugin_GetUserRoles(t *testing.T) {
 	t.Parallel()
 
 	testData := []struct {
@@ -32,14 +32,14 @@ func TestAdminPlugin_GetRoles(t *testing.T) {
 				assignRole(t, plugin, user.ID, role)
 			}
 
-			roles, err := plugin.GetRoles(t.Context(), user)
+			roles, err := plugin.GetUserRoles(t.Context(), user)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, roleNames(roles))
 		})
 	}
 }
 
-func TestAdminPlugin_GetRoles_AdminUserIDs(t *testing.T) {
+func TestAdminPlugin_GetUserRoles_AdminUserIDs(t *testing.T) {
 	t.Parallel()
 
 	_, plugin := newTestAdminPlugin(t, WithAdminUserIDs("root-admin"))
@@ -48,12 +48,12 @@ func TestAdminPlugin_GetRoles_AdminUserIDs(t *testing.T) {
 	user, err := plugin.core.DBAction.FindUserByEmail(t.Context(), "root@test.com")
 	require.NoError(t, err)
 
-	roles, err := plugin.GetRoles(t.Context(), user)
+	roles, err := plugin.GetUserRoles(t.Context(), user)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"user", "admin"}, roleNames(roles))
 }
 
-func TestAdminPlugin_GetRoles_AdminUserIDsPublicID(t *testing.T) {
+func TestAdminPlugin_GetUserRoles_AdminUserIDsPublicID(t *testing.T) {
 	t.Parallel()
 
 	_, plugin := newTestAdminPluginWithPublicIDs(t, WithAdminUserIDs("usr_root"))
@@ -62,7 +62,7 @@ func TestAdminPlugin_GetRoles_AdminUserIDsPublicID(t *testing.T) {
 	user, err := plugin.core.DBAction.FindUserByEmail(t.Context(), "root@test.com")
 	require.NoError(t, err)
 
-	roles, err := plugin.GetRoles(t.Context(), user)
+	roles, err := plugin.GetUserRoles(t.Context(), user)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"user", "admin"}, roleNames(roles))
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/thecodearcher/limen/access"
 )
 
-func (p *adminPlugin) GetRoles(ctx context.Context, user *limen.User) ([]access.Role, error) {
+func (p *adminPlugin) GetUserRoles(ctx context.Context, user *limen.User) ([]access.Role, error) {
 	models, err := p.core.FindMany(ctx, p.userRoleSchema, []limen.Where{
 		limen.Eq(p.userRoleSchema.GetUserIDField(), user.ID),
 	})
@@ -41,7 +41,7 @@ func (p *adminPlugin) GetRoles(ctx context.Context, user *limen.User) ([]access.
 }
 
 func (p *adminPlugin) GetPermissions(ctx context.Context, user *limen.User) (access.Permissions, error) {
-	roles, err := p.GetRoles(ctx, user)
+	roles, err := p.GetUserRoles(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -70,4 +70,17 @@ func (p *adminPlugin) isConfiguredAdmin(user *limen.User) bool {
 	}
 	publicID, ok := p.core.EncodePublicID(p.core.Schema.User, user)
 	return ok && p.adminUserIDs[publicID]
+}
+
+func (p *adminPlugin) ListRoles(ctx context.Context, actor *limen.User) (map[string]access.Permissions, error) {
+	if err := p.HasPermission(ctx, actor, access.P("user:set-role")); err != nil {
+		return nil, err
+	}
+
+	vocabulary := access.Permissions(p.config.accessControl.Statements())
+	roles := make(map[string]access.Permissions, len(p.config.roles))
+	for _, role := range p.config.roles {
+		roles[role.Name()] = access.ClampPermissions(vocabulary, role.Permissions())
+	}
+	return roles, nil
 }

@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"maps"
 	"net/http"
+	"slices"
 
 	"github.com/thecodearcher/limen"
 )
@@ -20,7 +22,7 @@ func (p *adminPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
 func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
 	h := &adminHandlers{plugin: p, responder: httpCore.Responder}
 
-	routeBuilder.ProtectedGET("/roles", "admin:roles-list", h.ListRoles, h.requirePermission("user:set-role"))
+	routeBuilder.ProtectedGET("/roles", "admin:roles-list", h.ListRoles)
 
 	routeBuilder.ProtectedGET("/users", "admin:users-list", h.ListUsers)
 	routeBuilder.ProtectedGET("/users/:id", "admin:users-get", h.GetUser)
@@ -30,14 +32,23 @@ func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 }
 
 func (h *adminHandlers) ListRoles(w http.ResponseWriter, r *http.Request) {
-	roles := make([]map[string]any, 0, len(h.plugin.config.roles))
-	for _, role := range h.plugin.config.roles {
-		roles = append(roles, map[string]any{
-			"name":        role.Name(),
-			"permissions": role.Permissions(),
-		})
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
 	}
-	h.responder.JSON(w, r, http.StatusOK, roles)
+
+	roles, err := h.plugin.ListRoles(r.Context(), session.User)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	out := make([]map[string]any, 0, len(roles))
+	for _, name := range slices.Sorted(maps.Keys(roles)) {
+		out = append(out, map[string]any{"name": name, "permissions": roles[name]})
+	}
+	h.responder.JSON(w, r, http.StatusOK, out)
 }
 
 func (h *adminHandlers) validateUserIDParam(v *limen.Validator) {
