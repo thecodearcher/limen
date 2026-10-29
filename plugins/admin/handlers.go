@@ -80,7 +80,13 @@ func (h *adminHandlers) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusOK, limen.SerializePage(h.plugin.core, h.plugin.core.Schema.User, page))
+	h.responder.JSON(w, r, http.StatusOK, &limen.Page[map[string]any]{
+		Items:      h.plugin.serializeUsers(page.Items),
+		Total:      page.Total,
+		Page:       page.Page,
+		PerPage:    page.PerPage,
+		TotalPages: page.TotalPages,
+	})
 }
 
 func (h *adminHandlers) GetUser(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +106,7 @@ func (h *adminHandlers) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusOK, h.plugin.core.SerializeModel(h.plugin.core.Schema.User, user))
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUser(user))
 }
 
 func (h *adminHandlers) CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +132,7 @@ func (h *adminHandlers) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusCreated, h.plugin.core.SerializeModel(h.plugin.core.Schema.User, user))
+	h.responder.JSON(w, r, http.StatusCreated, h.plugin.serializeUser(user))
 }
 
 func (h *adminHandlers) UpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -152,7 +158,7 @@ func (h *adminHandlers) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusOK, h.plugin.core.SerializeModel(h.plugin.core.Schema.User, user))
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUser(user))
 }
 
 func (h *adminHandlers) DeleteUser(w http.ResponseWriter, r *http.Request) {

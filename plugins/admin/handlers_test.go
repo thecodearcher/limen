@@ -2,8 +2,10 @@ package admin
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
@@ -85,4 +87,37 @@ func TestListUsersHandler_Filter(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
 	require.Len(t, page.Items, 1)
 	assert.Equal(t, "verified@test.com", page.Items[0]["email"])
+}
+
+func TestListUsersHandler_UserShape(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name     string
+		opt      ConfigOption
+		wantKeys []string
+	}{
+		{name: "fields", opt: WithUserFields("id", "email"), wantKeys: []string{"id", "email"}},
+		{name: "serializer", opt: WithUserSerializer(func(user *limen.User) map[string]any {
+			return map[string]any{"handle": user.Email}
+		}), wantKeys: []string{"handle"}},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l, plugin := newTestAdminPluginWithPublicIDs(t, tt.opt)
+			admin := seedAdmin(t, l, plugin, "admin@test.com")
+
+			w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users")
+
+			require.Equal(t, http.StatusOK, w.Code)
+			var page struct {
+				Items []map[string]any `json:"items"`
+			}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
+			require.Len(t, page.Items, 1)
+			assert.ElementsMatch(t, tt.wantKeys, slices.Collect(maps.Keys(page.Items[0])))
+		})
+	}
 }

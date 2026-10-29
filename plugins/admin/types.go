@@ -5,6 +5,8 @@ import (
 	"github.com/thecodearcher/limen/access"
 )
 
+type UserSerializerFunc func(user *limen.User) map[string]any
+
 type ListUsersQuery struct {
 	Search  string            `json:"search"`
 	Filters map[string]string `json:"filter"`
@@ -34,6 +36,8 @@ type config struct {
 	userFilters          map[string]UserFilterFunc
 	sortableUserFields   []limen.SchemaField
 	searchColumns        []string
+	userFields           []limen.SchemaField
+	userSerializer       UserSerializerFunc
 	bansEnabled          bool
 	impersonationEnabled bool
 }
@@ -97,6 +101,21 @@ func WithSortableUserFields(fields ...limen.SchemaField) ConfigOption {
 func WithUserSearchColumns(columns ...string) ConfigOption {
 	return func(c *config) {
 		c.searchColumns = columns
+	}
+}
+
+// WithUserFields limits the users in admin responses to the given fields.
+// Never exposes more than the core user serializer does.
+func WithUserFields(fields ...limen.SchemaField) ConfigOption {
+	return func(c *config) {
+		c.userFields = fields
+	}
+}
+
+// WithUserSerializer builds the users in admin responses. It takes precedence over WithUserFields.
+func WithUserSerializer(serializer UserSerializerFunc) ConfigOption {
+	return func(c *config) {
+		c.userSerializer = serializer
 	}
 }
 

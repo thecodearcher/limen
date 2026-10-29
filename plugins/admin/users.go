@@ -183,3 +183,30 @@ func (p *adminPlugin) addNameFields(payload map[limen.SchemaField]any, firstName
 		payload[field] = *value
 	}
 }
+
+func (p *adminPlugin) serializeUser(user *limen.User) map[string]any {
+	if p.config.userSerializer != nil {
+		return p.config.userSerializer(user)
+	}
+
+	serialized := p.core.SerializeModel(p.core.Schema.User, user)
+	if len(p.config.userFields) == 0 {
+		return serialized
+	}
+
+	filtered := make(map[string]any, len(p.config.userFields))
+	for _, field := range p.config.userFields {
+		if value, ok := serialized[string(field)]; ok {
+			filtered[string(field)] = value
+		}
+	}
+	return filtered
+}
+
+func (p *adminPlugin) serializeUsers(users []*limen.User) []map[string]any {
+	serialized := make([]map[string]any, 0, len(users))
+	for _, user := range users {
+		serialized = append(serialized, p.serializeUser(user))
+	}
+	return serialized
+}
