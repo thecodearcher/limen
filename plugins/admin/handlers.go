@@ -29,6 +29,7 @@ func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 	routeBuilder.ProtectedPOST("/users", "admin:users-create", h.CreateUser)
 	routeBuilder.ProtectedPATCH("/users/:id", "admin:users-update", h.UpdateUser)
 	routeBuilder.ProtectedDELETE("/users/:id", "admin:users-delete", h.DeleteUser)
+	routeBuilder.ProtectedPUT("/users/:id/roles", "admin:users-set-roles", h.SetRoles)
 }
 
 func (h *adminHandlers) ListRoles(w http.ResponseWriter, r *http.Request) {
@@ -100,13 +101,13 @@ func (h *adminHandlers) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.plugin.GetUser(r.Context(), session.User, limen.GetParam(r, "id"))
+	user, err := h.plugin.GetUserWithRoles(r.Context(), session.User, limen.GetParam(r, "id"))
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
-	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUser(user))
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUserWithRoles(user))
 }
 
 func (h *adminHandlers) CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -178,4 +179,32 @@ func (h *adminHandlers) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.responder.JSON(w, r, http.StatusNoContent, nil)
+}
+
+type setRolesBody struct {
+	Roles []string `json:"roles"`
+}
+
+func (h *adminHandlers) SetRoles(w http.ResponseWriter, r *http.Request) {
+	body := limen.BindAndValidate[setRolesBody](w, r, h.responder, func(v *limen.Validator) {
+		h.validateUserIDParam(v)
+		v.Field("roles").Nullable().Array().String()
+	})
+	if body == nil {
+		return
+	}
+
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	user, err := h.plugin.SetRoles(r.Context(), session.User, limen.GetParam(r, "id"), body.Roles)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUserWithRoles(user))
 }

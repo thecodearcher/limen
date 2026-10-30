@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/thecodearcher/limen"
@@ -62,6 +63,22 @@ func (p *adminPlugin) GetUser(ctx context.Context, actor *limen.User, userID any
 		return nil, err
 	}
 	return p.core.DBAction.FindUserByID(ctx, userID)
+}
+
+func (p *adminPlugin) GetUserWithRoles(ctx context.Context, actor *limen.User, userID any) (*UserWithRoles, error) {
+	user, err := p.GetUser(ctx, actor, userID)
+	if err != nil {
+		return nil, err
+	}
+	return p.withRoles(ctx, user)
+}
+
+func (p *adminPlugin) withRoles(ctx context.Context, user *limen.User) (*UserWithRoles, error) {
+	roles, err := p.GetUserRoles(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	return &UserWithRoles{User: user, Roles: roles}, nil
 }
 
 func (p *adminPlugin) CreateUser(ctx context.Context, actor *limen.User, req *CreateUserRequest) (*limen.User, error) {
@@ -138,33 +155,32 @@ func (p *adminPlugin) DeleteUser(ctx context.Context, actor *limen.User, userID 
 		return ErrCannotDeleteSelf
 	}
 
-	isLastAdmin, err := p.isLastAdmin(ctx, user.ID)
-	if err != nil {
+	if err := p.requireNotLastAdmin(ctx, user.ID); err != nil {
 		return err
-	}
-	if isLastAdmin {
-		return ErrLastAdmin
 	}
 
 	return p.core.DeleteUser(ctx, user.ID)
 }
 
-func (p *adminPlugin) isLastAdmin(ctx context.Context, userID any) (bool, error) {
+func (p *adminPlugin) requireNotLastAdmin(ctx context.Context, userID any) error {
 	isAdmin, err := p.core.Exists(ctx, p.userRoleSchema, []limen.Where{
 		limen.Eq(p.userRoleSchema.GetUserIDField(), userID),
 		limen.Eq(p.userRoleSchema.GetRoleField(), p.config.adminRole),
 	})
 	if err != nil || !isAdmin {
-		return false, err
+		return err
 	}
 
 	admins, err := p.core.Count(ctx, p.userRoleSchema, []limen.Where{
 		limen.Eq(p.userRoleSchema.GetRoleField(), p.config.adminRole),
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
-	return admins <= 1, nil
+	if admins <= 1 {
+		return ErrLastAdmin
+	}
+	return nil
 }
 
 func (p *adminPlugin) addNameFields(payload map[limen.SchemaField]any, firstName, lastName *string) {
@@ -209,4 +225,17 @@ func (p *adminPlugin) serializeUsers(users []*limen.User) []map[string]any {
 		serialized = append(serialized, p.serializeUser(user))
 	}
 	return serialized
+}
+
+func (p *adminPlugin) serializeUserWithRoles(user *UserWithRoles) map[string]any {
+	names := make([]string, 0, len(user.Roles))
+	for _, role := range user.Roles {
+		names = append(names, role.Name())
+	}
+	slices.Sort(names)
+
+	body := p.serializeUser(user.User)
+	body["roles"] = names
+	body["permissions"] = access.MergeRolePermissions(user.Roles...).Specs()
+	return body
 }

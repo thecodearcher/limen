@@ -7,6 +7,11 @@ import (
 
 type UserSerializerFunc func(user *limen.User) map[string]any
 
+type UserWithRoles struct {
+	*limen.User
+	Roles []access.Role
+}
+
 type ListUsersQuery struct {
 	Search  string            `json:"search"`
 	Filters map[string]string `json:"filter"`

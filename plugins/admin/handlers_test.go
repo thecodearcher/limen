@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,10 +16,13 @@ import (
 	"github.com/thecodearcher/limen"
 )
 
-func serveAs(t *testing.T, l *limen.Limen, user *limen.User, method, path string) *httptest.ResponseRecorder {
+func serveAs(t *testing.T, l *limen.Limen, user *limen.User, method, path, body string) *httptest.ResponseRecorder {
 	t.Helper()
 	session := limen.SeedTestSession(t, l, user.ID, user.Email)
-	req := httptest.NewRequestWithContext(t.Context(), method, path, http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), method, path, strings.NewReader(body))
+	if body != "" {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	req.AddCookie(session.Cookie)
 	w := httptest.NewRecorder()
 	l.Handler().ServeHTTP(w, req)
@@ -30,17 +34,22 @@ func TestGetUserHandler_PublicID(t *testing.T) {
 
 	l, plugin := newTestAdminPluginWithPublicIDs(t)
 	admin := seedAdmin(t, l, plugin, "admin@test.com")
-	target := limen.SeedTestUser(t, l, "target@test.com")
+	target := seedAdmin(t, l, plugin, "target@test.com")
 	publicID, ok := plugin.core.EncodePublicID(plugin.core.Schema.User, target)
 	require.True(t, ok)
 
-	w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users/"+publicID)
+	w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users/"+publicID, "")
 
 	require.Equal(t, http.StatusOK, w.Code)
-	var body map[string]any
+	var body struct {
+		ID          string   `json:"id"`
+		Roles       []string `json:"roles"`
+		Permissions []string `json:"permissions"`
+	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
-	assert.Equal(t, publicID, body["id"])
-	assert.Equal(t, "target@test.com", body["email"])
+	assert.Equal(t, publicID, body.ID)
+	assert.Equal(t, []string{"admin"}, body.Roles)
+	assert.Contains(t, body.Permissions, "session:revoke")
 }
 
 func TestListRolesHandler(t *testing.T) {
@@ -64,7 +73,7 @@ func TestListRolesHandler(t *testing.T) {
 				assignRole(t, plugin, user.ID, roleNameAdmin)
 			}
 
-			w := serveAs(t, l, user, http.MethodGet, "/auth/admin/roles")
+			w := serveAs(t, l, user, http.MethodGet, "/auth/admin/roles", "")
 			assert.Equal(t, tt.wantCode, w.Code)
 		})
 	}
@@ -78,7 +87,7 @@ func TestListUsersHandler_Filter(t *testing.T) {
 	verified := limen.SeedTestUser(t, l, "verified@test.com")
 	setUserColumns(t, plugin, verified.ID, map[limen.SchemaField]any{limen.UserSchemaEmailVerifiedAtField: time.Now()})
 
-	w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users?filter[email_verified]=true")
+	w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users?filter[email_verified]=true", "")
 
 	require.Equal(t, http.StatusOK, w.Code)
 	var page struct {
@@ -109,7 +118,7 @@ func TestListUsersHandler_UserShape(t *testing.T) {
 			l, plugin := newTestAdminPluginWithPublicIDs(t, tt.opt)
 			admin := seedAdmin(t, l, plugin, "admin@test.com")
 
-			w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users")
+			w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users", "")
 
 			require.Equal(t, http.StatusOK, w.Code)
 			var page struct {
@@ -120,4 +129,23 @@ func TestListUsersHandler_UserShape(t *testing.T) {
 			assert.ElementsMatch(t, tt.wantKeys, slices.Collect(maps.Keys(page.Items[0])))
 		})
 	}
+}
+
+func TestSetRolesHandler_EmptyListClears(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPluginWithPublicIDs(t)
+	admin := seedAdmin(t, l, plugin, "admin@test.com")
+	target := seedAdmin(t, l, plugin, "target@test.com")
+	publicID, ok := plugin.core.EncodePublicID(plugin.core.Schema.User, target)
+	require.True(t, ok)
+
+	w := serveAs(t, l, admin, http.MethodPut, "/auth/admin/users/"+publicID+"/roles", `{"roles": []}`)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	var body struct {
+		Roles []string `json:"roles"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.Equal(t, []string{"user"}, body.Roles)
 }

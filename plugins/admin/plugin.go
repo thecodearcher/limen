@@ -101,16 +101,20 @@ func (p *adminPlugin) Initialize(core *limen.LimenCore) error {
 
 func (p *adminPlugin) validateRoles() error {
 	seen := make(map[string]bool, len(p.config.roles))
+	expanded := make([]access.Role, 0, len(p.config.roles))
 	for _, role := range p.config.roles {
 		if seen[role.Name()] {
 			return fmt.Errorf("admin: role %q is defined multiple times", role.Name())
 		}
 		seen[role.Name()] = true
 
-		if _, err := p.config.accessControl.NewRole(role.Name(), role.Permissions()); err != nil {
+		expandedRole, err := p.config.accessControl.NewRole(role.Name(), p.config.accessControl.ExpandPermissions(role.Permissions()))
+		if err != nil {
 			return fmt.Errorf("admin: role %q is not valid against the configured access control: %w", role.Name(), err)
 		}
+		expanded = append(expanded, expandedRole)
 	}
+	p.config.roles = expanded
 	return nil
 }
 

@@ -12,7 +12,12 @@ var (
 	ErrEmailAlreadyExists     = limen.NewLimenErrorWithCode("email_already_exists", "A user with this email already exists", http.StatusConflict, nil)
 	ErrCannotDeleteSelf       = limen.NewLimenErrorWithCode("cannot_delete_self", "You cannot delete your own account", http.StatusForbidden, nil)
 	ErrLastAdmin              = limen.NewLimenErrorWithCode("last_admin", "The last admin cannot be removed", http.StatusConflict, nil)
+	ErrRoleNotGrantable       = limen.NewLimenErrorWithCode("role_not_grantable", "You cannot assign or remove a role with permissions you do not hold", http.StatusForbidden, nil)
 )
+
+func newUnknownRoleError(name string) *limen.LimenError {
+	return limen.NewLimenErrorWithCode("unknown_role", fmt.Sprintf("role %q is not a configured role", name), http.StatusUnprocessableEntity, nil)
+}
 
 func newInvalidFilterError(name, reason string) *limen.LimenError {
 	return limen.NewLimenErrorWithCode("invalid_filter", fmt.Sprintf("filter[%s] %s", name, reason), http.StatusUnprocessableEntity, nil)
