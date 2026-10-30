@@ -257,3 +257,25 @@ func TestP(t *testing.T) {
 		}
 	})
 }
+
+func TestExpandPermissions(t *testing.T) {
+	t.Parallel()
+
+	ac := New(Statements{"project": {"read", "create"}, "member": {"read", "delete"}})
+
+	got := ac.ExpandPermissions(Permissions{"project": {Wildcard}, "member": {"read"}})
+	assert.Equal(t, Permissions{"project": {"create", "read"}, "member": {"read"}}, got)
+
+	got["project"][0] = "mutated"
+	assert.Equal(t, []string{"create", "read"}, ac.Statements()["project"])
+}
+
+func TestPermissionsSpecs(t *testing.T) {
+	t.Parallel()
+
+	perms := Permissions{"project": {"create", "read"}, "member": {"delete"}}
+
+	specs := perms.Specs()
+	assert.Equal(t, []string{"member:delete", "project:create", "project:read"}, specs)
+	assert.Equal(t, perms, P(specs...))
+}
