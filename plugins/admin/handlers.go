@@ -75,14 +75,14 @@ func (h *adminHandlers) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	sortable := append([]limen.SchemaField{limen.SchemaCreatedAtField, limen.UserSchemaEmailField}, h.plugin.config.sortableUserFields...)
 	opts := limen.ParsePagination(r, limen.WithSortableFields(h.plugin.core.Schema.User, sortable...))
-	page, err := h.plugin.ListUsers(r.Context(), session.User, query, opts)
+	page, err := h.plugin.ListUsersWithRoles(r.Context(), session.User, query, opts)
 	if err != nil {
 		h.responder.Error(w, r, err)
 		return
 	}
 
 	h.responder.JSON(w, r, http.StatusOK, &limen.Page[map[string]any]{
-		Items:      h.plugin.serializeUsers(page.Items),
+		Items:      h.plugin.serializeUsersWithRoles(page.Items),
 		Total:      page.Total,
 		Page:       page.Page,
 		PerPage:    page.PerPage,

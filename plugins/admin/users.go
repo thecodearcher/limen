@@ -58,6 +58,25 @@ func (p *adminPlugin) ListUsers(ctx context.Context, actor *limen.User, query *L
 	return limen.MapPage[*limen.User](page), nil
 }
 
+func (p *adminPlugin) ListUsersWithRoles(ctx context.Context, actor *limen.User, query *ListUsersQuery, opts *limen.QueryOptions) (*limen.Page[*UserWithRoles], error) {
+	page, err := p.ListUsers(ctx, actor, query, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	users, err := p.attachUserRoles(ctx, page.Items)
+	if err != nil {
+		return nil, err
+	}
+	return &limen.Page[*UserWithRoles]{
+		Items:      users,
+		Total:      page.Total,
+		Page:       page.Page,
+		PerPage:    page.PerPage,
+		TotalPages: page.TotalPages,
+	}, nil
+}
+
 func (p *adminPlugin) GetUser(ctx context.Context, actor *limen.User, userID any) (*limen.User, error) {
 	if err := p.HasPermission(ctx, actor, access.P("user:read")); err != nil {
 		return nil, err
@@ -219,10 +238,10 @@ func (p *adminPlugin) serializeUser(user *limen.User) map[string]any {
 	return filtered
 }
 
-func (p *adminPlugin) serializeUsers(users []*limen.User) []map[string]any {
+func (p *adminPlugin) serializeUsersWithRoles(users []*UserWithRoles) []map[string]any {
 	serialized := make([]map[string]any, 0, len(users))
 	for _, user := range users {
-		serialized = append(serialized, p.serializeUser(user))
+		serialized = append(serialized, p.serializeUserWithRoles(user))
 	}
 	return serialized
 }

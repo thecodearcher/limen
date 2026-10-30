@@ -23,6 +23,8 @@ type API interface {
 
 	// ListUsers returns a page of users matching query. Requires user:list.
 	ListUsers(ctx context.Context, actor *limen.User, query *ListUsersQuery, opts *limen.QueryOptions) (*limen.Page[*limen.User], error)
+	// ListUsersWithRoles returns a page of users matching query with their resolved roles. Requires user:list.
+	ListUsersWithRoles(ctx context.Context, actor *limen.User, query *ListUsersQuery, opts *limen.QueryOptions) (*limen.Page[*UserWithRoles], error)
 	// GetUser returns a user by ID or public ID. Requires user:read.
 	GetUser(ctx context.Context, actor *limen.User, userID any) (*limen.User, error)
 	// GetUserWithRoles returns a user with their resolved roles. Requires user:read.

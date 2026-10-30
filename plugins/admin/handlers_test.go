@@ -106,10 +106,10 @@ func TestListUsersHandler_UserShape(t *testing.T) {
 		opt      ConfigOption
 		wantKeys []string
 	}{
-		{name: "fields", opt: WithUserFields("id", "email"), wantKeys: []string{"id", "email"}},
+		{name: "fields", opt: WithUserFields("id", "email"), wantKeys: []string{"id", "email", "roles", "permissions"}},
 		{name: "serializer", opt: WithUserSerializer(func(user *limen.User) map[string]any {
 			return map[string]any{"handle": user.Email}
-		}), wantKeys: []string{"handle"}},
+		}), wantKeys: []string{"handle", "roles", "permissions"}},
 	}
 	for _, tt := range testData {
 		t.Run(tt.name, func(t *testing.T) {
@@ -148,4 +148,28 @@ func TestSetRolesHandler_EmptyListClears(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, []string{"user"}, body.Roles)
+}
+
+func TestListUsersHandler_Roles(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPlugin(t)
+	admin := seedAdmin(t, l, plugin, "admin@test.com")
+	limen.SeedTestUser(t, l, "member@test.com")
+
+	w := serveAs(t, l, admin, http.MethodGet, "/auth/admin/users", "")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var page struct {
+		Items []struct {
+			Email string   `json:"email"`
+			Roles []string `json:"roles"`
+		} `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &page))
+	roles := make(map[string][]string, len(page.Items))
+	for _, item := range page.Items {
+		roles[item.Email] = item.Roles
+	}
+	assert.Equal(t, map[string][]string{"admin@test.com": {"admin"}, "member@test.com": {"user"}}, roles)
 }

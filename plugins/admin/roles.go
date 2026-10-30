@@ -15,9 +15,43 @@ func (p *adminPlugin) GetUserRoles(ctx context.Context, user *limen.User) ([]acc
 	if err != nil {
 		return nil, err
 	}
+	return p.resolveRoles(user, names), nil
+}
+
+func (p *adminPlugin) attachUserRoles(ctx context.Context, users []*limen.User) ([]*UserWithRoles, error) {
+	result := make([]*UserWithRoles, 0, len(users))
+	if len(users) == 0 {
+		return result, nil
+	}
+
+	userIDs := make([]any, len(users))
+	for i, user := range users {
+		userIDs[i] = user.ID
+	}
+
+	models, err := p.core.FindMany(ctx, p.userRoleSchema, []limen.Where{
+		limen.In(p.userRoleSchema.GetUserIDField(), userIDs),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	namesByUser := make(map[any][]string, len(users))
+	for _, userRole := range limen.MapToSliceOfType[*UserRole](models) {
+		namesByUser[userRole.UserID] = append(namesByUser[userRole.UserID], userRole.Role)
+	}
+
+	for _, user := range users {
+		result = append(result, &UserWithRoles{User: user, Roles: p.resolveRoles(user, namesByUser[user.ID])})
+	}
+	return result, nil
+}
+
+func (p *adminPlugin) resolveRoles(user *limen.User, names []string) []access.Role {
 	if len(names) == 0 {
 		names = append(names, p.config.defaultRoles...)
 	}
+
 	if p.isConfiguredAdmin(user) {
 		names = append(names, p.config.adminRole)
 	}
@@ -32,7 +66,7 @@ func (p *adminPlugin) GetUserRoles(ctx context.Context, user *limen.User) ([]acc
 		seen[role.Name()] = true
 		roles = append(roles, *role)
 	}
-	return roles, nil
+	return roles
 }
 
 func (p *adminPlugin) GetPermissions(ctx context.Context, user *limen.User) (access.Permissions, error) {
