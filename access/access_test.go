@@ -263,8 +263,8 @@ func TestExpandPermissions(t *testing.T) {
 
 	ac := New(Statements{"project": {"read", "create"}, "member": {"read", "delete"}})
 
-	got := ac.ExpandPermissions(Permissions{"project": {Wildcard}, "member": {"read"}})
-	assert.Equal(t, Permissions{"project": {"create", "read"}, "member": {"read"}}, got)
+	got := ac.ExpandPermissions(Permissions{"project": {Wildcard}, "member": {"read", "undeclared"}})
+	assert.Equal(t, Permissions{"project": {"create", "read"}, "member": {"read", "undeclared"}}, got)
 
 	got["project"][0] = "mutated"
 	assert.Equal(t, []string{"create", "read"}, ac.Statements()["project"])
