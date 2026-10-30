@@ -223,13 +223,24 @@ func Gte(column string, value any) Where {
 }
 
 // In creates an IN condition
-func In(column string, values []any) Where {
-	return Where{Column: column, Operator: OpIn, Value: values, Connector: ConnectorAnd}
+func In[T any](column string, values []T) Where {
+	return Where{Column: column, Operator: OpIn, Value: anySlice(values), Connector: ConnectorAnd}
 }
 
 // NotIn creates a NOT IN condition
-func NotIn(column string, values []any) Where {
-	return Where{Column: column, Operator: OpNotIn, Value: values, Connector: ConnectorAnd}
+func NotIn[T any](column string, values []T) Where {
+	return Where{Column: column, Operator: OpNotIn, Value: anySlice(values), Connector: ConnectorAnd}
+}
+
+func anySlice[T any](values []T) []any {
+	if v, ok := any(values).([]any); ok {
+		return v
+	}
+	out := make([]any, len(values))
+	for i, value := range values {
+		out[i] = value
+	}
+	return out
 }
 
 // Contains creates a contains substring condition
