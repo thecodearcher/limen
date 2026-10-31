@@ -25,6 +25,13 @@ type CreateUserRequest struct {
 	AdditionalFields map[string]any `json:"-"`
 }
 
+// SetEmailRequest changes a user's email. EmailVerified is ignored when SendVerification is set.
+type SetEmailRequest struct {
+	Email            string `json:"email"`
+	EmailVerified    bool   `json:"email_verified"`
+	SendVerification bool   `json:"send_verification"`
+}
+
 type UpdateUserRequest struct {
 	FirstName        *string        `json:"first_name,omitempty"`
 	LastName         *string        `json:"last_name,omitempty"`

@@ -161,6 +161,67 @@ func (p *adminPlugin) UpdateUser(ctx context.Context, actor *limen.User, userID 
 	return model.(*limen.User), nil
 }
 
+func (p *adminPlugin) SetEmail(ctx context.Context, actor *limen.User, userID any, req *SetEmailRequest) (*limen.User, error) {
+	if err := p.HasPermission(ctx, actor, access.P("user:set-email")); err != nil {
+		return nil, err
+	}
+
+	user, err := p.core.DBAction.FindUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	email := limen.NormalizeEmail(req.Email)
+	if email == user.Email {
+		return user, nil
+	}
+	if req.SendVerification && !p.core.EmailVerificationEnabled() {
+		return nil, ErrEmailVerificationDisabled
+	}
+
+	userSchema := p.core.Schema.User
+	exists, err := p.core.Exists(ctx, userSchema, []limen.Where{limen.Eq(userSchema.GetEmailField(), email)})
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, ErrEmailAlreadyExists
+	}
+
+	var verifiedAt *time.Time
+	if req.EmailVerified && !req.SendVerification {
+		now := time.Now()
+		verifiedAt = &now
+	}
+
+	var updatedUser *limen.User
+	var verification *limen.Verification
+	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
+		updatedUserModel, err := p.core.UpdateAndReturn(ctx, userSchema, map[limen.SchemaField]any{
+			limen.UserSchemaEmailField:           email,
+			limen.UserSchemaEmailVerifiedAtField: verifiedAt,
+		}, []limen.Where{limen.Eq(userSchema.GetIDField(), user.ID)}, user.ID)
+		if err != nil {
+			return err
+		}
+
+		updatedUser = updatedUserModel.(*limen.User)
+		if !req.SendVerification {
+			return nil
+		}
+		verification, err = p.core.CreateEmailVerification(ctx, updatedUser)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if verification != nil {
+		p.core.SendEmailVerificationMail(updatedUser, verification)
+	}
+	return updatedUser, nil
+}
+
 func (p *adminPlugin) DeleteUser(ctx context.Context, actor *limen.User, userID any) error {
 	if err := p.HasPermission(ctx, actor, access.P("user:delete")); err != nil {
 		return err

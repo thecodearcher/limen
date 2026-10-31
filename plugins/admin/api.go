@@ -8,7 +8,7 @@ import (
 )
 
 type API interface {
-	// ListRoles returns each configured role's permissions with wildcards expanded to the declared actions. Requires user:set-role.
+	// ListRoles returns each configured role's expanded permissions. Requires user:set-role.
 	ListRoles(ctx context.Context, actor *limen.User) (map[string]access.Permissions, error)
 	// GetUserRoles returns the user's assigned roles, or the default roles when none are assigned.
 	GetUserRoles(ctx context.Context, user *limen.User) ([]access.Role, error)
@@ -16,9 +16,7 @@ type API interface {
 	GetPermissions(ctx context.Context, user *limen.User) (access.Permissions, error)
 	// HasPermission returns ErrInsufficientPermission unless the user holds every permission.
 	HasPermission(ctx context.Context, user *limen.User, permissions access.Permissions) error
-	// SetRoles replaces the user's assigned roles and returns the user with their resolved roles.
-	// An empty list removes them all, so the user falls back to the default roles. Requires
-	// user:set-role, and the actor must hold every permission of each role added or removed.
+	// SetRoles replaces the user's assigned roles. Requires user:set-role.
 	SetRoles(ctx context.Context, actor *limen.User, userID any, roles []string) (*UserWithRoles, error)
 
 	// ListUsers returns a page of users matching query. Requires user:list.
@@ -33,6 +31,8 @@ type API interface {
 	CreateUser(ctx context.Context, actor *limen.User, req *CreateUserRequest) (*limen.User, error)
 	// UpdateUser updates a user's profile fields. Requires user:update.
 	UpdateUser(ctx context.Context, actor *limen.User, userID any, req *UpdateUserRequest) (*limen.User, error)
+	// SetEmail changes a user's email. Requires user:set-email.
+	SetEmail(ctx context.Context, actor *limen.User, userID any, req *SetEmailRequest) (*limen.User, error)
 	// DeleteUser deletes a user and their sessions and accounts. Requires user:delete.
 	DeleteUser(ctx context.Context, actor *limen.User, userID any) error
 }

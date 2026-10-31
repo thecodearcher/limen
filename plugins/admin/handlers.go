@@ -30,6 +30,7 @@ func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 	routeBuilder.ProtectedPATCH("/users/:id", "admin:users-update", h.UpdateUser)
 	routeBuilder.ProtectedDELETE("/users/:id", "admin:users-delete", h.DeleteUser)
 	routeBuilder.ProtectedPUT("/users/:id/roles", "admin:users-set-roles", h.SetRoles)
+	routeBuilder.ProtectedPUT("/users/:id/email", "admin:users-set-email", h.SetEmail)
 }
 
 func (h *adminHandlers) ListRoles(w http.ResponseWriter, r *http.Request) {
@@ -207,4 +208,30 @@ func (h *adminHandlers) SetRoles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUserWithRoles(user))
+}
+
+func (h *adminHandlers) SetEmail(w http.ResponseWriter, r *http.Request) {
+	body := limen.BindAndValidate[SetEmailRequest](w, r, h.responder, func(v *limen.Validator) {
+		h.validateUserIDParam(v)
+		v.Field("email").Required().String().Email()
+		v.Field("email_verified").Optional().Boolean()
+		v.Field("send_verification").Optional().Boolean()
+	})
+	if body == nil {
+		return
+	}
+
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	user, err := h.plugin.SetEmail(r.Context(), session.User, limen.GetParam(r, "id"), body)
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUser(user))
 }

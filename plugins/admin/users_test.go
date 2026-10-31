@@ -149,6 +149,64 @@ func TestAdminPlugin_CreateUser_NameFieldsDisabled(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestAdminPlugin_SetEmail_EmailAlreadyExists(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPlugin(t)
+	actor := seedAdmin(t, l, plugin, "actor@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+	limen.SeedTestUser(t, l, "taken@test.com")
+
+	_, err := plugin.SetEmail(t.Context(), actor, target.ID, &SetEmailRequest{Email: "Taken@Test.com"})
+	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
+}
+
+func TestAdminPlugin_SetEmail_VerifiedState(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name         string
+		req          SetEmailRequest
+		wantVerified bool
+		wantToken    bool
+	}{
+		{name: "new email is unverified", req: SetEmailRequest{Email: "new@test.com"}},
+		{name: "marked verified", req: SetEmailRequest{Email: "new@test.com", EmailVerified: true}, wantVerified: true},
+		{name: "send verification wins", req: SetEmailRequest{Email: "new@test.com", EmailVerified: true, SendVerification: true}, wantToken: true},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l, plugin := newTestAdminPlugin(t)
+			actor := seedAdmin(t, l, plugin, "actor@test.com")
+			target, err := plugin.CreateUser(t.Context(), actor, &CreateUserRequest{Email: "old@test.com", EmailVerified: true})
+			require.NoError(t, err)
+
+			user, err := plugin.SetEmail(t.Context(), actor, target.ID, &tt.req)
+			require.NoError(t, err)
+			assert.Equal(t, "new@test.com", user.Email)
+			assert.Equal(t, tt.wantVerified, user.EmailVerifiedAt != nil)
+
+			_, err = plugin.core.DBAction.FindVerificationByAction(t.Context(), limen.EmailVerificationAction, "new@test.com")
+			assert.Equal(t, tt.wantToken, err == nil)
+		})
+	}
+}
+
+func TestAdminPlugin_SetEmail_SameEmailKeepsVerified(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPlugin(t)
+	actor := seedAdmin(t, l, plugin, "actor@test.com")
+	target, err := plugin.CreateUser(t.Context(), actor, &CreateUserRequest{Email: "same@test.com", EmailVerified: true})
+	require.NoError(t, err)
+
+	user, err := plugin.SetEmail(t.Context(), actor, target.ID, &SetEmailRequest{Email: "Same@Test.com"})
+	require.NoError(t, err)
+	assert.NotNil(t, user.EmailVerifiedAt)
+}
+
 func TestAdminPlugin_DeleteUser(t *testing.T) {
 	t.Parallel()
 

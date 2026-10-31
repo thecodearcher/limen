@@ -8,11 +8,12 @@ import (
 )
 
 var (
-	ErrInsufficientPermission = limen.NewLimenErrorWithCode("permission_denied", "You do not have permission to access this resource", http.StatusForbidden, nil)
-	ErrEmailAlreadyExists     = limen.NewLimenErrorWithCode("email_already_exists", "A user with this email already exists", http.StatusConflict, nil)
-	ErrCannotDeleteSelf       = limen.NewLimenErrorWithCode("cannot_delete_self", "You cannot delete your own account", http.StatusForbidden, nil)
-	ErrLastAdmin              = limen.NewLimenErrorWithCode("last_admin", "The last admin cannot be removed", http.StatusConflict, nil)
-	ErrRoleNotGrantable       = limen.NewLimenErrorWithCode("role_not_grantable", "You cannot assign or remove a role with permissions you do not hold", http.StatusForbidden, nil)
+	ErrInsufficientPermission    = limen.NewLimenErrorWithCode("permission_denied", "You do not have permission to access this resource", http.StatusForbidden, nil)
+	ErrEmailAlreadyExists        = limen.NewLimenErrorWithCode("email_already_exists", "A user with this email already exists", http.StatusConflict, nil)
+	ErrCannotDeleteSelf          = limen.NewLimenErrorWithCode("cannot_delete_self", "You cannot delete your own account", http.StatusForbidden, nil)
+	ErrLastAdmin                 = limen.NewLimenErrorWithCode("last_admin", "The last admin cannot be removed", http.StatusConflict, nil)
+	ErrRoleNotGrantable          = limen.NewLimenErrorWithCode("role_not_grantable", "You cannot assign or remove a role with permissions you do not hold", http.StatusForbidden, nil)
+	ErrEmailVerificationDisabled = limen.NewLimenErrorWithCode("email_verification_disabled", "Email verification is not enabled", http.StatusUnprocessableEntity, nil)
 )
 
 func newUnknownRoleError(name string) *limen.LimenError {
