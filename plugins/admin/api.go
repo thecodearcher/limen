@@ -33,6 +33,8 @@ type API interface {
 	UpdateUser(ctx context.Context, actor *limen.User, userID any, req *UpdateUserRequest) (*limen.User, error)
 	// SetEmail changes a user's email. Requires user:set-email.
 	SetEmail(ctx context.Context, actor *limen.User, userID any, req *SetEmailRequest) (*limen.User, error)
+	// SetUserPassword replaces a user's password. Requires user:set-password.
+	SetUserPassword(ctx context.Context, actor *limen.User, userID any, req *SetUserPasswordRequest) error
 	// ListUserSessions returns the user's sessions. Requires session:list.
 	ListUserSessions(ctx context.Context, actor *limen.User, userID any) ([]UserSession, error)
 	// RevokeSession revokes a session by its token. Requires session:revoke.

@@ -13,7 +13,8 @@ var (
 	ErrCannotDeleteSelf          = limen.NewLimenErrorWithCode("cannot_delete_self", "You cannot delete your own account", http.StatusForbidden, nil)
 	ErrLastAdmin                 = limen.NewLimenErrorWithCode("last_admin", "The last admin cannot be removed", http.StatusConflict, nil)
 	ErrRoleNotGrantable          = limen.NewLimenErrorWithCode("role_not_grantable", "You cannot assign or remove a role with permissions you do not hold", http.StatusForbidden, nil)
-	ErrEmailVerificationDisabled = limen.NewLimenErrorWithCode("email_verification_disabled", "Email verification is not enabled", http.StatusUnprocessableEntity, nil)
+	ErrEmailVerificationDisabled = limen.NewLimenErrorWithCode("email_verification_disabled", "Email verification is not enabled", http.StatusNotImplemented, nil)
+	ErrPasswordsNotEnabled       = limen.NewLimenErrorWithCode("passwords_not_enabled", "Password authentication is not enabled", http.StatusNotImplemented, nil)
 )
 
 func newUnknownRoleError(name string) *limen.LimenError {

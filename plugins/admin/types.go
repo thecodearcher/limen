@@ -49,6 +49,11 @@ type SetEmailRequest struct {
 	SendVerification bool   `json:"send_verification"`
 }
 
+type SetUserPasswordRequest struct {
+	Password       string `json:"password"`
+	RevokeSessions bool   `json:"revoke_sessions"`
+}
+
 type UpdateUserRequest struct {
 	FirstName        *string        `json:"first_name,omitempty"`
 	LastName         *string        `json:"last_name,omitempty"`

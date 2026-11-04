@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -14,6 +15,26 @@ import (
 )
 
 var publicIDSeq atomic.Uint64
+
+var errFakeWeakPassword = errors.New("weak password")
+
+type fakePasswordPlugin struct{}
+
+func (fakePasswordPlugin) Name() limen.PluginName                                   { return limen.PluginCredentialPassword }
+func (fakePasswordPlugin) Initialize(*limen.LimenCore) error                        { return nil }
+func (fakePasswordPlugin) PluginHTTPConfig() limen.PluginHTTPConfig                 { return limen.PluginHTTPConfig{} }
+func (fakePasswordPlugin) RegisterRoutes(*limen.LimenHTTPCore, *limen.RouteBuilder) {}
+
+func (fakePasswordPlugin) ValidatePassword(password string) error {
+	if len(password) < 8 {
+		return errFakeWeakPassword
+	}
+	return nil
+}
+
+func (fakePasswordPlugin) HashPassword(password string) (string, error) {
+	return "hashed:" + password, nil
+}
 
 func testPublicIDConfig() limen.PublicIDConfig {
 	return limen.PublicIDConfig{

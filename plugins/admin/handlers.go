@@ -31,6 +31,7 @@ func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 	routeBuilder.ProtectedDELETE("/users/:id", "admin:users-delete", h.DeleteUser)
 	routeBuilder.ProtectedPUT("/users/:id/roles", "admin:users-set-roles", h.SetRoles)
 	routeBuilder.ProtectedPUT("/users/:id/email", "admin:users-set-email", h.SetEmail)
+	routeBuilder.ProtectedPUT("/users/:id/password", "admin:users-set-password", h.SetUserPassword)
 	routeBuilder.ProtectedGET("/users/:id/sessions", "admin:users-sessions-list", h.ListUserSessions)
 	routeBuilder.ProtectedDELETE("/users/:id/sessions", "admin:users-sessions-revoke-all", h.RevokeUserSessions)
 	routeBuilder.ProtectedDELETE("/sessions/:token", "admin:sessions-revoke", h.RevokeSession)
@@ -237,6 +238,30 @@ func (h *adminHandlers) SetEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUser(user))
+}
+
+func (h *adminHandlers) SetUserPassword(w http.ResponseWriter, r *http.Request) {
+	body := limen.BindAndValidate[SetUserPasswordRequest](w, r, h.responder, func(v *limen.Validator) {
+		h.validateUserIDParam(v)
+		v.Field("password").Required().String()
+		v.Field("revoke_sessions").Optional().Boolean()
+	})
+	if body == nil {
+		return
+	}
+
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	if err := h.plugin.SetUserPassword(r.Context(), session.User, limen.GetParam(r, "id"), body); err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }
 
 func (h *adminHandlers) ListUserSessions(w http.ResponseWriter, r *http.Request) {
