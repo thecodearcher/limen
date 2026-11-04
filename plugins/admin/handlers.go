@@ -31,6 +31,9 @@ func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 	routeBuilder.ProtectedDELETE("/users/:id", "admin:users-delete", h.DeleteUser)
 	routeBuilder.ProtectedPUT("/users/:id/roles", "admin:users-set-roles", h.SetRoles)
 	routeBuilder.ProtectedPUT("/users/:id/email", "admin:users-set-email", h.SetEmail)
+	routeBuilder.ProtectedGET("/users/:id/sessions", "admin:users-sessions-list", h.ListUserSessions)
+	routeBuilder.ProtectedDELETE("/users/:id/sessions", "admin:users-sessions-revoke-all", h.RevokeUserSessions)
+	routeBuilder.ProtectedDELETE("/sessions/:token", "admin:sessions-revoke", h.RevokeSession)
 }
 
 func (h *adminHandlers) ListRoles(w http.ResponseWriter, r *http.Request) {
@@ -234,4 +237,65 @@ func (h *adminHandlers) SetEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUser(user))
+}
+
+func (h *adminHandlers) ListUserSessions(w http.ResponseWriter, r *http.Request) {
+	if body := limen.ValidateRequest(w, r, h.responder, h.validateUserIDParam); body == nil {
+		return
+	}
+
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	sessions, err := h.plugin.ListUserSessions(r.Context(), session.User, limen.GetParam(r, "id"))
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusOK, h.plugin.serializeUserSessions(sessions))
+}
+
+func (h *adminHandlers) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	body := limen.ValidateRequest(w, r, h.responder, func(v *limen.Validator) {
+		v.Param("token").Required().String()
+	})
+	if body == nil {
+		return
+	}
+
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	if err := h.plugin.RevokeSession(r.Context(), session.User, limen.GetParam(r, "token")); err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
+}
+
+func (h *adminHandlers) RevokeUserSessions(w http.ResponseWriter, r *http.Request) {
+	if body := limen.ValidateRequest(w, r, h.responder, h.validateUserIDParam); body == nil {
+		return
+	}
+
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	if err := h.plugin.RevokeUserSessions(r.Context(), session.User, limen.GetParam(r, "id")); err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
 }

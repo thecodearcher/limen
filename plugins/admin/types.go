@@ -1,11 +1,28 @@
 package admin
 
 import (
+	"time"
+
 	"github.com/thecodearcher/limen"
 	"github.com/thecodearcher/limen/access"
 )
 
 type UserSerializerFunc func(user *limen.User) map[string]any
+
+type UserSession struct {
+	ID             string      `json:"id"`
+	CreatedAt      time.Time   `json:"created_at"`
+	ExpiresAt      time.Time   `json:"expires_at"`
+	LastAccess     time.Time   `json:"last_access,omitzero"`
+	IPAddress      string      `json:"ip_address,omitempty"`
+	UserAgent      string      `json:"user_agent,omitempty"`
+	ImpersonatedBy *limen.User `json:"-"`
+}
+
+type userSessionResponse struct {
+	UserSession
+	ImpersonatedBy map[string]any `json:"impersonated_by,omitempty"`
+}
 
 type UserWithRoles struct {
 	*limen.User
