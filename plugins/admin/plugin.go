@@ -1,10 +1,13 @@
 package admin
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"slices"
+	"time"
 
 	"github.com/thecodearcher/limen"
 	"github.com/thecodearcher/limen/access"
@@ -97,6 +100,24 @@ func (p *adminPlugin) Initialize(core *limen.LimenCore) error {
 	maps.Copy(p.userFilters, p.config.userFilters)
 
 	return nil
+}
+
+func (p *adminPlugin) BeforeSessionCreate(ctx context.Context, auth *limen.AuthenticationResult) error {
+	if !p.config.bansEnabled {
+		return nil
+	}
+
+	user, err := p.core.DBAction.FindUserByID(ctx, auth.User.ID)
+	if err != nil {
+		return err
+	}
+	if !p.isBanned(user, time.Now()) {
+		return nil
+	}
+	if p.config.bannedMessage == nil {
+		return ErrUserBanned
+	}
+	return limen.NewLimenErrorWithCode(ErrUserBanned.Code(), p.config.bannedMessage(user), http.StatusForbidden, nil)
 }
 
 func (p *adminPlugin) validateRoles() error {

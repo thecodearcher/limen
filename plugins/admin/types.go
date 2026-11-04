@@ -49,6 +49,11 @@ type SetEmailRequest struct {
 	SendVerification bool   `json:"send_verification"`
 }
 
+type BanUserRequest struct {
+	Reason    *string    `json:"reason,omitempty"`
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+}
+
 type SetUserPasswordRequest struct {
 	Password       string `json:"password"`
 	RevokeSessions bool   `json:"revoke_sessions"`
@@ -73,6 +78,7 @@ type config struct {
 	userFields           []limen.SchemaField
 	userSerializer       UserSerializerFunc
 	bansEnabled          bool
+	bannedMessage        func(user *limen.User) string
 	impersonationEnabled bool
 }
 
@@ -157,6 +163,13 @@ func WithUserSerializer(serializer UserSerializerFunc) ConfigOption {
 func WithBans(enabled bool) ConfigOption {
 	return func(c *config) {
 		c.bansEnabled = enabled
+	}
+}
+
+// WithBannedMessage sets the message returned when a banned user tries to sign in.
+func WithBannedMessage(message func(user *limen.User) string) ConfigOption {
+	return func(c *config) {
+		c.bannedMessage = message
 	}
 }
 

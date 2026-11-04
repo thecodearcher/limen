@@ -15,6 +15,10 @@ var (
 	ErrRoleNotGrantable          = limen.NewLimenErrorWithCode("role_not_grantable", "You cannot assign or remove a role with permissions you do not hold", http.StatusForbidden, nil)
 	ErrEmailVerificationDisabled = limen.NewLimenErrorWithCode("email_verification_disabled", "Email verification is not enabled", http.StatusNotImplemented, nil)
 	ErrPasswordsNotEnabled       = limen.NewLimenErrorWithCode("passwords_not_enabled", "Password authentication is not enabled", http.StatusNotImplemented, nil)
+	ErrBansNotEnabled            = limen.NewLimenErrorWithCode("bans_not_enabled", "User bans are not enabled", http.StatusNotImplemented, nil)
+	ErrCannotBanSelf             = limen.NewLimenErrorWithCode("cannot_ban_self", "You cannot ban your own account", http.StatusForbidden, nil)
+	ErrInvalidBanExpiry          = limen.NewLimenErrorWithCode("invalid_ban_expiry", "Ban expiry must be in the future", http.StatusUnprocessableEntity, nil)
+	ErrUserBanned                = limen.NewLimenErrorWithCode("user_banned", "Your account has been banned", http.StatusForbidden, nil)
 )
 
 func newUnknownRoleError(name string) *limen.LimenError {

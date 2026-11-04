@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -80,4 +82,30 @@ func roleNames(roles []access.Role) []string {
 		names = append(names, role.Name())
 	}
 	return names
+}
+
+func newTestAdminPluginWithPasswords(t *testing.T) (*limen.Limen, *adminPlugin) {
+	t.Helper()
+	plugin := New()
+	l, _ := limen.NewTestLimen(t, plugin, fakePasswordPlugin{})
+	return l, plugin
+}
+
+func banColumns(t *testing.T, plugin *adminPlugin, userID any) map[string]any {
+	t.Helper()
+	user, err := plugin.core.DBAction.FindUserByID(t.Context(), userID)
+	require.NoError(t, err)
+	raw := user.Raw()
+	return map[string]any{
+		"banned_at":      raw[plugin.userSchema.GetBannedAtField()],
+		"ban_reason":     raw[plugin.userSchema.GetBanReasonField()],
+		"ban_expires_at": raw[plugin.userSchema.GetBanExpiresAtField()],
+	}
+}
+
+func createSession(t *testing.T, plugin *adminPlugin, user *limen.User) error {
+	t.Helper()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
+	_, err := plugin.core.CreateSession(t.Context(), req, httptest.NewRecorder(), &limen.AuthenticationResult{User: user})
+	return err
 }

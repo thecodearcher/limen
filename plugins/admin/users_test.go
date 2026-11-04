@@ -2,6 +2,7 @@ package admin
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -257,4 +258,149 @@ func TestAdminPlugin_DeleteUser_Refused(t *testing.T) {
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
+}
+
+func TestAdminPlugin_BanUser(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPlugin(t)
+	actor := seedAdmin(t, l, plugin, "actor@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+	limen.SeedTestSession(t, l, target.ID, target.Email)
+	reason, expiresAt := "spam", time.Now().Add(time.Hour)
+
+	_, err := plugin.BanUser(t.Context(), actor, target.ID, &BanUserRequest{Reason: &reason, ExpiresAt: &expiresAt})
+	require.NoError(t, err)
+
+	columns := banColumns(t, plugin, target.ID)
+	assert.NotNil(t, columns["banned_at"])
+	assert.Equal(t, "spam", columns["ban_reason"])
+	assert.NotNil(t, columns["ban_expires_at"])
+
+	sessions, err := plugin.core.SessionManager.ListSessions(t.Context(), target.ID)
+	require.NoError(t, err)
+	assert.Empty(t, sessions)
+
+	_, err = plugin.BanUser(t.Context(), actor, target.ID, &BanUserRequest{})
+	require.NoError(t, err)
+
+	columns = banColumns(t, plugin, target.ID)
+	assert.NotNil(t, columns["banned_at"])
+	assert.Nil(t, columns["ban_reason"])
+	assert.Nil(t, columns["ban_expires_at"])
+}
+
+func TestAdminPlugin_BanUser_Rejected(t *testing.T) {
+	t.Parallel()
+
+	past := time.Now().Add(-time.Hour)
+	testData := []struct {
+		name    string
+		opts    []ConfigOption
+		self    bool
+		req     *BanUserRequest
+		wantErr error
+	}{
+		{name: "self", self: true, req: &BanUserRequest{}, wantErr: ErrCannotBanSelf},
+		{name: "past expiry", req: &BanUserRequest{ExpiresAt: &past}, wantErr: ErrInvalidBanExpiry},
+		{name: "bans disabled", opts: []ConfigOption{WithBans(false)}, req: &BanUserRequest{}, wantErr: ErrBansNotEnabled},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l, plugin := newTestAdminPlugin(t, tt.opts...)
+			actor := seedAdmin(t, l, plugin, "actor@test.com")
+			target := limen.SeedTestUser(t, l, "target@test.com")
+			if tt.self {
+				target = actor
+			}
+
+			_, err := plugin.BanUser(t.Context(), actor, target.ID, tt.req)
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestAdminPlugin_UnbanUser(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPlugin(t)
+	actor := seedAdmin(t, l, plugin, "actor@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+	reason, expiresAt := "spam", time.Now().Add(time.Hour)
+	_, err := plugin.BanUser(t.Context(), actor, target.ID, &BanUserRequest{Reason: &reason, ExpiresAt: &expiresAt})
+	require.NoError(t, err)
+
+	_, err = plugin.UnbanUser(t.Context(), actor, target.ID)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[string]any{"banned_at": nil, "ban_reason": nil, "ban_expires_at": nil}, banColumns(t, plugin, target.ID))
+	assert.NoError(t, createSession(t, plugin, target))
+}
+
+func TestAdminPlugin_SetUserPassword(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name           string
+		revokeSessions bool
+		wantSessions   int
+	}{
+		{name: "keeps sessions", revokeSessions: false, wantSessions: 1},
+		{name: "revokes sessions", revokeSessions: true, wantSessions: 0},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l, plugin := newTestAdminPluginWithPasswords(t)
+			actor := seedAdmin(t, l, plugin, "actor@test.com")
+			target := limen.SeedTestUser(t, l, "target@test.com")
+			limen.SeedTestSession(t, l, target.ID, target.Email)
+
+			err := plugin.SetUserPassword(t.Context(), actor, target.ID, &SetUserPasswordRequest{
+				Password:       "new-password",
+				RevokeSessions: tt.revokeSessions,
+			})
+			require.NoError(t, err)
+
+			stored, err := plugin.core.DBAction.FindUserByID(t.Context(), target.ID)
+			require.NoError(t, err)
+			require.NotNil(t, stored.Password)
+			assert.Equal(t, "hashed:new-password", *stored.Password)
+
+			sessions, err := plugin.core.SessionManager.ListSessions(t.Context(), target.ID)
+			require.NoError(t, err)
+			assert.Len(t, sessions, tt.wantSessions)
+		})
+	}
+}
+
+func TestAdminPlugin_SetUserPassword_PolicyRejected(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPluginWithPasswords(t)
+	actor := seedAdmin(t, l, plugin, "actor@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+	before, err := plugin.core.DBAction.FindUserByID(t.Context(), target.ID)
+	require.NoError(t, err)
+
+	err = plugin.SetUserPassword(t.Context(), actor, target.ID, &SetUserPasswordRequest{Password: "short"})
+	assert.ErrorIs(t, err, errFakeWeakPassword)
+
+	after, err := plugin.core.DBAction.FindUserByID(t.Context(), target.ID)
+	require.NoError(t, err)
+	assert.Equal(t, before.Password, after.Password)
+}
+
+func TestAdminPlugin_SetUserPassword_PasswordsNotEnabled(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPlugin(t)
+	actor := seedAdmin(t, l, plugin, "actor@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+
+	err := plugin.SetUserPassword(t.Context(), actor, target.ID, &SetUserPasswordRequest{Password: "new-password"})
+	assert.ErrorIs(t, err, ErrPasswordsNotEnabled)
 }

@@ -35,6 +35,10 @@ type API interface {
 	SetEmail(ctx context.Context, actor *limen.User, userID any, req *SetEmailRequest) (*limen.User, error)
 	// SetUserPassword replaces a user's password. Requires user:set-password.
 	SetUserPassword(ctx context.Context, actor *limen.User, userID any, req *SetUserPasswordRequest) error
+	// BanUser bans a user and revokes their sessions. Requires user:ban.
+	BanUser(ctx context.Context, actor *limen.User, userID any, req *BanUserRequest) (*limen.User, error)
+	// UnbanUser lifts a user's ban. Requires user:ban.
+	UnbanUser(ctx context.Context, actor *limen.User, userID any) (*limen.User, error)
 	// ListUserSessions returns the user's sessions. Requires session:list.
 	ListUserSessions(ctx context.Context, actor *limen.User, userID any) ([]UserSession, error)
 	// RevokeSession revokes a session by its token. Requires session:revoke.
@@ -50,4 +54,7 @@ func Use(a *limen.Limen) API {
 	return limen.Use[API](a, limen.PluginAdmin)
 }
 
-var _ API = (*adminPlugin)(nil)
+var (
+	_ API                      = (*adminPlugin)(nil)
+	_ limen.SessionCreateGuard = (*adminPlugin)(nil)
+)

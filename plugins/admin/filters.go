@@ -96,3 +96,12 @@ func (p *adminPlugin) bannedFilter(value string) ([]limen.Where, error) {
 		limen.Lte(expiresAt, now).Or(),
 	}, nil
 }
+
+func (p *adminPlugin) isBanned(user *limen.User, now time.Time) bool {
+	raw := user.Raw()
+	if raw[p.userSchema.GetBannedAtField()] == nil {
+		return false
+	}
+	expiresAt := limen.GetNullableValue[time.Time](raw[p.userSchema.GetBanExpiresAtField()])
+	return expiresAt == nil || expiresAt.After(now)
+}

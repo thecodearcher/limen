@@ -173,3 +173,56 @@ func TestListUsersHandler_Roles(t *testing.T) {
 	}
 	assert.Equal(t, map[string][]string{"admin@test.com": {"admin"}, "member@test.com": {"user"}}, roles)
 }
+
+func TestBanUserHandler(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name     string
+		opts     []ConfigOption
+		wantCode int
+	}{
+		{name: "bans enabled", wantCode: http.StatusOK},
+		{name: "bans disabled", opts: []ConfigOption{WithBans(false)}, wantCode: http.StatusNotFound},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l, plugin := newTestAdminPluginWithPublicIDs(t, tt.opts...)
+			admin := seedAdmin(t, l, plugin, "admin@test.com")
+			target := limen.SeedTestUser(t, l, "target@test.com")
+			publicID, ok := plugin.core.EncodePublicID(plugin.core.Schema.User, target)
+			require.True(t, ok)
+
+			w := serveAs(t, l, admin, http.MethodPost, "/auth/admin/users/"+publicID+"/ban", `{"reason": "spam"}`)
+
+			require.Equal(t, tt.wantCode, w.Code, w.Body.String())
+			if tt.wantCode != http.StatusOK {
+				return
+			}
+			var body struct {
+				BannedAt  *time.Time `json:"banned_at"`
+				BanReason string     `json:"ban_reason"`
+			}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+			assert.NotNil(t, body.BannedAt)
+			assert.Equal(t, "spam", body.BanReason)
+		})
+	}
+}
+
+func TestSetUserPasswordHandler_PasswordRequired(t *testing.T) {
+	t.Parallel()
+
+	plugin := New()
+	l, _ := limen.NewTestLimenWithSchema(t, limen.NewDefaultSchemaConfig(limen.WithPublicIDs(testPublicIDConfig())), plugin, fakePasswordPlugin{})
+	admin := seedAdmin(t, l, plugin, "admin@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+	publicID, ok := plugin.core.EncodePublicID(plugin.core.Schema.User, target)
+	require.True(t, ok)
+
+	w := serveAs(t, l, admin, http.MethodPut, "/auth/admin/users/"+publicID+"/password", `{"revoke_sessions": true}`)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
+}

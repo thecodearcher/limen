@@ -222,6 +222,116 @@ func (p *adminPlugin) SetEmail(ctx context.Context, actor *limen.User, userID an
 	return updatedUser, nil
 }
 
+func (p *adminPlugin) BanUser(ctx context.Context, actor *limen.User, userID any, req *BanUserRequest) (*limen.User, error) {
+	if err := p.HasPermission(ctx, actor, access.P("user:ban")); err != nil {
+		return nil, err
+	}
+	if !p.config.bansEnabled {
+		return nil, ErrBansNotEnabled
+	}
+
+	user, err := p.core.DBAction.FindUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if user.ID == actor.ID {
+		return nil, ErrCannotBanSelf
+	}
+	if req.ExpiresAt != nil && !req.ExpiresAt.After(time.Now()) {
+		return nil, ErrInvalidBanExpiry
+	}
+
+	model, err := p.core.UpdateAndReturn(ctx, p.userSchema, map[limen.SchemaField]any{
+		UserSchemaBannedAtField:     time.Now(),
+		UserSchemaBanReasonField:    req.Reason,
+		UserSchemaBanExpiresAtField: req.ExpiresAt,
+	}, []limen.Where{limen.Eq(p.userSchema.GetIDField(), user.ID)}, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := p.core.SessionManager.RevokeAllSessions(ctx, user.ID); err != nil {
+		return nil, err
+	}
+	return model.(*limen.User), nil
+}
+
+func (p *adminPlugin) UnbanUser(ctx context.Context, actor *limen.User, userID any) (*limen.User, error) {
+	if err := p.HasPermission(ctx, actor, access.P("user:ban")); err != nil {
+		return nil, err
+	}
+	if !p.config.bansEnabled {
+		return nil, ErrBansNotEnabled
+	}
+
+	user, err := p.core.DBAction.FindUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	model, err := p.core.UpdateAndReturn(ctx, p.userSchema, map[limen.SchemaField]any{
+		UserSchemaBannedAtField:     nil,
+		UserSchemaBanReasonField:    nil,
+		UserSchemaBanExpiresAtField: nil,
+	}, []limen.Where{limen.Eq(p.userSchema.GetIDField(), user.ID)}, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	return model.(*limen.User), nil
+}
+
+func (p *adminPlugin) SetUserPassword(ctx context.Context, actor *limen.User, userID any, req *SetUserPasswordRequest) error {
+	if err := p.HasPermission(ctx, actor, access.P("user:set-password")); err != nil {
+		return err
+	}
+
+	hasher, err := p.passwordHasher()
+	if err != nil {
+		return err
+	}
+
+	user, err := p.core.DBAction.FindUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if err := hasher.ValidatePassword(req.Password); err != nil {
+		return err
+	}
+	hashedPassword, err := hasher.HashPassword(req.Password)
+	if err != nil {
+		return err
+	}
+
+	userSchema := p.core.Schema.User
+	if err := p.core.Update(ctx, userSchema, map[limen.SchemaField]any{
+		limen.UserSchemaPasswordField: hashedPassword,
+	}, []limen.Where{limen.Eq(userSchema.GetIDField(), user.ID)}); err != nil {
+		return err
+	}
+	if !req.RevokeSessions {
+		return nil
+	}
+	return p.core.SessionManager.RevokeAllSessions(ctx, user.ID)
+}
+
+type passwordHasher interface {
+	ValidatePassword(password string) error
+	HashPassword(password string) (string, error)
+}
+
+func (p *adminPlugin) passwordHasher() (passwordHasher, error) {
+	plugin, ok := p.core.GetPlugin(limen.PluginCredentialPassword)
+	if !ok {
+		return nil, ErrPasswordsNotEnabled
+	}
+	hasher, ok := plugin.(passwordHasher)
+	if !ok {
+		return nil, ErrPasswordsNotEnabled
+	}
+	return hasher, nil
+}
+
 func (p *adminPlugin) DeleteUser(ctx context.Context, actor *limen.User, userID any) error {
 	if err := p.HasPermission(ctx, actor, access.P("user:delete")); err != nil {
 		return err
