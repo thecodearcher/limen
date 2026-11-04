@@ -105,7 +105,7 @@ func (m *jwtSessionManager) RevokeSession(ctx context.Context, token string) err
 
 	claims := p.parseAccessTokenLenient(token)
 	if claims == nil || claims.ID == "" {
-		return nil
+		return p.DeleteRefreshToken(ctx, token)
 	}
 
 	_ = p.deleteRefreshTokensByJTI(ctx, claims.ID)
