@@ -1,17 +1,21 @@
 package admin
 
 import (
+	"fmt"
 	"maps"
 	"net/http"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/thecodearcher/limen"
 )
 
 type adminHandlers struct {
-	plugin    *adminPlugin
-	responder *limen.Responder
+	plugin            *adminPlugin
+	responder         *limen.Responder
+	sessionCookieName string
 }
 
 func (p *adminPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
@@ -21,7 +25,7 @@ func (p *adminPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
 }
 
 func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {
-	h := &adminHandlers{plugin: p, responder: httpCore.Responder}
+	h := &adminHandlers{plugin: p, responder: httpCore.Responder, sessionCookieName: httpCore.SessionCookieName()}
 
 	routeBuilder.ProtectedGET("/roles", "admin:roles-list", h.ListRoles)
 
@@ -40,6 +44,10 @@ func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder
 	routeBuilder.ProtectedGET("/users/:id/sessions", "admin:users-sessions-list", h.ListUserSessions)
 	routeBuilder.ProtectedDELETE("/users/:id/sessions", "admin:users-sessions-revoke-all", h.RevokeUserSessions)
 	routeBuilder.ProtectedDELETE("/sessions/:token", "admin:sessions-revoke", h.RevokeSession)
+	if h.plugin.config.impersonationEnabled {
+		routeBuilder.ProtectedPOST("/users/:id/impersonate", "admin:users-impersonate", h.ImpersonateUser)
+		routeBuilder.ProtectedPOST("/impersonation/stop", "admin:impersonation-stop", h.StopImpersonating)
+	}
 }
 
 func (h *adminHandlers) ListRoles(w http.ResponseWriter, r *http.Request) {
@@ -373,4 +381,73 @@ func (h *adminHandlers) RevokeUserSessions(w http.ResponseWriter, r *http.Reques
 	}
 
 	h.responder.JSON(w, r, http.StatusNoContent, nil)
+}
+
+func (h *adminHandlers) ImpersonateUser(w http.ResponseWriter, r *http.Request) {
+	if body := limen.ValidateRequest(w, r, h.responder, h.validateUserIDParam); body == nil {
+		return
+	}
+
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	user, sessionResult, err := h.plugin.ImpersonateUser(r.Context(), r, session, limen.GetParam(r, "id"))
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	if cookie, err := r.Cookie(h.sessionCookieName); err == nil {
+		value := fmt.Sprintf("%d:%s", session.Session.ExpiresAt.Unix(), cookie.Value)
+		maxAge := int(h.plugin.config.impersonationDuration.Seconds())
+		if err := h.plugin.core.Cookies().SetSignedCookie(w, h.plugin.config.adminSessionCookieName, value, maxAge); err != nil {
+			h.responder.Error(w, r, err)
+			return
+		}
+	}
+
+	h.responder.SessionResponse(w, r, h.plugin.core, &limen.AuthenticationResult{User: user}, sessionResult)
+}
+
+func (h *adminHandlers) StopImpersonating(w http.ResponseWriter, r *http.Request) {
+	session, err := limen.GetCurrentSessionFromCtx(r.Context())
+	if err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	if _, err := h.plugin.StopImpersonating(r.Context(), session); err != nil {
+		h.responder.Error(w, r, err)
+		return
+	}
+
+	cookies := h.plugin.core.Cookies()
+	if token, expiresAt := h.adminSessionCookie(r); expiresAt != nil {
+		cookies.Set(w, h.sessionCookieName, token, int(time.Until(*expiresAt).Seconds()))
+		cookies.Delete(w, h.plugin.config.adminSessionCookieName)
+	} else {
+		cookies.DeleteSessionCookie(w)
+	}
+
+	h.responder.JSON(w, r, http.StatusNoContent, nil)
+}
+
+func (h *adminHandlers) adminSessionCookie(r *http.Request) (string, *time.Time) {
+	value, err := h.plugin.core.Cookies().GetSignedCookie(r, h.plugin.config.adminSessionCookieName)
+	if err != nil {
+		return "", nil
+	}
+	unix, token, ok := strings.Cut(value, ":")
+	if !ok {
+		return "", nil
+	}
+	seconds, err := strconv.ParseInt(unix, 10, 64)
+	if err != nil {
+		return "", nil
+	}
+	expiresAt := time.Unix(seconds, 0)
+	return token, &expiresAt
 }

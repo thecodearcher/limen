@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/thecodearcher/limen"
 	"github.com/thecodearcher/limen/access"
@@ -45,6 +46,11 @@ type API interface {
 	RevokeSession(ctx context.Context, actor *limen.User, token string) error
 	// RevokeUserSessions revokes all of the user's sessions. Requires session:revoke.
 	RevokeUserSessions(ctx context.Context, actor *limen.User, userID any) error
+	// ImpersonateUser creates a session as the user, recorded as impersonated by the session's user.
+	// Requires user:impersonate, and user:impersonate-admins when the user has the admin role.
+	ImpersonateUser(ctx context.Context, r *http.Request, session *limen.ValidatedSession, userID any) (*limen.User, *limen.SessionResult, error)
+	// StopImpersonating revokes the impersonation session and returns the impersonator.
+	StopImpersonating(ctx context.Context, session *limen.ValidatedSession) (*limen.User, error)
 	// DeleteUser deletes a user and their sessions and accounts. Requires user:delete.
 	DeleteUser(ctx context.Context, actor *limen.User, userID any) error
 }

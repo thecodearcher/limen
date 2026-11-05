@@ -27,11 +27,13 @@ type adminPlugin struct {
 
 func New(opts ...ConfigOption) *adminPlugin {
 	config := &config{
-		accessControl:        access.New(defaultStatements),
-		defaultRoles:         []string{roleNameUser},
-		adminRole:            roleNameAdmin,
-		bansEnabled:          true,
-		impersonationEnabled: true,
+		accessControl:          access.New(defaultStatements),
+		defaultRoles:           []string{roleNameUser},
+		adminRole:              roleNameAdmin,
+		bansEnabled:            true,
+		impersonationEnabled:   true,
+		impersonationDuration:  time.Hour,
+		adminSessionCookieName: "limen_admin_session",
 	}
 
 	for _, opt := range opts {

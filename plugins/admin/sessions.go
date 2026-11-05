@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"net/http"
 	"slices"
 
 	"github.com/thecodearcher/limen"
@@ -105,4 +106,73 @@ func (p *adminPlugin) RevokeUserSessions(ctx context.Context, actor *limen.User,
 		return err
 	}
 	return p.core.SessionManager.RevokeAllSessions(ctx, user.ID)
+}
+
+func (p *adminPlugin) ImpersonateUser(ctx context.Context, r *http.Request, session *limen.ValidatedSession, userID any) (*limen.User, *limen.SessionResult, error) {
+	actor := session.User
+	if err := p.HasPermission(ctx, actor, access.P("user:impersonate")); err != nil {
+		return nil, nil, err
+	}
+	if !p.config.impersonationEnabled {
+		return nil, nil, ErrImpersonationNotEnabled
+	}
+
+	impersonatorID, err := p.core.SessionManager.GetSessionData(ctx, session.Session, SessionSchemaImpersonatedByField)
+	if err != nil {
+		return nil, nil, err
+	}
+	if impersonatorID != nil {
+		return nil, nil, ErrAlreadyImpersonating
+	}
+
+	user, err := p.core.DBAction.FindUserByID(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if user.ID == actor.ID {
+		return nil, nil, ErrCannotImpersonateSelf
+	}
+
+	roles, err := p.GetUserRoles(ctx, user)
+	if err != nil {
+		return nil, nil, err
+	}
+	if slices.ContainsFunc(roles, func(role access.Role) bool { return role.Name() == p.config.adminRole }) {
+		if err := p.HasPermission(ctx, actor, access.P("user:impersonate-admins")); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	impersonatedBy := limen.SessionValue{Internal: actor.ID, Client: actor.ID}
+	if encoded, ok := p.core.EncodePublicID(p.core.Schema.User, actor); ok {
+		impersonatedBy.Client = encoded
+	}
+
+	sessionResult, err := p.core.CreateSession(ctx, r, nil, &limen.AuthenticationResult{User: user},
+		limen.WithSessionExpiresIn(p.config.impersonationDuration),
+		limen.WithSessionData(map[limen.SchemaField]any{SessionSchemaImpersonatedByField: impersonatedBy}),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	return user, sessionResult, nil
+}
+
+func (p *adminPlugin) StopImpersonating(ctx context.Context, session *limen.ValidatedSession) (*limen.User, error) {
+	if !p.config.impersonationEnabled {
+		return nil, ErrImpersonationNotEnabled
+	}
+
+	impersonatorID, err := p.core.SessionManager.GetSessionData(ctx, session.Session, SessionSchemaImpersonatedByField)
+	if err != nil {
+		return nil, err
+	}
+	if impersonatorID == nil {
+		return nil, ErrNotImpersonating
+	}
+
+	if err := p.core.SessionManager.RevokeSession(ctx, session.Session.Token); err != nil {
+		return nil, err
+	}
+	return p.core.DBAction.FindUserByID(ctx, p.core.Schema.NormalizeIDValue(impersonatorID))
 }

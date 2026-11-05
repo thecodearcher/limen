@@ -226,3 +226,50 @@ func TestSetUserPasswordHandler_PasswordRequired(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnprocessableEntity, w.Code, w.Body.String())
 }
+
+func serveWithCookies(t *testing.T, l *limen.Limen, method, path string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequestWithContext(t.Context(), method, path, http.NoBody)
+	req.Header.Set("Content-Type", "application/json")
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+	w := httptest.NewRecorder()
+	l.Handler().ServeHTTP(w, req)
+	return w
+}
+
+func responseCookies(w *httptest.ResponseRecorder) map[string]*http.Cookie {
+	cookies := make(map[string]*http.Cookie)
+	for _, cookie := range w.Result().Cookies() {
+		cookies[cookie.Name] = cookie
+	}
+	return cookies
+}
+
+func TestImpersonationHandlers(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPluginWithPublicIDs(t)
+	admin := seedAdmin(t, l, plugin, "admin@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+	publicID, ok := plugin.core.EncodePublicID(plugin.core.Schema.User, target)
+	require.True(t, ok)
+	adminCookie := limen.SeedTestSession(t, l, admin.ID, admin.Email).Cookie
+
+	w := serveWithCookies(t, l, http.MethodPost, "/auth/admin/users/"+publicID+"/impersonate", adminCookie)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	cookies := responseCookies(w)
+	impersonationCookie, stashCookie := cookies[adminCookie.Name], cookies[plugin.config.adminSessionCookieName]
+	require.NotNil(t, impersonationCookie)
+	require.NotNil(t, stashCookie)
+	assert.NotEqual(t, adminCookie.Value, impersonationCookie.Value)
+
+	w = serveWithCookies(t, l, http.MethodPost, "/auth/admin/impersonation/stop", impersonationCookie, stashCookie)
+	require.Equal(t, http.StatusNoContent, w.Code, w.Body.String())
+	cookies = responseCookies(w)
+	require.NotNil(t, cookies[adminCookie.Name])
+	assert.Equal(t, adminCookie.Value, cookies[adminCookie.Name].Value)
+	require.NotNil(t, cookies[plugin.config.adminSessionCookieName])
+	assert.Negative(t, cookies[plugin.config.adminSessionCookieName].MaxAge)
+}

@@ -67,19 +67,21 @@ type UpdateUserRequest struct {
 }
 
 type config struct {
-	accessControl        *access.AccessControl
-	roles                []access.Role
-	defaultRoles         []string
-	adminRole            string
-	adminUserIDs         []any
-	userFilters          map[string]UserFilterFunc
-	sortableUserFields   []limen.SchemaField
-	searchColumns        []string
-	userFields           []limen.SchemaField
-	userSerializer       UserSerializerFunc
-	bansEnabled          bool
-	bannedMessage        func(user *limen.User) string
-	impersonationEnabled bool
+	accessControl          *access.AccessControl
+	roles                  []access.Role
+	defaultRoles           []string
+	adminRole              string
+	adminUserIDs           []any
+	userFilters            map[string]UserFilterFunc
+	sortableUserFields     []limen.SchemaField
+	searchColumns          []string
+	userFields             []limen.SchemaField
+	userSerializer         UserSerializerFunc
+	bansEnabled            bool
+	bannedMessage          func(user *limen.User) string
+	impersonationEnabled   bool
+	impersonationDuration  time.Duration
+	adminSessionCookieName string
 }
 
 type ConfigOption func(*config)
@@ -177,5 +179,19 @@ func WithBannedMessage(message func(user *limen.User) string) ConfigOption {
 func WithImpersonation(enabled bool) ConfigOption {
 	return func(c *config) {
 		c.impersonationEnabled = enabled
+	}
+}
+
+// WithImpersonationDuration sets how long an impersonation session lasts. Defaults to one hour.
+func WithImpersonationDuration(duration time.Duration) ConfigOption {
+	return func(c *config) {
+		c.impersonationDuration = duration
+	}
+}
+
+// WithAdminSessionCookieName sets the cookie that holds the admin's session while impersonating. Defaults to "limen_admin_session".
+func WithAdminSessionCookieName(name string) ConfigOption {
+	return func(c *config) {
+		c.adminSessionCookieName = name
 	}
 }

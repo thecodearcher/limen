@@ -19,6 +19,10 @@ var (
 	ErrCannotBanSelf             = limen.NewLimenErrorWithCode("cannot_ban_self", "You cannot ban your own account", http.StatusForbidden, nil)
 	ErrInvalidBanExpiry          = limen.NewLimenErrorWithCode("invalid_ban_expiry", "Ban expiry must be in the future", http.StatusUnprocessableEntity, nil)
 	ErrUserBanned                = limen.NewLimenErrorWithCode("user_banned", "Your account has been banned", http.StatusForbidden, nil)
+	ErrImpersonationNotEnabled   = limen.NewLimenErrorWithCode("impersonation_not_enabled", "Impersonation is not enabled", http.StatusNotImplemented, nil)
+	ErrCannotImpersonateSelf     = limen.NewLimenErrorWithCode("cannot_impersonate_self", "You cannot impersonate yourself", http.StatusForbidden, nil)
+	ErrAlreadyImpersonating      = limen.NewLimenErrorWithCode("already_impersonating", "You are already impersonating a user", http.StatusConflict, nil)
+	ErrNotImpersonating          = limen.NewLimenErrorWithCode("not_impersonating", "This session is not impersonating a user", http.StatusConflict, nil)
 )
 
 func newUnknownRoleError(name string) *limen.LimenError {
