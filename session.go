@@ -9,7 +9,7 @@ import (
 type Session struct {
 	ID         any            `json:"id,omitempty"`
 	Token      string         `json:"token"`
-	UserID     any            `json:"user_id"`
+	UserID     any            `json:"-"`
 	CreatedAt  time.Time      `json:"created_at"`
 	ExpiresAt  time.Time      `json:"expires_at"`
 	LastAccess time.Time      `json:"last_access"`

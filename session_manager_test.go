@@ -203,6 +203,40 @@ func TestOpaqueSessionManager_ListSessions(t *testing.T) {
 	assert.Len(t, sessions, 2)
 }
 
+func TestOpaqueSessionManager_ListSessions_SkipsExpired(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name      string
+		storeType StoreType
+	}{
+		{name: "database store", storeType: StoreTypeDatabase},
+		{name: "cache store", storeType: StoreTypeCache},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithSessionStoreType(tt.storeType)))
+			userID := seedUser(t, l, "expired@test.com")
+			live := seedSession(t, l, userID, "expired@test.com")
+			past := time.Now().Add(-time.Hour)
+			require.NoError(t, typedSessionManager(t, l).store.Set(t.Context(), &Session{
+				Token:      "expired-token",
+				UserID:     userID,
+				CreatedAt:  past.Add(-time.Hour),
+				ExpiresAt:  past,
+				LastAccess: past,
+			}))
+
+			sessions, err := l.core.SessionManager.ListSessions(t.Context(), userID)
+			require.NoError(t, err)
+			require.Len(t, sessions, 1)
+			assert.Equal(t, live.Token, sessions[0].Token)
+		})
+	}
+}
+
 func TestResolveSessionPolicy_ShortSession(t *testing.T) {
 	t.Parallel()
 
@@ -290,6 +324,13 @@ func TestOpaqueSessionManager_CreateSession_Data(t *testing.T) {
 			tag, err := l.core.SessionManager.GetSessionData(t.Context(), validated.Session, testSessionTagField)
 			assert.NoError(t, err)
 			assert.Equal(t, "internal", tag)
+
+			sessions, err := l.core.SessionManager.ListSessions(t.Context(), userID)
+			require.NoError(t, err)
+			require.Len(t, sessions, 1)
+			listedTag, err := l.core.SessionManager.GetSessionData(t.Context(), &sessions[0], testSessionTagField)
+			assert.NoError(t, err)
+			assert.Equal(t, "internal", listedTag)
 		})
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"time"
 )
 
 type databaseSessionStore struct {
@@ -114,6 +115,7 @@ func (s *databaseSessionStore) DeleteByUserID(ctx context.Context, userID any) e
 func (s *databaseSessionStore) ListByUserID(ctx context.Context, userID any) ([]Session, error) {
 	models, err := s.core.FindMany(ctx, s.schema, []Where{
 		Eq(s.schema.GetUserIDField(), userID),
+		Gt(s.schema.GetExpiresAtField(), time.Now()),
 	})
 	if err != nil {
 		return nil, err

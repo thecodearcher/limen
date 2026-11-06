@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"time"
 )
 
@@ -160,73 +161,96 @@ func (s *cacheSessionStore) Delete(ctx context.Context, token string) error {
 }
 
 func (s *cacheSessionStore) ListByUserID(ctx context.Context, userID any) ([]Session, error) {
-	return s.getUserSessions(ctx, userID)
+	entries, err := s.getUserIndex(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	sessions := make([]Session, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.ExpiresAt.After(now) {
+			continue
+		}
+		session, err := s.Get(ctx, entry.Token)
+		if errors.Is(err, ErrSessionNotFound) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, *session)
+	}
+	return sessions, nil
 }
 
 func (s *cacheSessionStore) DeleteByUserID(ctx context.Context, userID any) error {
-	sessions, err := s.getUserSessions(ctx, userID)
+	entries, err := s.getUserIndex(ctx, userID)
 	if err != nil {
 		return nil
 	}
 
-	for _, sess := range sessions {
-		_ = s.cache.Delete(ctx, s.sessionKey(sess.Token))
+	for _, entry := range entries {
+		_ = s.cache.Delete(ctx, s.sessionKey(entry.Token))
 	}
 
 	return s.cache.Delete(ctx, s.userSessionsKey(userID))
 }
 
-func (s *cacheSessionStore) getUserSessions(ctx context.Context, userID any) ([]Session, error) {
+type sessionIndexEntry struct {
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+func (s *cacheSessionStore) getUserIndex(ctx context.Context, userID any) ([]sessionIndexEntry, error) {
 	data, err := s.cache.Get(ctx, s.userSessionsKey(userID))
 	if err != nil {
 		return nil, err
 	}
 
-	var sessions []Session
-	if err := json.Unmarshal(data, &sessions); err != nil {
+	var entries []sessionIndexEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
 		return nil, err
 	}
-	return sessions, nil
+	return entries, nil
 }
 
 func (s *cacheSessionStore) addToUserIndex(ctx context.Context, session *Session) error {
-	sessions, _ := s.getUserSessions(ctx, session.UserID)
+	fmt.Println("addToUserIndex", session.UserID, session.Token, session.ExpiresAt)
+	entries, _ := s.getUserIndex(ctx, session.UserID)
 
-	for i, sess := range sessions {
-		if sess.Token == session.Token {
-			sessions[i] = *session
-			return s.saveUserIndex(ctx, session.UserID, sessions)
-		}
+	i := slices.IndexFunc(entries, func(entry sessionIndexEntry) bool { return entry.Token == session.Token })
+	if i != -1 && entries[i].ExpiresAt.Equal(session.ExpiresAt) {
+		return nil
 	}
 
-	sessions = append(sessions, *session)
-	return s.saveUserIndex(ctx, session.UserID, sessions)
+	entries = slices.DeleteFunc(entries, func(entry sessionIndexEntry) bool { return entry.Token == session.Token })
+	entries = append(entries, sessionIndexEntry{Token: session.Token, ExpiresAt: session.ExpiresAt})
+	return s.saveUserIndex(ctx, session.UserID, entries)
 }
 
 func (s *cacheSessionStore) removeFromUserIndex(ctx context.Context, userID any, token string) error {
-	sessions, err := s.getUserSessions(ctx, userID)
+	entries, err := s.getUserIndex(ctx, userID)
 	if err != nil {
 		return nil
 	}
 
-	filtered := sessions[:0]
-	for _, sess := range sessions {
-		if sess.Token != token {
-			filtered = append(filtered, sess)
-		}
-	}
+	entries = slices.DeleteFunc(entries, func(entry sessionIndexEntry) bool { return entry.Token == token })
+	return s.saveUserIndex(ctx, userID, entries)
+}
 
-	if len(filtered) == 0 {
+func (s *cacheSessionStore) saveUserIndex(ctx context.Context, userID any, entries []sessionIndexEntry) error {
+	now := time.Now()
+	entries = slices.DeleteFunc(entries, func(entry sessionIndexEntry) bool { return !entry.ExpiresAt.After(now) })
+	if len(entries) == 0 {
 		return s.cache.Delete(ctx, s.userSessionsKey(userID))
 	}
 
-	return s.saveUserIndex(ctx, userID, filtered)
-}
-
-func (s *cacheSessionStore) saveUserIndex(ctx context.Context, userID any, sessions []Session) error {
-	data, err := json.Marshal(sessions)
+	data, err := json.Marshal(entries)
 	if err != nil {
 		return err
 	}
-	return s.cache.Set(ctx, s.userSessionsKey(userID), data, 0)
+
+	furthest := slices.MaxFunc(entries, func(a, b sessionIndexEntry) int { return a.ExpiresAt.Compare(b.ExpiresAt) })
+	return s.cache.Set(ctx, s.userSessionsKey(userID), data, time.Until(furthest.ExpiresAt))
 }
