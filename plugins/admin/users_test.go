@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"cmp"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/thecodearcher/limen"
+	"github.com/thecodearcher/limen/access"
 )
 
 func TestAdminPlugin_ListUsers_Search(t *testing.T) {
@@ -231,35 +233,31 @@ func TestAdminPlugin_DeleteUser_Refused(t *testing.T) {
 	t.Parallel()
 
 	testData := []struct {
-		name    string
-		self    bool
-		wantErr error
+		name      string
+		actorRole string
+		self      bool
+		wantErr   error
 	}{
-		{name: "self", self: true, wantErr: ErrCannotDeleteSelf},
-		{name: "last admin", self: false, wantErr: ErrLastAdmin},
+		{name: "self", actorRole: roleNameAdmin, self: true, wantErr: ErrCannotDeleteSelf},
+		{name: "target with permissions the actor lacks", actorRole: "manager", wantErr: ErrCannotManageUser},
 	}
 	for _, tt := range testData {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			l, plugin := newTestAdminPlugin(t, WithAdminUserIDs("root-admin"))
-			err := plugin.core.DBAction.CreateUser(t.Context(), &limen.User{Email: "root@test.com"}, map[string]any{"id": "root-admin"})
-			require.NoError(t, err)
-			root, err := plugin.core.DBAction.FindUserByID(t.Context(), "root-admin")
-			require.NoError(t, err)
-			admin := seedAdmin(t, l, plugin, "admin@test.com")
-
-			actor, target := root, admin
+			l, plugin := newTestAdminPluginWithRoles(t, map[string]access.Permissions{"manager": access.P("user:delete")})
+			actor := limen.SeedTestUser(t, l, "actor@test.com")
+			assignRole(t, plugin, actor.ID, tt.actorRole)
+			target := seedAdmin(t, l, plugin, "target@test.com")
 			if tt.self {
-				actor, target = admin, admin
+				target = actor
 			}
 
-			err = plugin.DeleteUser(t.Context(), actor, target.ID)
+			err := plugin.DeleteUser(t.Context(), actor, target.ID)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
 }
-
 func TestAdminPlugin_BanUser(t *testing.T) {
 	t.Parallel()
 
@@ -295,13 +293,16 @@ func TestAdminPlugin_BanUser_Rejected(t *testing.T) {
 
 	past := time.Now().Add(-time.Hour)
 	testData := []struct {
-		name    string
-		opts    []ConfigOption
-		self    bool
-		req     *BanUserRequest
-		wantErr error
+		name        string
+		opts        []ConfigOption
+		actorRole   string
+		adminTarget bool
+		self        bool
+		req         *BanUserRequest
+		wantErr     error
 	}{
 		{name: "self", self: true, req: &BanUserRequest{}, wantErr: ErrCannotBanSelf},
+		{name: "target with permissions the actor lacks", actorRole: "moderator", adminTarget: true, req: &BanUserRequest{}, wantErr: ErrCannotManageUser},
 		{name: "past expiry", req: &BanUserRequest{ExpiresAt: &past}, wantErr: ErrInvalidBanExpiry},
 		{name: "bans disabled", opts: []ConfigOption{WithBans(false)}, req: &BanUserRequest{}, wantErr: ErrBansNotEnabled},
 	}
@@ -309,9 +310,13 @@ func TestAdminPlugin_BanUser_Rejected(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			l, plugin := newTestAdminPlugin(t, tt.opts...)
-			actor := seedAdmin(t, l, plugin, "actor@test.com")
+			l, plugin := newTestAdminPluginWithRoles(t, map[string]access.Permissions{"moderator": access.P("user:ban")}, tt.opts...)
+			actor := limen.SeedTestUser(t, l, "actor@test.com")
+			assignRole(t, plugin, actor.ID, cmp.Or(tt.actorRole, roleNameAdmin))
 			target := limen.SeedTestUser(t, l, "target@test.com")
+			if tt.adminTarget {
+				assignRole(t, plugin, target.ID, roleNameAdmin)
+			}
 			if tt.self {
 				target = actor
 			}

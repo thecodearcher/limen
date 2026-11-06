@@ -76,6 +76,19 @@ func assignRole(t *testing.T, plugin *adminPlugin, userID any, role string) {
 	require.NoError(t, err)
 }
 
+func newTestAdminPluginWithRoles(t *testing.T, extra map[string]access.Permissions, opts ...ConfigOption) (*limen.Limen, *adminPlugin) {
+	t.Helper()
+	ac := access.New(DefaultStatements())
+	roles, err := DefaultRoles(ac)
+	require.NoError(t, err)
+	for name, permissions := range extra {
+		role, err := ac.NewRole(name, permissions)
+		require.NoError(t, err)
+		roles = append(roles, role)
+	}
+	return newTestAdminPlugin(t, append([]ConfigOption{WithAccessControl(ac), WithRoles(roles...)}, opts...)...)
+}
+
 func roleNames(roles []access.Role) []string {
 	names := make([]string, 0, len(roles))
 	for _, role := range roles {

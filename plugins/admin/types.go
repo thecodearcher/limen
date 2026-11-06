@@ -71,6 +71,7 @@ type config struct {
 	roles                  []access.Role
 	defaultRoles           []string
 	adminRole              string
+	adminRoles             []string
 	adminUserIDs           []any
 	userFilters            map[string]UserFilterFunc
 	sortableUserFields     []limen.SchemaField
@@ -107,10 +108,12 @@ func WithDefaultRoles(names ...string) ConfigOption {
 	}
 }
 
-// WithAdminRole sets the role that counts as admin. Defaults to "admin".
-func WithAdminRole(name string) ConfigOption {
+// WithAdminRoles sets the roles that count as admin. The primary role is the one granted
+// to WithAdminUserIDs. Defaults to "admin".
+func WithAdminRoles(primary string, others ...string) ConfigOption {
 	return func(c *config) {
-		c.adminRole = name
+		c.adminRole = primary
+		c.adminRoles = append([]string{primary}, others...)
 	}
 }
 

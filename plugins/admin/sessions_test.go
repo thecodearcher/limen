@@ -142,18 +142,17 @@ func TestAdminPlugin_ImpersonateUser_Access(t *testing.T) {
 		{name: "admin target with impersonate-admins", actorRole: "owner", targetRole: roleNameAdmin},
 		{name: "already impersonating", actorRole: roleNameAdmin, impersonating: true, wantErr: ErrAlreadyImpersonating},
 		{name: "banned target", actorRole: roleNameAdmin, banned: true, wantErr: ErrUserBanned},
+		{name: "secondary admin role target", actorRole: roleNameAdmin, targetRole: "support", opts: []ConfigOption{WithAdminRoles(roleNameAdmin, "support")}, wantErr: ErrInsufficientPermission},
 		{name: "impersonation disabled", actorRole: roleNameAdmin, opts: []ConfigOption{WithImpersonation(false)}, wantErr: ErrImpersonationNotEnabled},
 	}
 	for _, tt := range testData {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ac := access.New(DefaultStatements())
-			roles, err := DefaultRoles(ac)
-			require.NoError(t, err)
-			owner, err := ac.NewRole("owner", access.P("user:impersonate,impersonate-admins"))
-			require.NoError(t, err)
-			l, plugin := newTestAdminPlugin(t, append([]ConfigOption{WithAccessControl(ac), WithRoles(append(roles, owner)...)}, tt.opts...)...)
+			l, plugin := newTestAdminPluginWithRoles(t, map[string]access.Permissions{
+				"owner":   access.P("user:impersonate,impersonate-admins"),
+				"support": access.P("user:read"),
+			}, tt.opts...)
 
 			actor := limen.SeedTestUser(t, l, "actor@test.com")
 			assignRole(t, plugin, actor.ID, tt.actorRole)
@@ -175,7 +174,7 @@ func TestAdminPlugin_ImpersonateUser_Access(t *testing.T) {
 			}
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/impersonate", http.NoBody)
 
-			_, _, err = plugin.ImpersonateUser(t.Context(), req, validatedSession(t, plugin, actor), target.ID)
+			_, _, err := plugin.ImpersonateUser(t.Context(), req, validatedSession(t, plugin, actor), target.ID)
 			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}

@@ -144,10 +144,8 @@ func (p *adminPlugin) SetRoles(ctx context.Context, actor *limen.User, userID an
 		return nil, err
 	}
 
-	if slices.Contains(toRemove, p.config.adminRole) {
-		if err := p.requireNotLastAdmin(ctx, user.ID); err != nil {
-			return nil, err
-		}
+	if user.ID == actor.ID && slices.ContainsFunc(toRemove, func(name string) bool { return slices.Contains(p.config.adminRoles, name) }) {
+		return nil, ErrCannotRemoveOwnAdminRole
 	}
 
 	err = p.core.WithTransaction(ctx, func(ctx context.Context) error {
@@ -186,6 +184,21 @@ func (p *adminPlugin) requireGrantable(ctx context.Context, actor *limen.User, r
 		if !access.HasRequiredPermissions(granted, role.Permissions()) {
 			return ErrRoleNotGrantable
 		}
+	}
+	return nil
+}
+
+func (p *adminPlugin) requireCanManage(ctx context.Context, actor, user *limen.User) error {
+	granted, err := p.GetPermissions(ctx, actor)
+	if err != nil {
+		return err
+	}
+	held, err := p.GetPermissions(ctx, user)
+	if err != nil {
+		return err
+	}
+	if !access.HasRequiredPermissions(granted, held) {
+		return ErrCannotManageUser
 	}
 	return nil
 }

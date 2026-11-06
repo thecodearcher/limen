@@ -137,7 +137,7 @@ func (p *adminPlugin) ImpersonateUser(ctx context.Context, r *http.Request, sess
 	if err != nil {
 		return nil, nil, err
 	}
-	if slices.ContainsFunc(roles, func(role access.Role) bool { return role.Name() == p.config.adminRole }) {
+	if slices.ContainsFunc(roles, func(role access.Role) bool { return slices.Contains(p.config.adminRoles, role.Name()) }) {
 		if err := p.HasPermission(ctx, actor, access.P("user:impersonate-admins")); err != nil {
 			return nil, nil, err
 		}

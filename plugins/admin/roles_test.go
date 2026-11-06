@@ -56,6 +56,20 @@ func TestAdminPlugin_GetUserRoles_AdminUserIDs(t *testing.T) {
 	assert.Equal(t, []string{"user", "admin"}, roleNames(roles))
 }
 
+func TestAdminPlugin_GetUserRoles_AdminUserIDsPrimaryRole(t *testing.T) {
+	t.Parallel()
+
+	_, plugin := newTestAdminPluginWithSupportRole(t, WithAdminUserIDs("root-admin"), WithAdminRoles("support", roleNameAdmin))
+	err := plugin.core.DBAction.CreateUser(t.Context(), &limen.User{Email: "root@test.com"}, map[string]any{"id": "root-admin"})
+	require.NoError(t, err)
+	user, err := plugin.core.DBAction.FindUserByEmail(t.Context(), "root@test.com")
+	require.NoError(t, err)
+
+	roles, err := plugin.GetUserRoles(t.Context(), user)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"user", "support"}, roleNames(roles))
+}
+
 func TestAdminPlugin_GetUserRoles_AdminUserIDsPublicID(t *testing.T) {
 	t.Parallel()
 
@@ -84,12 +98,7 @@ func TestAdminPlugin_HasPermission(t *testing.T) {
 
 func newTestAdminPluginWithSupportRole(t *testing.T, opts ...ConfigOption) (*limen.Limen, *adminPlugin) {
 	t.Helper()
-	ac := access.New(DefaultStatements())
-	roles, err := DefaultRoles(ac)
-	require.NoError(t, err)
-	support, err := ac.NewRole("support", access.P("user:set-role,list"))
-	require.NoError(t, err)
-	return newTestAdminPlugin(t, append([]ConfigOption{WithAccessControl(ac), WithRoles(append(roles, support)...)}, opts...)...)
+	return newTestAdminPluginWithRoles(t, map[string]access.Permissions{"support": access.P("user:set-role,list")}, opts...)
 }
 
 func userRoleRows(t *testing.T, plugin *adminPlugin, userID any) map[string]any {
@@ -136,14 +145,31 @@ func TestAdminPlugin_SetRoles_UnknownRole(t *testing.T) {
 	assert.Equal(t, "unknown_role", limenErr.Code())
 }
 
-func TestAdminPlugin_SetRoles_LastAdmin(t *testing.T) {
+func TestAdminPlugin_SetRoles_OwnRoles(t *testing.T) {
 	t.Parallel()
 
-	l, plugin := newTestAdminPlugin(t)
-	admin := seedAdmin(t, l, plugin, "admin@test.com")
+	testData := []struct {
+		name    string
+		opts    []ConfigOption
+		roles   []string
+		wantErr error
+	}{
+		{name: "remove own admin role", roles: []string{"support"}, wantErr: ErrCannotRemoveOwnAdminRole},
+		{name: "remove own secondary admin role", opts: []ConfigOption{WithAdminRoles(roleNameAdmin, "support")}, roles: []string{roleNameAdmin}, wantErr: ErrCannotRemoveOwnAdminRole},
+		{name: "remove own non-admin role", roles: []string{roleNameAdmin}},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	_, err := plugin.SetRoles(t.Context(), admin, admin.ID, []string{roleNameUser})
-	assert.ErrorIs(t, err, ErrLastAdmin)
+			l, plugin := newTestAdminPluginWithSupportRole(t, tt.opts...)
+			admin := seedAdmin(t, l, plugin, "admin@test.com")
+			assignRole(t, plugin, admin.ID, "support")
+
+			_, err := plugin.SetRoles(t.Context(), admin, admin.ID, tt.roles)
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
 }
 
 func TestAdminPlugin_SetRoles_Grantable(t *testing.T) {

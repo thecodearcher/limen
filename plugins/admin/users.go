@@ -237,6 +237,9 @@ func (p *adminPlugin) BanUser(ctx context.Context, actor *limen.User, userID any
 	if user.ID == actor.ID {
 		return nil, ErrCannotBanSelf
 	}
+	if err := p.requireCanManage(ctx, actor, user); err != nil {
+		return nil, err
+	}
 	if req.ExpiresAt != nil && !req.ExpiresAt.After(time.Now()) {
 		return nil, ErrInvalidBanExpiry
 	}
@@ -345,32 +348,11 @@ func (p *adminPlugin) DeleteUser(ctx context.Context, actor *limen.User, userID 
 		return ErrCannotDeleteSelf
 	}
 
-	if err := p.requireNotLastAdmin(ctx, user.ID); err != nil {
+	if err := p.requireCanManage(ctx, actor, user); err != nil {
 		return err
 	}
 
 	return p.core.DeleteUser(ctx, user.ID)
-}
-
-func (p *adminPlugin) requireNotLastAdmin(ctx context.Context, userID any) error {
-	isAdmin, err := p.core.Exists(ctx, p.userRoleSchema, []limen.Where{
-		limen.Eq(p.userRoleSchema.GetUserIDField(), userID),
-		limen.Eq(p.userRoleSchema.GetRoleField(), p.config.adminRole),
-	})
-	if err != nil || !isAdmin {
-		return err
-	}
-
-	admins, err := p.core.Count(ctx, p.userRoleSchema, []limen.Where{
-		limen.Eq(p.userRoleSchema.GetRoleField(), p.config.adminRole),
-	})
-	if err != nil {
-		return err
-	}
-	if admins <= 1 {
-		return ErrLastAdmin
-	}
-	return nil
 }
 
 func (p *adminPlugin) addNameFields(payload map[limen.SchemaField]any, firstName, lastName *string) {

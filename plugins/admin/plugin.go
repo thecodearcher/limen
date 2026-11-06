@@ -30,6 +30,7 @@ func New(opts ...ConfigOption) *adminPlugin {
 		accessControl:          access.New(defaultStatements),
 		defaultRoles:           []string{roleNameUser},
 		adminRole:              roleNameAdmin,
+		adminRoles:             []string{roleNameAdmin},
 		bansEnabled:            true,
 		impersonationEnabled:   true,
 		impersonationDuration:  time.Hour,
@@ -94,8 +95,10 @@ func (p *adminPlugin) Initialize(core *limen.LimenCore) error {
 		}
 	}
 
-	if p.findRole(p.config.adminRole) == nil {
-		return fmt.Errorf("admin: admin role %q is not among the configured roles", p.config.adminRole)
+	for _, name := range p.config.adminRoles {
+		if p.findRole(name) == nil {
+			return fmt.Errorf("admin: admin role %q is not among the configured roles", name)
+		}
 	}
 
 	p.userFilters = p.builtinUserFilters()

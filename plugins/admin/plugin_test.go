@@ -56,7 +56,8 @@ func TestAdminPlugin_Initialize_UnknownRoleReference(t *testing.T) {
 		wantErr string
 	}{
 		{name: "default role", opt: WithDefaultRoles("ghost"), wantErr: `default role "ghost"`},
-		{name: "admin role", opt: WithAdminRole("ghost"), wantErr: `admin role "ghost"`},
+		{name: "admin role", opt: WithAdminRoles("ghost"), wantErr: `admin role "ghost"`},
+		{name: "secondary admin role", opt: WithAdminRoles(roleNameAdmin, "ghost"), wantErr: `admin role "ghost"`},
 	}
 	for _, tt := range testData {
 		t.Run(tt.name, func(t *testing.T) {
