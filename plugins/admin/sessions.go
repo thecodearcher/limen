@@ -133,14 +133,8 @@ func (p *adminPlugin) ImpersonateUser(ctx context.Context, r *http.Request, sess
 		return nil, nil, ErrCannotImpersonateSelf
 	}
 
-	roles, err := p.GetUserRoles(ctx, user)
-	if err != nil {
+	if err := p.requireAdminTargetPermission(ctx, actor, user, "user:impersonate-admins"); err != nil {
 		return nil, nil, err
-	}
-	if slices.ContainsFunc(roles, func(role access.Role) bool { return slices.Contains(p.config.adminRoles, role.Name()) }) {
-		if err := p.HasPermission(ctx, actor, access.P("user:impersonate-admins")); err != nil {
-			return nil, nil, err
-		}
 	}
 
 	impersonatedBy := limen.SessionValue{Internal: actor.ID, Client: actor.ID}

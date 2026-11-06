@@ -12,7 +12,6 @@ var (
 	ErrEmailAlreadyExists        = limen.NewLimenErrorWithCode("email_already_exists", "A user with this email already exists", http.StatusConflict, nil)
 	ErrCannotDeleteSelf          = limen.NewLimenErrorWithCode("cannot_delete_self", "You cannot delete your own account", http.StatusForbidden, nil)
 	ErrCannotRemoveOwnAdminRole  = limen.NewLimenErrorWithCode("cannot_remove_own_admin_role", "You cannot remove your own admin role", http.StatusForbidden, nil)
-	ErrCannotManageUser          = limen.NewLimenErrorWithCode("cannot_manage_user", "You cannot manage a user with permissions you do not hold", http.StatusForbidden, nil)
 	ErrRoleNotGrantable          = limen.NewLimenErrorWithCode("role_not_grantable", "You cannot assign or remove a role with permissions you do not hold", http.StatusForbidden, nil)
 	ErrEmailVerificationDisabled = limen.NewLimenErrorWithCode("email_verification_disabled", "Email verification is not enabled", http.StatusNotImplemented, nil)
 	ErrPasswordsNotEnabled       = limen.NewLimenErrorWithCode("passwords_not_enabled", "Password authentication is not enabled", http.StatusNotImplemented, nil)

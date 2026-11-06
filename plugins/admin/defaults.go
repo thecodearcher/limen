@@ -10,7 +10,7 @@ const (
 )
 
 var defaultStatements = access.Statements{
-	"user":    {"create", "list", "read", "update", "delete", "ban", "impersonate", "impersonate-admins", "set-password", "set-role", "set-email"},
+	"user":    {"create", "list", "read", "update", "delete", "ban", "impersonate", "impersonate-admins", "set-password", "set-password-admins", "set-role", "set-email", "set-email-admins"},
 	"session": {"list", "revoke"},
 }
 

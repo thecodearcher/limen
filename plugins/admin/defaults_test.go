@@ -27,7 +27,7 @@ func TestDefaultRoleMatrix(t *testing.T) {
 			role:    admin,
 			name:    "admin",
 			granted: []string{"user:ban", "user:impersonate", "user:set-role", "session:revoke"},
-			denied:  []string{"user:impersonate-admins"},
+			denied:  []string{"user:impersonate-admins", "user:set-password-admins", "user:set-email-admins"},
 		},
 		{
 			role:   user,

@@ -188,19 +188,18 @@ func (p *adminPlugin) requireGrantable(ctx context.Context, actor *limen.User, r
 	return nil
 }
 
-func (p *adminPlugin) requireCanManage(ctx context.Context, actor, user *limen.User) error {
-	granted, err := p.GetPermissions(ctx, actor)
+func (p *adminPlugin) requireAdminTargetPermission(ctx context.Context, actor, user *limen.User, permission string) error {
+	if user.ID == actor.ID {
+		return nil
+	}
+	roles, err := p.GetUserRoles(ctx, user)
 	if err != nil {
 		return err
 	}
-	held, err := p.GetPermissions(ctx, user)
-	if err != nil {
-		return err
+	if !slices.ContainsFunc(roles, func(role access.Role) bool { return slices.Contains(p.config.adminRoles, role.Name()) }) {
+		return nil
 	}
-	if !access.HasRequiredPermissions(granted, held) {
-		return ErrCannotManageUser
-	}
-	return nil
+	return p.HasPermission(ctx, actor, access.P(permission))
 }
 
 func (p *adminPlugin) assignedRoleNames(ctx context.Context, userID any) ([]string, error) {

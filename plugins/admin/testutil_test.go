@@ -78,6 +78,11 @@ func assignRole(t *testing.T, plugin *adminPlugin, userID any, role string) {
 
 func newTestAdminPluginWithRoles(t *testing.T, extra map[string]access.Permissions, opts ...ConfigOption) (*limen.Limen, *adminPlugin) {
 	t.Helper()
+	return newTestAdminPlugin(t, append(withExtraRoles(t, extra), opts...)...)
+}
+
+func withExtraRoles(t *testing.T, extra map[string]access.Permissions) []ConfigOption {
+	t.Helper()
 	ac := access.New(DefaultStatements())
 	roles, err := DefaultRoles(ac)
 	require.NoError(t, err)
@@ -86,7 +91,7 @@ func newTestAdminPluginWithRoles(t *testing.T, extra map[string]access.Permissio
 		require.NoError(t, err)
 		roles = append(roles, role)
 	}
-	return newTestAdminPlugin(t, append([]ConfigOption{WithAccessControl(ac), WithRoles(roles...)}, opts...)...)
+	return []ConfigOption{WithAccessControl(ac), WithRoles(roles...)}
 }
 
 func roleNames(roles []access.Role) []string {
@@ -97,9 +102,9 @@ func roleNames(roles []access.Role) []string {
 	return names
 }
 
-func newTestAdminPluginWithPasswords(t *testing.T) (*limen.Limen, *adminPlugin) {
+func newTestAdminPluginWithPasswords(t *testing.T, opts ...ConfigOption) (*limen.Limen, *adminPlugin) {
 	t.Helper()
-	plugin := New()
+	plugin := New(opts...)
 	l, _ := limen.NewTestLimen(t, plugin, fakePasswordPlugin{})
 	return l, plugin
 }

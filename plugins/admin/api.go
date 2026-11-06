@@ -32,9 +32,9 @@ type API interface {
 	CreateUser(ctx context.Context, actor *limen.User, req *CreateUserRequest) (*limen.User, error)
 	// UpdateUser updates a user's profile fields. Requires user:update.
 	UpdateUser(ctx context.Context, actor *limen.User, userID any, req *UpdateUserRequest) (*limen.User, error)
-	// SetEmail changes a user's email. Requires user:set-email.
+	// SetEmail changes a user's email. Requires user:set-email, and user:set-email-admins when the user has an admin role.
 	SetEmail(ctx context.Context, actor *limen.User, userID any, req *SetEmailRequest) (*limen.User, error)
-	// SetUserPassword replaces a user's password. Requires user:set-password.
+	// SetUserPassword replaces a user's password. Requires user:set-password, and user:set-password-admins when the user has an admin role.
 	SetUserPassword(ctx context.Context, actor *limen.User, userID any, req *SetUserPasswordRequest) error
 	// BanUser bans a user and revokes their sessions. Requires user:ban.
 	BanUser(ctx context.Context, actor *limen.User, userID any, req *BanUserRequest) (*limen.User, error)
@@ -47,7 +47,7 @@ type API interface {
 	// RevokeUserSessions revokes all of the user's sessions. Requires session:revoke.
 	RevokeUserSessions(ctx context.Context, actor *limen.User, userID any) error
 	// ImpersonateUser creates a session as the user, recorded as impersonated by the session's user.
-	// Requires user:impersonate, and user:impersonate-admins when the user has the admin role.
+	// Requires user:impersonate, and user:impersonate-admins when the user has an admin role.
 	ImpersonateUser(ctx context.Context, r *http.Request, session *limen.ValidatedSession, userID any) (*limen.User, *limen.SessionResult, error)
 	// StopImpersonating revokes the impersonation session and returns the impersonator.
 	StopImpersonating(ctx context.Context, session *limen.ValidatedSession) (*limen.User, error)

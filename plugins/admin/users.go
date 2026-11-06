@@ -170,6 +170,9 @@ func (p *adminPlugin) SetEmail(ctx context.Context, actor *limen.User, userID an
 	if err != nil {
 		return nil, err
 	}
+	if err := p.requireAdminTargetPermission(ctx, actor, user, "user:set-email-admins"); err != nil {
+		return nil, err
+	}
 
 	email := limen.NormalizeEmail(req.Email)
 	if email == user.Email {
@@ -237,9 +240,6 @@ func (p *adminPlugin) BanUser(ctx context.Context, actor *limen.User, userID any
 	if user.ID == actor.ID {
 		return nil, ErrCannotBanSelf
 	}
-	if err := p.requireCanManage(ctx, actor, user); err != nil {
-		return nil, err
-	}
 	if req.ExpiresAt != nil && !req.ExpiresAt.After(time.Now()) {
 		return nil, ErrInvalidBanExpiry
 	}
@@ -297,6 +297,9 @@ func (p *adminPlugin) SetUserPassword(ctx context.Context, actor *limen.User, us
 	if err != nil {
 		return err
 	}
+	if err := p.requireAdminTargetPermission(ctx, actor, user, "user:set-password-admins"); err != nil {
+		return err
+	}
 
 	if err := hasher.ValidatePassword(req.Password); err != nil {
 		return err
@@ -346,10 +349,6 @@ func (p *adminPlugin) DeleteUser(ctx context.Context, actor *limen.User, userID 
 	}
 	if user.ID == actor.ID {
 		return ErrCannotDeleteSelf
-	}
-
-	if err := p.requireCanManage(ctx, actor, user); err != nil {
-		return err
 	}
 
 	return p.core.DeleteUser(ctx, user.ID)

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"cmp"
 	"testing"
 	"time"
 
@@ -164,6 +163,37 @@ func TestAdminPlugin_SetEmail_EmailAlreadyExists(t *testing.T) {
 	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
 }
 
+func TestAdminPlugin_SetEmail_AdminTarget(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name      string
+		actorRole string
+		self      bool
+		wantErr   error
+	}{
+		{name: "admin target", actorRole: roleNameAdmin, wantErr: ErrInsufficientPermission},
+		{name: "admin target with set-email-admins", actorRole: "owner"},
+		{name: "own email", actorRole: roleNameAdmin, self: true},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l, plugin := newTestAdminPluginWithRoles(t, map[string]access.Permissions{"owner": access.P("user:set-email,set-email-admins")})
+			actor := limen.SeedTestUser(t, l, "actor@test.com")
+			assignRole(t, plugin, actor.ID, tt.actorRole)
+			target := seedAdmin(t, l, plugin, "target@test.com")
+			if tt.self {
+				target = actor
+			}
+
+			_, err := plugin.SetEmail(t.Context(), actor, target.ID, &SetEmailRequest{Email: "new@test.com"})
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
+}
+
 func TestAdminPlugin_SetEmail_VerifiedState(t *testing.T) {
 	t.Parallel()
 
@@ -229,34 +259,13 @@ func TestAdminPlugin_DeleteUser(t *testing.T) {
 	assert.Empty(t, sessions)
 }
 
-func TestAdminPlugin_DeleteUser_Refused(t *testing.T) {
+func TestAdminPlugin_DeleteUser_Self(t *testing.T) {
 	t.Parallel()
 
-	testData := []struct {
-		name      string
-		actorRole string
-		self      bool
-		wantErr   error
-	}{
-		{name: "self", actorRole: roleNameAdmin, self: true, wantErr: ErrCannotDeleteSelf},
-		{name: "target with permissions the actor lacks", actorRole: "manager", wantErr: ErrCannotManageUser},
-	}
-	for _, tt := range testData {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	l, plugin := newTestAdminPlugin(t)
+	admin := seedAdmin(t, l, plugin, "admin@test.com")
 
-			l, plugin := newTestAdminPluginWithRoles(t, map[string]access.Permissions{"manager": access.P("user:delete")})
-			actor := limen.SeedTestUser(t, l, "actor@test.com")
-			assignRole(t, plugin, actor.ID, tt.actorRole)
-			target := seedAdmin(t, l, plugin, "target@test.com")
-			if tt.self {
-				target = actor
-			}
-
-			err := plugin.DeleteUser(t.Context(), actor, target.ID)
-			assert.ErrorIs(t, err, tt.wantErr)
-		})
-	}
+	assert.ErrorIs(t, plugin.DeleteUser(t.Context(), admin, admin.ID), ErrCannotDeleteSelf)
 }
 func TestAdminPlugin_BanUser(t *testing.T) {
 	t.Parallel()
@@ -293,16 +302,13 @@ func TestAdminPlugin_BanUser_Rejected(t *testing.T) {
 
 	past := time.Now().Add(-time.Hour)
 	testData := []struct {
-		name        string
-		opts        []ConfigOption
-		actorRole   string
-		adminTarget bool
-		self        bool
-		req         *BanUserRequest
-		wantErr     error
+		name    string
+		opts    []ConfigOption
+		self    bool
+		req     *BanUserRequest
+		wantErr error
 	}{
 		{name: "self", self: true, req: &BanUserRequest{}, wantErr: ErrCannotBanSelf},
-		{name: "target with permissions the actor lacks", actorRole: "moderator", adminTarget: true, req: &BanUserRequest{}, wantErr: ErrCannotManageUser},
 		{name: "past expiry", req: &BanUserRequest{ExpiresAt: &past}, wantErr: ErrInvalidBanExpiry},
 		{name: "bans disabled", opts: []ConfigOption{WithBans(false)}, req: &BanUserRequest{}, wantErr: ErrBansNotEnabled},
 	}
@@ -310,13 +316,9 @@ func TestAdminPlugin_BanUser_Rejected(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			l, plugin := newTestAdminPluginWithRoles(t, map[string]access.Permissions{"moderator": access.P("user:ban")}, tt.opts...)
-			actor := limen.SeedTestUser(t, l, "actor@test.com")
-			assignRole(t, plugin, actor.ID, cmp.Or(tt.actorRole, roleNameAdmin))
+			l, plugin := newTestAdminPlugin(t, tt.opts...)
+			actor := seedAdmin(t, l, plugin, "actor@test.com")
 			target := limen.SeedTestUser(t, l, "target@test.com")
-			if tt.adminTarget {
-				assignRole(t, plugin, target.ID, roleNameAdmin)
-			}
 			if tt.self {
 				target = actor
 			}
@@ -378,6 +380,37 @@ func TestAdminPlugin_SetUserPassword(t *testing.T) {
 			sessions, err := plugin.core.SessionManager.ListSessions(t.Context(), target.ID)
 			require.NoError(t, err)
 			assert.Len(t, sessions, tt.wantSessions)
+		})
+	}
+}
+
+func TestAdminPlugin_SetUserPassword_AdminTarget(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name      string
+		actorRole string
+		self      bool
+		wantErr   error
+	}{
+		{name: "admin target", actorRole: roleNameAdmin, wantErr: ErrInsufficientPermission},
+		{name: "admin target with set-password-admins", actorRole: "owner"},
+		{name: "own password", actorRole: roleNameAdmin, self: true},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l, plugin := newTestAdminPluginWithPasswords(t, withExtraRoles(t, map[string]access.Permissions{"owner": access.P("user:set-password,set-password-admins")})...)
+			actor := limen.SeedTestUser(t, l, "actor@test.com")
+			assignRole(t, plugin, actor.ID, tt.actorRole)
+			target := seedAdmin(t, l, plugin, "target@test.com")
+			if tt.self {
+				target = actor
+			}
+
+			err := plugin.SetUserPassword(t.Context(), actor, target.ID, &SetUserPasswordRequest{Password: "new-password"})
+			assert.ErrorIs(t, err, tt.wantErr)
 		})
 	}
 }
