@@ -19,9 +19,37 @@ type adminHandlers struct {
 }
 
 func (p *adminPlugin) PluginHTTPConfig() limen.PluginHTTPConfig {
-	return limen.PluginHTTPConfig{
-		BasePath: "/admin",
+	config := limen.PluginHTTPConfig{BasePath: "/admin"}
+	if p.config.impersonationEnabled {
+		config.Hooks = &limen.Hooks{
+			After: []*limen.Hook{
+				{
+					PathMatcher: func(ctx *limen.HookContext) bool {
+						return ctx.RouteID() == "list-sessions"
+					},
+					Run: p.hideImpersonationSessions,
+				},
+			},
+		}
 	}
+	return config
+}
+
+func (p *adminPlugin) hideImpersonationSessions(ctx *limen.HookContext) bool {
+	response := ctx.GetResponse()
+	if response == nil || response.IsError {
+		return true
+	}
+	sessions, ok := response.Payload.([]limen.Session)
+	if !ok {
+		return true
+	}
+
+	impersonatedByColumn := p.core.Schema.Session.GetField(SessionSchemaImpersonatedByField)
+	ctx.ModifyResponse(response.StatusCode, slices.DeleteFunc(sessions, func(session limen.Session) bool {
+		return session.Raw()[impersonatedByColumn] != nil
+	}))
+	return true
 }
 
 func (p *adminPlugin) RegisterRoutes(httpCore *limen.LimenHTTPCore, routeBuilder *limen.RouteBuilder) {

@@ -273,3 +273,19 @@ func TestImpersonationHandlers(t *testing.T) {
 	require.NotNil(t, cookies[plugin.config.adminSessionCookieName])
 	assert.Negative(t, cookies[plugin.config.adminSessionCookieName].MaxAge)
 }
+
+func TestListSessionsHandler_HidesImpersonationSessions(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPlugin(t)
+	admin := seedAdmin(t, l, plugin, "admin@test.com")
+	user := limen.SeedTestUser(t, l, "user@test.com")
+	seedImpersonatedSession(t, plugin, user, admin)
+
+	w := serveAs(t, l, user, http.MethodGet, "/auth/sessions", "")
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var sessions []map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &sessions))
+	assert.Len(t, sessions, 1)
+}
