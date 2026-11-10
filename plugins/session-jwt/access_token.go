@@ -128,7 +128,7 @@ func (p *sessionJWTPlugin) RefreshAccessToken(r *http.Request) (*limen.SessionRe
 
 func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken string, family string) (*limen.SessionResult, *limen.User, error) {
 	rt, err := p.FindRefreshTokenByToken(ctx, rawRefreshToken)
-	if err != nil {
+	if errors.Is(err, ErrInvalidRefreshToken) {
 		if family == "" {
 			return nil, nil, ErrInvalidRefreshToken
 		}
@@ -139,6 +139,9 @@ func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken s
 		}
 
 		return nil, nil, ErrInvalidRefreshToken
+	}
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if time.Now().After(rt.ExpiresAt) {

@@ -106,18 +106,24 @@ func TestJWTSessionManager_CreateSession_Data(t *testing.T) {
 func TestJWTSessionManager_RevokeSession_ListedToken(t *testing.T) {
 	t.Parallel()
 
-	l, core, plugin := newTestJWTLimen(t)
+	plugin := New(WithBlacklistEnabled(true))
+	l, core := limen.NewTestLimen(t, plugin)
 	user := limen.SeedTestUser(t, l, "jwt-revoke@test.com")
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
-	_, err := core.SessionManager.CreateSession(t.Context(), req, &limen.AuthenticationResult{User: user})
+	result, err := core.SessionManager.CreateSession(t.Context(), req, &limen.AuthenticationResult{User: user})
 	require.NoError(t, err)
 
 	sessions, err := core.SessionManager.ListSessions(t.Context(), user.ID)
 	require.NoError(t, err)
 	require.Len(t, sessions, 1)
+	claims, err := plugin.VerifyAccessToken(result.Token)
+	require.NoError(t, err)
 
 	require.NoError(t, core.SessionManager.RevokeSession(t.Context(), sessions[0].Token))
 
 	_, err = plugin.FindRefreshTokenByToken(t.Context(), sessions[0].Token)
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidRefreshToken)
+	blacklisted, err := plugin.IsBlacklisted(t.Context(), claims.ID)
+	require.NoError(t, err)
+	assert.True(t, blacklisted)
 }

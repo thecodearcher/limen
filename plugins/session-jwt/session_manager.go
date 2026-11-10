@@ -3,6 +3,7 @@ package sessionjwt
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -105,7 +106,18 @@ func (m *jwtSessionManager) RevokeSession(ctx context.Context, token string) err
 
 	claims := p.parseAccessTokenLenient(token)
 	if claims == nil || claims.ID == "" {
-		return p.DeleteRefreshToken(ctx, token)
+		if !p.config.blacklistEnabled {
+			return p.DeleteRefreshToken(ctx, token)
+		}
+		rt, err := p.FindRefreshTokenByToken(ctx, token)
+		if errors.Is(err, ErrInvalidRefreshToken) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		_ = p.AddToBlacklist(ctx, rt.JWTID, rt.ExpiresAt)
+		return p.DeleteRefreshToken(ctx, rt.Token)
 	}
 
 	_ = p.deleteRefreshTokensByJTI(ctx, claims.ID)
