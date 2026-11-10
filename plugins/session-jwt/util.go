@@ -15,16 +15,21 @@ func generateOpaqueToken() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-// encodeRefreshTokenValue combines a token and its family into a single
-// dot-delimited string for inclusion in response bodies.
-func encodeRefreshTokenValue(token, family string) string {
-	return token + "." + family
+// encodeRefreshTokenValue combines a token and its family into the signed
+// value handed to clients.
+func (p *sessionJWTPlugin) encodeRefreshTokenValue(token, family string) string {
+	return p.core.SignValue(token + "." + family)
 }
 
-// parseRefreshTokenValue splits an encoded token.family value.
-func parseRefreshTokenValue(raw string) (token, family string) {
-	token, family, _ = strings.Cut(raw, ".")
-	return token, family
+// parseRefreshTokenValue verifies a value from encodeRefreshTokenValue and
+// splits it back into its token and family.
+func (p *sessionJWTPlugin) parseRefreshTokenValue(value string) (token, family string, ok bool) {
+	value, ok = p.core.VerifySignedValue(value)
+	if !ok {
+		return "", "", false
+	}
+	token, family, _ = strings.Cut(value, ".")
+	return token, family, true
 }
 
 func generateJTI() string {
@@ -58,6 +63,9 @@ func (p *sessionJWTPlugin) extractRefreshToken(r *http.Request) (token string, f
 	if raw == "" {
 		return "", "", ErrMissingRefreshToken
 	}
-	token, family = parseRefreshTokenValue(raw)
+	token, family, ok := p.parseRefreshTokenValue(raw)
+	if !ok {
+		return "", "", ErrInvalidRefreshToken
+	}
 	return token, family, nil
 }

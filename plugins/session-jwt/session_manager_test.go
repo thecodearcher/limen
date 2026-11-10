@@ -66,7 +66,7 @@ func TestJWTSessionManager_CreateSession_ExpiresIn(t *testing.T) {
 	require.NoError(t, err)
 	assert.WithinDuration(t, time.Now().Add(5*time.Minute), claims.ExpiresAt.Time, 2*time.Second)
 
-	rawRefresh, _ := parseRefreshTokenValue(result.RefreshToken)
+	rawRefresh, _, _ := plugin.parseRefreshTokenValue(result.RefreshToken)
 	rt, err := plugin.FindRefreshTokenByToken(t.Context(), rawRefresh)
 	require.NoError(t, err)
 	assert.WithinDuration(t, time.Now().Add(5*time.Minute), rt.ExpiresAt, 2*time.Second)
@@ -90,7 +90,7 @@ func TestJWTSessionManager_CreateSession_Data(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "client", claims.Session[string(testSessionTagField)])
 
-	rawRefresh, _ := parseRefreshTokenValue(result.RefreshToken)
+	rawRefresh, _, _ := plugin.parseRefreshTokenValue(result.RefreshToken)
 	rt, err := plugin.FindRefreshTokenByToken(t.Context(), rawRefresh)
 	require.NoError(t, err)
 	assert.Equal(t, "client", rt.SessionData[string(testSessionTagField)])

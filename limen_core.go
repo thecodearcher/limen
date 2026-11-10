@@ -164,6 +164,16 @@ func (c *LimenCore) Secret() []byte {
 	return c.secret
 }
 
+// SignValue appends an HMAC-SHA256 signature of value made with the core secret.
+func (c *LimenCore) SignValue(value string) string {
+	return signValue(value, c.secret)
+}
+
+// VerifySignedValue returns the value a SignValue output was made from, or false when the signature does not match.
+func (c *LimenCore) VerifySignedValue(signed string) (string, bool) {
+	return verifySignedValue(signed, c.secret)
+}
+
 func (c *LimenCore) GetBaseURL() string {
 	return c.baseURL
 }

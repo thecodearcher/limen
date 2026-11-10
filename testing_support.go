@@ -521,12 +521,16 @@ func SeedTestSessionRecord(t *testing.T, l *Limen, userID any, email string) *Se
 		t.Fatal("SeedTestSessionRecord: empty session token")
 	}
 
+	token, ok := l.core.VerifySignedValue(result.Token)
+	if !ok {
+		t.Fatalf("SeedTestSessionRecord: %q is not a signed session token", result.Token)
+	}
 	sessions, err := l.ListSessions(t.Context(), userID)
 	if err != nil {
 		t.Fatalf("SeedTestSessionRecord: %v", err)
 	}
 	for i := range sessions {
-		if sessions[i].Token == result.Token {
+		if sessions[i].Token == token {
 			return &sessions[i]
 		}
 	}

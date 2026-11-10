@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -159,7 +160,7 @@ func TestPerformRefresh_AccessTokenDoesNotOutliveRefreshToken(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	rawRefresh, family := parseRefreshTokenValue(result.RefreshToken)
+	rawRefresh, family, _ := plugin.parseRefreshTokenValue(result.RefreshToken)
 	rt, err := plugin.FindRefreshTokenByToken(t.Context(), rawRefresh)
 	require.NoError(t, err)
 
@@ -169,4 +170,24 @@ func TestPerformRefresh_AccessTokenDoesNotOutliveRefreshToken(t *testing.T) {
 	claims, err := plugin.VerifyAccessToken(refreshed.Token)
 	require.NoError(t, err)
 	assert.False(t, claims.ExpiresAt.After(rt.ExpiresAt), "access token expires after its refresh token")
+}
+
+func TestRefreshAccessToken_UnsignedToken(t *testing.T) {
+	t.Parallel()
+
+	l, core, _ := newTestJWTLimen(t)
+	user := limen.SeedTestUser(t, l, "jwt-unsigned@test.com")
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
+	_, err := core.SessionManager.CreateSession(t.Context(), req, &limen.AuthenticationResult{User: user})
+	require.NoError(t, err)
+	sessions, err := core.SessionManager.ListSessions(t.Context(), user.ID)
+	require.NoError(t, err)
+	require.Len(t, sessions, 1)
+
+	refreshReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/auth/refresh", strings.NewReader(`{"refresh_token":"`+sessions[0].Token+`"}`))
+	refreshReq.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	l.Handler().ServeHTTP(w, refreshReq)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }

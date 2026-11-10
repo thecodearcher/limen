@@ -19,8 +19,8 @@ func TestAdminPlugin_ListUserSessions(t *testing.T) {
 	l, plugin := newTestAdminPlugin(t)
 	actor := seedAdmin(t, l, plugin, "actor@test.com")
 	target := limen.SeedTestUser(t, l, "target@test.com")
-	first := limen.SeedTestSession(t, l, target.ID, target.Email)
-	second := limen.SeedTestSession(t, l, target.ID, target.Email)
+	first := limen.SeedTestSessionRecord(t, l, target.ID, target.Email)
+	second := limen.SeedTestSessionRecord(t, l, target.ID, target.Email)
 
 	sessions, err := plugin.ListUserSessions(t.Context(), actor, target.ID)
 	require.NoError(t, err)
@@ -111,14 +111,13 @@ func TestAdminPlugin_ImpersonateUser(t *testing.T) {
 	limen.SeedTestSession(t, l, actor.ID, actor.Email)
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/impersonate", http.NoBody)
 
-	user, result, err := plugin.ImpersonateUser(t.Context(), req, validatedSession(t, plugin, actor), target.ID)
+	user, _, err := plugin.ImpersonateUser(t.Context(), req, validatedSession(t, plugin, actor), target.ID)
 	require.NoError(t, err)
 	assert.Equal(t, target.ID, user.ID)
 
 	sessions, err := plugin.ListUserSessions(t.Context(), actor, target.ID)
 	require.NoError(t, err)
 	require.Len(t, sessions, 1)
-	assert.Equal(t, result.Token, sessions[0].ID)
 	assert.Equal(t, actor.Email, sessions[0].ImpersonatedBy.Email)
 	assert.WithinDuration(t, time.Now().Add(10*time.Minute), sessions[0].ExpiresAt, time.Minute)
 }

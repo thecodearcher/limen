@@ -216,7 +216,6 @@ func (s *cacheSessionStore) getUserIndex(ctx context.Context, userID any) ([]ses
 }
 
 func (s *cacheSessionStore) addToUserIndex(ctx context.Context, session *Session) error {
-	fmt.Println("addToUserIndex", session.UserID, session.Token, session.ExpiresAt)
 	entries, _ := s.getUserIndex(ctx, session.UserID)
 
 	i := slices.IndexFunc(entries, func(entry sessionIndexEntry) bool { return entry.Token == session.Token })

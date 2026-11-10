@@ -74,7 +74,8 @@ func TestOpaqueSessionManager_ValidateSession(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, validated)
 	assert.Equal(t, userID, validated.User.ID)
-	assert.Equal(t, sess.Token, validated.Session.Token)
+	stored, _ := l.core.VerifySignedValue(sess.Token)
+	assert.Equal(t, stored, validated.Session.Token)
 }
 
 func TestOpaqueSessionManager_ValidateSession_Expired(t *testing.T) {
@@ -95,7 +96,7 @@ func TestOpaqueSessionManager_ValidateSession_Expired(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
-	req.AddCookie(&http.Cookie{Name: "limen_session", Value: "expired-token"})
+	req.AddCookie(&http.Cookie{Name: "limen_session", Value: l.core.SignValue("expired-token")})
 
 	_, err = l.core.SessionManager.ValidateSession(context.Background(), req)
 	assert.ErrorIs(t, err, ErrSessionExpired)
@@ -125,6 +126,20 @@ func TestOpaqueSessionManager_ValidateSession_NotFound(t *testing.T) {
 	}
 }
 
+func TestOpaqueSessionManager_ValidateSession_UnsignedToken(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	userID := seedUser(t, l, "unsigned@test.com")
+	sess := SeedTestSessionRecord(t, l, userID, "unsigned@test.com")
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
+	req.AddCookie(&http.Cookie{Name: "limen_session", Value: sess.Token})
+
+	_, err := l.core.SessionManager.ValidateSession(t.Context(), req)
+	assert.ErrorIs(t, err, ErrSessionNotFound)
+}
+
 func TestOpaqueSessionManager_ExtractToken_Bearer(t *testing.T) {
 	t.Parallel()
 
@@ -132,7 +147,7 @@ func TestOpaqueSessionManager_ExtractToken_Bearer(t *testing.T) {
 	sm := typedSessionManager(t, l)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
-	req.Header.Set("Authorization", "Bearer my-token-123")
+	req.Header.Set("Authorization", "Bearer "+l.core.SignValue("my-token-123"))
 
 	token, err := sm.extractToken(req)
 	assert.NoError(t, err)
@@ -146,8 +161,8 @@ func TestOpaqueSessionManager_ExtractToken_CookiePriority(t *testing.T) {
 	sm := typedSessionManager(t, l)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
-	req.AddCookie(&http.Cookie{Name: "limen_session", Value: "cookie-token"})
-	req.Header.Set("Authorization", "Bearer bearer-token")
+	req.AddCookie(&http.Cookie{Name: "limen_session", Value: l.core.SignValue("cookie-token")})
+	req.Header.Set("Authorization", "Bearer "+l.core.SignValue("bearer-token"))
 
 	token, err := sm.extractToken(req)
 	assert.NoError(t, err)
@@ -219,7 +234,7 @@ func TestOpaqueSessionManager_ListSessions_SkipsExpired(t *testing.T) {
 
 			l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithSessionStoreType(tt.storeType)))
 			userID := seedUser(t, l, "expired@test.com")
-			live := seedSession(t, l, userID, "expired@test.com")
+			live := SeedTestSessionRecord(t, l, userID, "expired@test.com")
 			past := time.Now().Add(-time.Hour)
 			require.NoError(t, typedSessionManager(t, l).store.Set(t.Context(), &Session{
 				Token:      "expired-token",

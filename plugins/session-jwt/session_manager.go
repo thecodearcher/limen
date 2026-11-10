@@ -260,7 +260,7 @@ func encodeSessionData(sessionData map[string]any) (any, error) {
 func (p *sessionJWTPlugin) buildSessionResult(jwtString string, rt *RefreshToken) *limen.SessionResult {
 	result := &limen.SessionResult{Token: jwtString}
 	if rt != nil {
-		result.RefreshToken = encodeRefreshTokenValue(rt.Token, rt.Family)
+		result.RefreshToken = p.encodeRefreshTokenValue(rt.Token, rt.Family)
 	}
 	return result
 }
