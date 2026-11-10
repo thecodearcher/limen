@@ -121,15 +121,23 @@ func (m *jwtSessionManager) ListSessions(ctx context.Context, userID any) ([]lim
 		return nil, err
 	}
 
+	schema := m.plugin.core.Schema.Session
+	now := time.Now()
 	sessions := make([]limen.Session, 0, len(tokens))
 	for _, rt := range tokens {
-		sessions = append(sessions, limen.Session{
-			ID:        rt.ID,
-			Token:     rt.Token,
-			UserID:    rt.UserID,
-			CreatedAt: rt.CreatedAt,
-			ExpiresAt: rt.ExpiresAt,
-		})
+		if !rt.ExpiresAt.After(now) {
+			continue
+		}
+		data := map[string]any{
+			schema.GetIDField():         rt.ID,
+			schema.GetTokenField():      rt.Token,
+			schema.GetUserIDField():     rt.UserID,
+			schema.GetCreatedAtField():  rt.CreatedAt,
+			schema.GetExpiresAtField():  rt.ExpiresAt,
+			schema.GetLastAccessField(): rt.CreatedAt,
+		}
+		maps.Copy(data, rt.SessionData)
+		sessions = append(sessions, *schema.FromStorage(data).(*limen.Session))
 	}
 	return sessions, nil
 }

@@ -45,9 +45,8 @@ func (p *adminPlugin) hideImpersonationSessions(ctx *limen.HookContext) bool {
 		return true
 	}
 
-	impersonatedByColumn := p.core.Schema.Session.GetField(SessionSchemaImpersonatedByField)
 	ctx.ModifyResponse(response.StatusCode, slices.DeleteFunc(sessions, func(session limen.Session) bool {
-		return session.Raw()[impersonatedByColumn] != nil
+		return p.impersonatorID(&session) != nil
 	}))
 	return true
 }

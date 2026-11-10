@@ -29,8 +29,7 @@ func (p *adminPlugin) ListUserSessions(ctx context.Context, actor *limen.User, u
 		return nil, nil
 	}
 
-	impersonatedByColumn := p.core.Schema.Session.GetField(SessionSchemaImpersonatedByField)
-	impersonators, err := p.findImpersonators(ctx, sessions, impersonatedByColumn)
+	impersonators, err := p.findImpersonators(ctx, sessions)
 	if err != nil {
 		return nil, err
 	}
@@ -46,16 +45,21 @@ func (p *adminPlugin) ListUserSessions(ctx context.Context, actor *limen.User, u
 			LastAccess:     session.LastAccess,
 			IPAddress:      ipAddress,
 			UserAgent:      userAgent,
-			ImpersonatedBy: impersonators[session.Raw()[impersonatedByColumn]],
+			ImpersonatedBy: impersonators[p.impersonatorID(&session)],
 		})
 	}
 	return result, nil
 }
 
-func (p *adminPlugin) findImpersonators(ctx context.Context, sessions []limen.Session, impersonatedByColumn string) (map[any]*limen.User, error) {
+func (p *adminPlugin) impersonatorID(session *limen.Session) any {
+	column := p.core.Schema.Session.GetField(SessionSchemaImpersonatedByField)
+	return p.core.Schema.NormalizeIDValue(session.Raw()[column])
+}
+
+func (p *adminPlugin) findImpersonators(ctx context.Context, sessions []limen.Session) (map[any]*limen.User, error) {
 	var ids []any
 	for _, session := range sessions {
-		if id := session.Raw()[impersonatedByColumn]; id != nil && !slices.Contains(ids, id) {
+		if id := p.impersonatorID(&session); id != nil && !slices.Contains(ids, id) {
 			ids = append(ids, id)
 		}
 	}
@@ -73,6 +77,9 @@ func (p *adminPlugin) findImpersonators(ctx context.Context, sessions []limen.Se
 	usersByID := make(map[any]*limen.User, len(users))
 	for _, user := range limen.MapToSliceOfType[*limen.User](users) {
 		usersByID[user.ID] = user
+		if encoded, ok := p.core.EncodePublicID(p.core.Schema.User, user); ok {
+			usersByID[encoded] = user
+		}
 	}
 	return usersByID, nil
 }
