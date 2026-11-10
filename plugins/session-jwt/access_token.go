@@ -2,6 +2,7 @@ package sessionjwt
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -183,14 +184,17 @@ func (p *sessionJWTPlugin) parseAccessTokenLenient(tokenString string) *LimenCla
 		jwt.WithValidMethods([]string{p.config.signingMethod.Alg()}),
 	}
 
-	token, _ := jwt.ParseWithClaims(tokenString, &LimenClaims{}, keyFunc, opts...)
+	token, err := jwt.ParseWithClaims(tokenString, &LimenClaims{}, keyFunc, opts...)
+	if err != nil && !errors.Is(err, jwt.ErrTokenExpired) {
+		return nil
+	}
+
 	if token == nil {
 		return nil
 	}
 
-	claims, ok := token.Claims.(*LimenClaims)
-	if !ok {
-		return nil
+	if claims, ok := token.Claims.(*LimenClaims); ok {
+		return claims
 	}
-	return claims
+	return nil
 }
