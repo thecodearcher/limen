@@ -99,9 +99,10 @@ export type Session<TFields = unknown> = {
 };
 
 /**
- * Query values for a request. An array value is sent comma-separated.
+ * Query values for a request. An array value is sent comma-separated, and an
+ * object value as `name[key]=value`.
  */
-export type QueryParams = Record<string, string>;
+export type QueryParams = Record<string, string | Record<string, string>>;
 
 /**
  * Pagination accepted by list routes.
@@ -109,6 +110,14 @@ export type QueryParams = Record<string, string>;
 export type PaginationInput = {
   page?: number;
   perPage?: number;
+};
+
+/**
+ * Pagination with sorting, for list routes the server lets sort.
+ */
+export type SortablePaginationInput = PaginationInput & {
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
 };
 
 export type Page<T> = {

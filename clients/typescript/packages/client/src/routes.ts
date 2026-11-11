@@ -14,7 +14,6 @@ export type RequestEmailVerificationInput = {
 export type ActiveSession = {
   id: string | number;
   token: string;
-  userId: unknown;
   createdAt: string;
   expiresAt: string;
   lastAccess: string;
