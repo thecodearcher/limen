@@ -1,16 +1,18 @@
 import { DEFAULT_TOKEN_STORAGE_KEY } from "../../constants";
 import type { AnyRouteContext } from "../../context";
-import { defineClientPlugin, defineRoutes, type RunRoute } from "../../define-plugin";
+import { defineClientPlugin, defineRoutes, defineStores, type RunRoute } from "../../define-plugin";
 import { LimenError } from "../../errors";
 import { route } from "../../route";
 import type { Session } from "../../types";
 import { resolveDefaultStorage } from "../bearer";
+import { createTokenStore, TOKENS } from "../bearer/token-store";
 import { DEFAULT_EXPIRY_SKEW_SECONDS } from "./constants";
 import { isExpiring, tokensFromHeaders } from "./jwt";
 import type { RefreshInput, SessionJwtPluginConfig, SessionJwtTokens } from "./types";
 
 export function sessionJwtPlugin<TFields = unknown>(config: SessionJwtPluginConfig = {}) {
   const store = config.storage ?? resolveDefaultStorage(config.storageKey ?? DEFAULT_TOKEN_STORAGE_KEY);
+  const tokenStore = createTokenStore(store);
   const skewMs = (config.expirySkewSeconds ?? DEFAULT_EXPIRY_SKEW_SECONDS) * 1000;
 
   const refreshRoute = route<RefreshInput, Session<TFields>>()({
@@ -37,7 +39,7 @@ export function sessionJwtPlugin<TFields = unknown>(config: SessionJwtPluginConf
       }
       return tokens;
     } catch (err) {
-      store.clear();
+      tokenStore.setData(null);
       ctx.setSession(null);
       throw err;
     }
@@ -81,6 +83,7 @@ export function sessionJwtPlugin<TFields = unknown>(config: SessionJwtPluginConf
   return defineClientPlugin({
     id: "session-jwt",
     routes: defineRoutes(refreshRoute),
+    stores: () => defineStores({ [TOKENS]: tokenStore }),
     actions: (pluginCtx, pluginRun) => {
       ctx = pluginCtx;
       run = pluginRun;
@@ -93,8 +96,8 @@ export function sessionJwtPlugin<TFields = unknown>(config: SessionJwtPluginConf
           getAccessToken,
           refresh,
           getTokens: () => store.get(),
-          setTokens: (tokens: SessionJwtTokens) => store.set(tokens),
-          clear: () => store.clear(),
+          setTokens: (tokens: SessionJwtTokens) => tokenStore.setData(tokens),
+          clear: () => tokenStore.setData(null),
         },
       };
     },
@@ -114,7 +117,7 @@ export function sessionJwtPlugin<TFields = unknown>(config: SessionJwtPluginConf
           run: (res) => {
             const tokens = tokensFromHeaders(res.headers, store.get());
             if (tokens) {
-              store.set(tokens);
+              tokenStore.setData(tokens);
             }
             return res;
           },
@@ -123,7 +126,7 @@ export function sessionJwtPlugin<TFields = unknown>(config: SessionJwtPluginConf
           match: ["/signout", "/revoke-sessions"],
           allowOnFailure: true,
           run: (res) => {
-            store.clear();
+            tokenStore.setData(null);
             return res;
           },
         },
