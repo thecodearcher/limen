@@ -49,15 +49,16 @@ describe("fetcher — timeout", () => {
 });
 
 describe("fetcher — error codes", () => {
-  it("uses a known server code instead of the status-derived code", async () => {
+  it("keeps the server code instead of the status-derived code", async () => {
     const auth = makeClient(
-      staticImpl(JSON.stringify({ message: "email is not verified", code: "email_not_verified" }), { status: 403 }),
+      staticImpl(JSON.stringify({ message: "Your account has been banned", code: "user_banned" }), { status: 403 }),
       { timeout: 0 },
     );
     const err = (await auth.sessions().catch((e) => e)) as LimenError;
     expect(err).toBeInstanceOf(LimenError);
     expect(err.status).toBe(403);
-    expect(err.code).toBe("email_not_verified");
+    expect(err.code).toBe("user_banned");
+    expect(err.is("user_banned")).toBe(true);
   });
 
   it("derives forbidden when a 403 body has no code", async () => {

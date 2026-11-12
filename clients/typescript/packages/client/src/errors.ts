@@ -1,33 +1,11 @@
 import { unwrapErrorCode } from "./envelope";
 
-const LIMEN_ERROR_CODES = [
-  "unauthorized",
-  "forbidden",
-  "not_found",
-  "rate_limited",
-  "validation_error",
-  "conflict",
-  "server_error",
-  "timeout",
-  "email_not_verified",
-  "unknown",
-] as const;
+/** A server `code`, or one derived from the HTTP status when the body has none. */
+export type LimenErrorCode = string;
 
-export type LimenErrorCode = (typeof LIMEN_ERROR_CODES)[number];
-
-const LIMEN_ERROR_CODE_SET = new Set<string>(LIMEN_ERROR_CODES);
-
-export function isLimenErrorCode(code: string): code is LimenErrorCode {
-  return LIMEN_ERROR_CODE_SET.has(code);
-}
-
-/** Prefer a known server code on the body; otherwise derive one from the HTTP status. */
+/** Use the server's `code` when the body has one; otherwise derive one from the HTTP status. */
 export function resolveErrorCode(status: number, body: unknown): LimenErrorCode {
-  const serverCode = unwrapErrorCode(body);
-  if (serverCode !== undefined && isLimenErrorCode(serverCode)) {
-    return serverCode;
-  }
-  return deriveErrorCode(status);
+  return unwrapErrorCode(body) ?? deriveErrorCode(status);
 }
 
 /** Map HTTP status → typed code. Anything unmapped becomes `"unknown"`. */
@@ -45,7 +23,8 @@ export function deriveErrorCode(status: number): LimenErrorCode {
 
 /**
  * The single error type every SDK call throws on non-2xx. Carries the raw
- * server message, the HTTP status, and a derived typed code.
+ * server message, the HTTP status, and the server code. When the body has no
+ * code, the code is derived from the status.
  */
 export class LimenError extends Error {
   override readonly name = "LimenError";
