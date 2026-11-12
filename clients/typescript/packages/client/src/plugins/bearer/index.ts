@@ -1,19 +1,22 @@
 import { DEFAULT_TOKEN_STORAGE_KEY, SET_AUTH_TOKEN_HEADER, SET_REFRESH_TOKEN_HEADER } from "../../constants";
-import { defineClientPlugin, defineRoutes } from "../../define-plugin";
+import { defineClientPlugin, defineRoutes, defineStores } from "../../define-plugin";
 import { resolveDefaultStorage } from "./storage";
+import { createTokenStore, TOKENS } from "./token-store";
 import type { BearerPluginConfig, BearerTokens } from "./types";
 
 export function bearerPlugin(config: BearerPluginConfig = {}) {
   const store = config.storage ?? resolveDefaultStorage(config.storageKey ?? DEFAULT_TOKEN_STORAGE_KEY);
+  const tokenStore = createTokenStore(store);
 
   return defineClientPlugin({
     id: "bearer",
     routes: defineRoutes(),
+    stores: () => defineStores({ [TOKENS]: tokenStore }),
     actions: () => ({
       bearer: {
         getTokens: () => store.get(),
-        setTokens: (tokens: BearerTokens) => store.set(tokens),
-        clear: () => store.clear(),
+        setTokens: (tokens: BearerTokens) => tokenStore.setData(tokens),
+        clear: () => tokenStore.setData(null),
       },
     }),
     hooks: {
@@ -40,7 +43,7 @@ export function bearerPlugin(config: BearerPluginConfig = {}) {
               if (refreshToken) {
                 tokens.refreshToken = refreshToken;
               }
-              store.set(tokens);
+              tokenStore.setData(tokens);
             }
             return res;
           },
@@ -48,7 +51,7 @@ export function bearerPlugin(config: BearerPluginConfig = {}) {
         {
           match: ["/signout", "/revoke-sessions"],
           run: (res) => {
-            store.clear();
+            tokenStore.setData(null);
             return res;
           },
         },
@@ -58,4 +61,5 @@ export function bearerPlugin(config: BearerPluginConfig = {}) {
 }
 
 export { localStorageBearerStorage, memoryBearerStorage, resolveDefaultStorage } from "./storage";
+export { createTokenStore, tokensStore } from "./token-store";
 export type { BearerPluginConfig, BearerPlugin as BearerPublic, BearerStorage, BearerTokens } from "./types";

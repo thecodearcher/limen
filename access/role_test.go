@@ -161,3 +161,15 @@ func TestRolePermissionsReturnsCopy(t *testing.T) {
 	assert.Equal(t, Permissions{"organization": {"read"}}, editor.Permissions())
 	assert.False(t, editor.Can("organization", "delete"))
 }
+
+func TestMergeRolePermissions(t *testing.T) {
+	t.Parallel()
+
+	ac := New(Statements{"project": {"read", "create"}, "member": {"read"}})
+	reader, err := ac.NewRole("reader", Permissions{"project": {"read"}})
+	require.NoError(t, err)
+	editor, err := ac.NewRole("editor", Permissions{"project": {"create"}, "member": {"read"}})
+	require.NoError(t, err)
+
+	assert.Equal(t, Permissions{"project": {"read", "create"}, "member": {"read"}}, MergeRolePermissions(reader, editor))
+}

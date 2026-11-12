@@ -2,6 +2,7 @@ package sessionjwt
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -23,8 +24,16 @@ type LimenClaims struct {
 }
 
 func (p *sessionJWTPlugin) GenerateAccessToken(user *limen.User, sessionData map[string]any) (string, string, error) {
+	signed, claims, err := p.generateAccessToken(user, sessionData, nil)
+	if err != nil {
+		return "", "", err
+	}
+	return signed, claims.ID, nil
+}
+
+func (p *sessionJWTPlugin) generateAccessToken(user *limen.User, sessionData map[string]any, sessionExpiresAt *time.Time) (string, *LimenClaims, error) {
 	claims := LimenClaims{
-		RegisteredClaims: p.newRegisteredClaims(),
+		RegisteredClaims: p.newRegisteredClaims(sessionExpiresAt),
 		Session:          sessionData,
 	}
 	claims.Subject = p.config.subjectEncoder(user)
@@ -38,14 +47,18 @@ func (p *sessionJWTPlugin) GenerateAccessToken(user *limen.User, sessionData map
 		claims.Custom = p.config.customClaims(user)
 	}
 
-	return p.signClaims(claims)
+	signed, _, err := p.signClaims(claims)
+	if err != nil {
+		return "", nil, err
+	}
+	return signed, &claims, nil
 }
 
 // reissueAccessToken mints a fresh token carrying the prior token's identity
 // claims with the given session data.
 func (p *sessionJWTPlugin) reissueAccessToken(prior *LimenClaims, sessionData map[string]any) (string, *LimenClaims, error) {
 	claims := LimenClaims{
-		RegisteredClaims: p.newRegisteredClaims(),
+		RegisteredClaims: p.newRegisteredClaims(nil),
 		Email:            prior.Email,
 		EmailVerifiedAt:  prior.EmailVerifiedAt,
 		Custom:           prior.Custom,
@@ -60,12 +73,16 @@ func (p *sessionJWTPlugin) reissueAccessToken(prior *LimenClaims, sessionData ma
 	return signed, &claims, nil
 }
 
-func (p *sessionJWTPlugin) newRegisteredClaims() jwt.RegisteredClaims {
+func (p *sessionJWTPlugin) newRegisteredClaims(sessionExpiresAt *time.Time) jwt.RegisteredClaims {
 	now := time.Now()
+	expiresAt := now.Add(p.config.accessTokenDuration)
+	if sessionExpiresAt != nil && sessionExpiresAt.Before(expiresAt) {
+		expiresAt = *sessionExpiresAt
+	}
 	return jwt.RegisteredClaims{
 		ID:        generateJTI(),
 		IssuedAt:  jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(p.config.accessTokenDuration)),
+		ExpiresAt: jwt.NewNumericDate(expiresAt),
 		Issuer:    p.config.issuer,
 		Audience:  jwt.ClaimStrings(p.config.audience),
 	}
@@ -119,7 +136,7 @@ func (p *sessionJWTPlugin) RefreshAccessToken(r *http.Request) (*limen.SessionRe
 
 func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken string, family string) (*limen.SessionResult, *limen.User, error) {
 	rt, err := p.FindRefreshTokenByToken(ctx, rawRefreshToken)
-	if err != nil {
+	if errors.Is(err, ErrInvalidRefreshToken) {
 		if family == "" {
 			return nil, nil, ErrInvalidRefreshToken
 		}
@@ -130,6 +147,9 @@ func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken s
 		}
 
 		return nil, nil, ErrInvalidRefreshToken
+	}
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if time.Now().After(rt.ExpiresAt) {
@@ -142,24 +162,25 @@ func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken s
 		return nil, nil, fmt.Errorf("session-jwt: user not found: %w", err)
 	}
 
-	signed, jti, err := p.GenerateAccessToken(user, rt.SessionData)
+	signed, claims, err := p.generateAccessToken(user, rt.SessionData, &rt.ExpiresAt)
 	if err != nil {
 		return nil, nil, err
 	}
+	session := p.claimsToSession(claims, signed, user.ID)
 
 	if p.config.refreshTokenRotation {
-		newRT, err := p.RotateRefreshToken(ctx, rt, jti)
+		newRT, err := p.RotateRefreshToken(ctx, rt, claims.ID)
 		if err != nil {
 			return nil, nil, err
 		}
-		return p.buildSessionResult(signed, newRT), user, nil
+		return p.buildSessionResult(signed, session, newRT), user, nil
 	}
 
-	if err := p.updateRefreshTokenJWTID(ctx, rt.Token, jti); err != nil {
+	if err := p.updateRefreshTokenJWTID(ctx, rt.Token, claims.ID); err != nil {
 		return nil, nil, err
 	}
 
-	return p.buildSessionResult(signed, rt), user, nil
+	return p.buildSessionResult(signed, session, rt), user, nil
 }
 
 // parseAccessTokenLenient parses a JWT verifying the signature but tolerating
@@ -175,14 +196,17 @@ func (p *sessionJWTPlugin) parseAccessTokenLenient(tokenString string) *LimenCla
 		jwt.WithValidMethods([]string{p.config.signingMethod.Alg()}),
 	}
 
-	token, _ := jwt.ParseWithClaims(tokenString, &LimenClaims{}, keyFunc, opts...)
+	token, err := jwt.ParseWithClaims(tokenString, &LimenClaims{}, keyFunc, opts...)
+	if err != nil && !errors.Is(err, jwt.ErrTokenExpired) {
+		return nil
+	}
+
 	if token == nil {
 		return nil
 	}
 
-	claims, ok := token.Claims.(*LimenClaims)
-	if !ok {
-		return nil
+	if claims, ok := token.Claims.(*LimenClaims); ok {
+		return claims
 	}
-	return claims
+	return nil
 }

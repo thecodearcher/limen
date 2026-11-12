@@ -8,18 +8,20 @@ import (
 )
 
 type LimenCore struct {
-	config         *Config
-	baseURL        string
-	fullBaseURL    string // baseURL + HTTP.basePath
-	db             DatabaseAdapter
-	cacheStore     CacheAdapter
-	DBAction       *DatabaseActionHelper
-	Schema         *SchemaConfig
-	SessionManager SessionManager
-	cookies        *cookieManager
-	schemaResolver *SchemaResolver
-	plugins        map[PluginName]Plugin
-	secret         []byte
+	config           *Config
+	baseURL          string
+	fullBaseURL      string // baseURL + HTTP.basePath
+	db               DatabaseAdapter
+	cacheStore       CacheAdapter
+	DBAction         *DatabaseActionHelper
+	Schema           *SchemaConfig
+	SessionManager   SessionManager
+	cookies          *cookieManager
+	schemaResolver   *SchemaResolver
+	plugins          map[PluginName]Plugin
+	sessionGuards    []SessionCreateGuard
+	sessionExtenders []SessionResponseExtender
+	secret           []byte
 }
 
 func (c *LimenCore) getPublicIDConfig(schema Schema) (SchemaName, *PublicIDConfig, bool) {
@@ -163,6 +165,16 @@ func (c *LimenCore) Secret() []byte {
 	return c.secret
 }
 
+// SignValue appends an HMAC-SHA256 signature of value made with the core secret.
+func (c *LimenCore) SignValue(value string) string {
+	return signValue(value, c.secret)
+}
+
+// VerifySignedValue returns the value a SignValue output was made from, or false when the signature does not match.
+func (c *LimenCore) VerifySignedValue(signed string) (string, bool) {
+	return verifySignedValue(signed, c.secret)
+}
+
 func (c *LimenCore) GetBaseURL() string {
 	return c.baseURL
 }
@@ -184,16 +196,34 @@ func (c *LimenCore) GetBaseURLWithPluginPath(pluginName PluginName, pathToJoin s
 
 // CreateSession creates a session for the auth result.
 // This should be called instead of SessionManager.CreateSession so that plugins
-// can pass options (e.g. remember_me) via SessionCreateOption.
+// can pass options (e.g. remember_me) via SessionCreateOption and registered
+// SessionCreateGuards can veto the session.
 func (c *LimenCore) CreateSession(ctx context.Context, r *http.Request, w http.ResponseWriter, auth *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error) {
-	createOpts := &SessionCreateOptions{ShortSession: false}
-	if c.cookies.checkIsShortSession(r) {
-		createOpts.ShortSession = true
+	for _, guard := range c.sessionGuards {
+		if err := guard.BeforeSessionCreate(ctx, auth); err != nil {
+			return nil, err
+		}
 	}
-	for _, opt := range opts {
-		opt(createOpts)
+
+	opts = append([]SessionCreateOption{WithShortSession(c.cookies.checkIsShortSession(r))}, opts...)
+	return c.SessionManager.CreateSession(ctx, r, auth, opts...)
+}
+
+func (c *LimenCore) extendSessionResponse(ctx context.Context, user *User, sessionResult *SessionResult) SessionExtension {
+	var session *Session
+	if sessionResult != nil && sessionResult.Session != nil {
+		session = sessionResult.Session
+	} else if current, err := GetCurrentSessionFromCtx(ctx); err == nil {
+		session = current.Session
 	}
-	return c.SessionManager.CreateSession(ctx, r, auth, createOpts.ShortSession)
+
+	merged := SessionExtension{User: map[string]any{}, Session: map[string]any{}}
+	for _, extender := range c.sessionExtenders {
+		extension := extender.ExtendSessionResponse(ctx, user, session)
+		maps.Copy(merged.User, extension.User)
+		maps.Copy(merged.Session, extension.Session)
+	}
+	return merged
 }
 
 // RotateSession revokes the caller's current session (or all of the user's
@@ -222,4 +252,31 @@ func (c *LimenCore) RotateSession(r *http.Request, w http.ResponseWriter, sessio
 	}
 
 	return authResult, sessionResult, nil
+}
+
+// DeleteUser revokes the user's sessions, deletes the user's accounts and
+// deletes the user. Returns ErrRecordNotFound when no user matches userID.
+func (c *LimenCore) DeleteUser(ctx context.Context, userID any) error {
+	return c.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := c.SessionManager.RevokeAllSessions(ctx, userID); err != nil {
+			return err
+		}
+
+		if err := c.Delete(ctx, c.Schema.Account, []Where{
+			Eq(c.Schema.Account.GetUserIDField(), userID),
+		}); err != nil {
+			return err
+		}
+
+		result, err := c.DeleteWithResult(ctx, c.Schema.User, []Where{
+			Eq(c.Schema.User.GetIDField(), userID),
+		})
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected == 0 {
+			return ErrRecordNotFound
+		}
+		return nil
+	})
 }

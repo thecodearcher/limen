@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createAuthClient, LimenError } from "../src";
+import { createAuthClient, defineClientPlugin, defineRoutes, LimenError, route } from "../src";
 
 /** A fetch impl that never resolves but rejects when its signal aborts — like real fetch. */
 function hangingImpl(): typeof fetch {
@@ -49,15 +49,16 @@ describe("fetcher — timeout", () => {
 });
 
 describe("fetcher — error codes", () => {
-  it("uses a known server code instead of the status-derived code", async () => {
+  it("keeps the server code instead of the status-derived code", async () => {
     const auth = makeClient(
-      staticImpl(JSON.stringify({ message: "email is not verified", code: "email_not_verified" }), { status: 403 }),
+      staticImpl(JSON.stringify({ message: "Your account has been banned", code: "user_banned" }), { status: 403 }),
       { timeout: 0 },
     );
     const err = (await auth.sessions().catch((e) => e)) as LimenError;
     expect(err).toBeInstanceOf(LimenError);
     expect(err.status).toBe(403);
-    expect(err.code).toBe("email_not_verified");
+    expect(err.code).toBe("user_banned");
+    expect(err.is("user_banned")).toBe(true);
   });
 
   it("derives forbidden when a 403 body has no code", async () => {
@@ -104,5 +105,32 @@ describe("fetcher — per-call init", () => {
     await auth.sessions(undefined, { headers: { "X-Test": "override" } });
 
     expect(seen?.get("X-Test")).toBe("override");
+  });
+});
+
+describe("fetcher — query", () => {
+  it("sends an object query value as name[key] params", async () => {
+    let seen = "";
+    const impl = ((url: RequestInfo | URL) => {
+      seen = String(url);
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+    }) as typeof fetch;
+    const items = defineClientPlugin({
+      id: "items",
+      routes: defineRoutes(
+        route<{ perPage: number; filter: Record<string, string> }, unknown[]>()({ method: "GET", path: "/items" }),
+      ),
+    });
+    const auth = createAuthClient({
+      baseURL: "http://localhost:8080",
+      plugins: [items],
+      fetchOptions: { impl, timeout: 0 },
+      crossTabSync: false,
+      refetchOnWindowFocus: false,
+    });
+
+    await auth.items({ perPage: 10, filter: { plan: "pro" } });
+
+    expect(Object.fromEntries(new URL(seen).searchParams)).toEqual({ per_page: "10", "filter[plan]": "pro" });
   });
 });

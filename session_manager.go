@@ -3,6 +3,7 @@ package limen
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -53,25 +54,33 @@ func (m *opaqueSessionManager) resolveSessionPolicy(session *Session) sessionPol
 	return p
 }
 
-func (m *opaqueSessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult, shortSession bool) (*SessionResult, error) {
+func (m *opaqueSessionManager) CreateSession(ctx context.Context, request *http.Request, authResult *AuthenticationResult, opts ...SessionCreateOption) (*SessionResult, error) {
+	o := ResolveSessionCreateOptions(opts...)
+
 	duration := m.config.Duration
-	if m.config.ShortSessionDuration > 0 && shortSession {
+	switch {
+	case o.ExpiresIn > 0:
+		duration = o.ExpiresIn
+	case o.ShortSession && m.config.ShortSessionDuration > 0:
 		duration = m.config.ShortSessionDuration
+	}
+
+	data := unwrapInternalSessionValues(o.Data)
+	if _, err := m.core.Schema.Session.sessionColumns(data); err != nil {
+		return nil, err
 	}
 
 	token := generateCryptoSecureRandomString()
 	clock := time.Now()
 	expiresAt := clock.Add(duration)
-	if err := m.storeSession(ctx, request, authResult.User.ID, token, clock, expiresAt); err != nil {
+	session, err := m.storeSession(ctx, request, authResult.User.ID, token, clock, expiresAt, data)
+	if err != nil {
 		return nil, fmt.Errorf("failed to store session: %w", err)
 	}
 
-	result := &SessionResult{
-		Token:        token,
-		Cookie:       m.createSessionCookie(token, expiresAt),
-		ShortSession: &shortSession,
-	}
-
+	result := m.newSessionResult(token, expiresAt)
+	result.ShortSession = &o.ShortSession
+	result.Session = session
 	return result, nil
 }
 
@@ -121,6 +130,9 @@ func (m *opaqueSessionManager) ValidateSession(ctx context.Context, request *htt
 }
 
 func (m *opaqueSessionManager) RevokeSession(ctx context.Context, token string) error {
+	if stored, ok := m.core.VerifySignedValue(token); ok {
+		token = stored
+	}
 	return m.store.Delete(ctx, token)
 }
 
@@ -142,6 +154,7 @@ func (m *opaqueSessionManager) UpdateSession(ctx context.Context, session *Sessi
 		return nil, err
 	}
 	payload[SessionSchemaTokenField] = session.Token
+	payload[SchemaIDField] = session.ID
 
 	if err := m.store.Set(ctx, payload); err != nil {
 		return nil, err
@@ -185,20 +198,19 @@ func (m *opaqueSessionManager) extendSessionExpiration(ctx context.Context, sess
 		return nil, fmt.Errorf("failed to update session: %w", err)
 	}
 
-	return &SessionResult{
-		Token:  session.Token,
-		Cookie: m.createSessionCookie(session.Token, session.ExpiresAt),
-	}, nil
+	return m.newSessionResult(session.Token, session.ExpiresAt), nil
 }
 
-func (m *opaqueSessionManager) createSessionCookie(token string, expiresAt time.Time) *http.Cookie {
-	if m.cookies == nil {
-		return nil
+func (m *opaqueSessionManager) newSessionResult(token string, expiresAt time.Time) *SessionResult {
+	signed := m.core.SignValue(token)
+	result := &SessionResult{Token: signed}
+	if m.cookies != nil {
+		result.Cookie = m.cookies.NewCookie(m.cookieName, signed, int(time.Until(expiresAt).Seconds()))
 	}
-	return m.cookies.NewCookie(m.cookieName, token, int(time.Until(expiresAt).Seconds()))
+	return result
 }
 
-func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, clock, expiresAt time.Time) error {
+func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, clock, expiresAt time.Time, data map[SchemaField]any) (*Session, error) {
 	session := &Session{
 		Token:      token,
 		UserID:     userID,
@@ -211,33 +223,40 @@ func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.R
 		},
 	}
 
-	return m.store.Set(ctx, session)
+	maps.Copy(data, m.core.Schema.Session.storageFields(session))
+	if err := m.store.Set(ctx, data); err != nil {
+		return nil, err
+	}
+
+	session.raw, _ = m.core.Schema.Session.sessionColumns(data)
+	return session, nil
 }
 
 func (m *opaqueSessionManager) extractToken(request *http.Request) (string, error) {
+	token, ok := m.core.VerifySignedValue(m.requestToken(request))
+	if !ok {
+		return "", ErrSessionNotFound
+	}
+	return token, nil
+}
+
+func (m *opaqueSessionManager) requestToken(request *http.Request) string {
 	if m.cookies != nil {
 		if val, err := m.cookies.Get(request, m.cookieName); err == nil {
-			token := strings.TrimSpace(val)
-			if token != "" {
-				return token, nil
+			if token := strings.TrimSpace(val); token != "" {
+				return token
 			}
 		}
 	}
 
 	if m.config.BearerEnabled {
-		authHeader := request.Header.Get("Authorization")
-		if authHeader != "" {
-			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
-				token := strings.TrimSpace(parts[1])
-				if token != "" {
-					return token, nil
-				}
-			}
+		parts := strings.SplitN(request.Header.Get("Authorization"), " ", 2)
+		if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
+			return strings.TrimSpace(parts[1])
 		}
 	}
 
-	return "", ErrSessionNotFound
+	return ""
 }
 
 func determineStore(config *sessionConfig, core *LimenCore) SessionStore {

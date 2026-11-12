@@ -34,7 +34,7 @@ func TestValidatePassword(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := plugin.validatePassword(tt.password)
+			err := plugin.ValidatePassword(tt.password)
 			if tt.wantErr != nil {
 				assert.ErrorIs(t, err, tt.wantErr)
 			} else {
@@ -49,10 +49,10 @@ func TestValidatePassword_WithSymbolsRequired(t *testing.T) {
 
 	plugin := newTestPlugin(WithPasswordRequireSymbols(true))
 
-	err := plugin.validatePassword("Password1")
+	err := plugin.ValidatePassword("Password1")
 	assert.ErrorIs(t, err, ErrPasswordRequiresSymbols)
 
-	err = plugin.validatePassword("Password1!")
+	err = plugin.ValidatePassword("Password1!")
 	assert.NoError(t, err)
 }
 

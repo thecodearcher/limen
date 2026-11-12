@@ -1,3 +1,4 @@
+export * from "./admin";
 export * from "./api-key";
 export * from "./bearer";
 export * from "./credential";

@@ -132,6 +132,31 @@ func HasRequiredPermissions(subjectPermissions, requiredPermissions Permissions)
 	return true
 }
 
+// ExpandPermissions replaces "*" with every action declared for the resource.
+func (ac *AccessControl) ExpandPermissions(perms Permissions) Permissions {
+	out := make(Permissions, len(perms))
+	for resource, actions := range perms {
+		if slices.Contains(actions, Wildcard) {
+			out[resource] = slices.Clone(ac.statements[resource])
+			continue
+		}
+		out[resource] = actions
+	}
+	return out
+}
+
+// Specs returns the permissions as sorted "resource:action" strings.
+func (p Permissions) Specs() []string {
+	specs := make([]string, 0, len(p))
+	for resource, actions := range p {
+		for _, action := range actions {
+			specs = append(specs, resource+":"+action)
+		}
+	}
+	slices.Sort(specs)
+	return specs
+}
+
 // ClampPermissions returns requested permissions limited to those in grantable.
 func ClampPermissions(requested, grantable Permissions) Permissions {
 	out := make(Permissions, len(requested))

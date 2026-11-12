@@ -6,7 +6,7 @@ import (
 	"github.com/thecodearcher/limen"
 )
 
-func (p *credentialPasswordPlugin) validatePassword(password string) error {
+func (p *credentialPasswordPlugin) ValidatePassword(password string) error {
 	if password == "" {
 		return ErrPasswordRequired
 	}
@@ -60,7 +60,7 @@ func (p *credentialPasswordPlugin) validateUser(user *limen.User, additionalFiel
 	if user.Password == nil {
 		return ErrPasswordRequired
 	}
-	if err := p.validatePassword(*user.Password); err != nil {
+	if err := p.ValidatePassword(*user.Password); err != nil {
 		return err
 	}
 

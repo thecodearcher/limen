@@ -160,13 +160,27 @@ export class Fetcher {
     const base = basePath === "" || basePath === "/" ? "" : ensureLeadingSlash(stripTrailingSlash(basePath));
     let path = base + ensureLeadingSlash(relativePath);
     if (query !== undefined) {
-      const qs = new URLSearchParams(query).toString();
+      const qs = toSearchParams(query).toString();
       if (qs.length > 0) {
         path = `${path}?${qs}`;
       }
     }
     return path;
   }
+}
+
+function toSearchParams(query: QueryParams): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) {
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      for (const [key, nested] of Object.entries(value)) {
+        params.append(`${name}[${key}]`, String(nested));
+      }
+      continue;
+    }
+    params.append(name, String(value));
+  }
+  return params;
 }
 
 function toRequestError(err: unknown): LimenError {

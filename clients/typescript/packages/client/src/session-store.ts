@@ -10,7 +10,10 @@ import type { ParseSession, Session } from "./types";
  * `error` holds the last non-401 failure (network error, 5xx, etc.). A 401 is
  * not an error — it resolves to `data: null`.
  */
-export type SessionState<TFields = unknown> = StoreState<Session<TFields> | null>;
+export type SessionState<TFields = unknown, TSession = Record<never, never>> = StoreState<Session<
+  TFields,
+  TSession
+> | null>;
 
 export type SessionStore<TFields = unknown> = DataStore<Session<TFields> | null>;
 

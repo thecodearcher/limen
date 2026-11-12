@@ -2,6 +2,7 @@ package sessionjwt
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -59,8 +60,11 @@ func (p *sessionJWTPlugin) FindRefreshTokenByToken(ctx context.Context, token st
 	model, err := p.core.FindOne(ctx, p.refreshTokenSchema, []limen.Where{
 		limen.Eq(p.refreshTokenSchema.GetTokenField(), token),
 	}, nil)
-	if err != nil {
+	if errors.Is(err, limen.ErrRecordNotFound) {
 		return nil, ErrInvalidRefreshToken
+	}
+	if err != nil {
+		return nil, err
 	}
 	return model.(*RefreshToken), nil
 }

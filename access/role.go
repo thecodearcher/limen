@@ -80,6 +80,15 @@ func (r Role) Permissions() Permissions {
 	return MergePermissions(r.permissions)
 }
 
+// MergeRolePermissions returns the union of the roles' permissions.
+func MergeRolePermissions(roles ...Role) Permissions {
+	perms := make([]Permissions, 0, len(roles))
+	for _, role := range roles {
+		perms = append(perms, role.permissions)
+	}
+	return MergePermissions(perms...)
+}
+
 func permits(perms Permissions, resource, action string) bool {
 	actions, ok := perms[resource]
 	if !ok {

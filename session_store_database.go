@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"time"
 )
 
 type databaseSessionStore struct {
@@ -31,15 +32,17 @@ func (s *databaseSessionStore) Get(ctx context.Context, token string) (*Session,
 func (s *databaseSessionStore) Set(ctx context.Context, data any) error {
 	switch v := data.(type) {
 	case *Session:
-		payload := make(map[SchemaField]any)
-		for column, value := range s.schema.ToStorage(v) {
-			payload[SchemaField(column)] = value
+		if v.ID != nil {
+			res, err := s.core.UpdateWithResult(ctx, s.schema, v, []Where{Eq(s.schema.GetIDField(), v.ID)})
+			if err != nil || res.RowsAffected > 0 {
+				return err
+			}
 		}
-		if v.ID == nil {
-			return s.core.Create(ctx, s.schema, payload, nil)
-		}
-		return s.write(ctx, payload)
+		return s.core.Create(ctx, s.schema, v, nil)
 	case map[SchemaField]any:
+		if v[SchemaIDField] == nil {
+			return s.core.Create(ctx, s.schema, v, nil)
+		}
 		return s.write(ctx, maps.Clone(v))
 	default:
 		return errUnsupportedSessionData(data)
@@ -54,6 +57,7 @@ func (s *databaseSessionStore) write(ctx context.Context, payload map[SchemaFiel
 
 	update := maps.Clone(payload)
 	delete(update, SessionSchemaTokenField)
+	delete(update, SchemaIDField)
 	if len(update) == 0 {
 		return nil
 	}
@@ -111,6 +115,7 @@ func (s *databaseSessionStore) DeleteByUserID(ctx context.Context, userID any) e
 func (s *databaseSessionStore) ListByUserID(ctx context.Context, userID any) ([]Session, error) {
 	models, err := s.core.FindMany(ctx, s.schema, []Where{
 		Eq(s.schema.GetUserIDField(), userID),
+		Gt(s.schema.GetExpiresAtField(), time.Now()),
 	})
 	if err != nil {
 		return nil, err

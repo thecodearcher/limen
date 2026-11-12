@@ -9,7 +9,7 @@ import (
 type Session struct {
 	ID         any            `json:"id,omitempty"`
 	Token      string         `json:"token"`
-	UserID     any            `json:"user_id"`
+	UserID     any            `json:"-"`
 	CreatedAt  time.Time      `json:"created_at"`
 	ExpiresAt  time.Time      `json:"expires_at"`
 	LastAccess time.Time      `json:"last_access"`
@@ -140,20 +140,28 @@ func (s *SessionSchema) FromStorage(data map[string]any) Model {
 }
 
 func (s *SessionSchema) ToStorage(data Model) map[string]any {
-	session := data.(*Session)
-	result := map[string]any{
-		s.GetTokenField():      session.Token,
-		s.GetUserIDField():     session.UserID,
-		s.GetCreatedAtField():  session.CreatedAt,
-		s.GetExpiresAtField():  session.ExpiresAt,
-		s.GetLastAccessField(): session.LastAccess,
+	fields := s.storageFields(data.(*Session))
+	result := make(map[string]any, len(fields))
+	for field, value := range fields {
+		result[s.GetField(field)] = value
+	}
+	return result
+}
+
+func (s *SessionSchema) storageFields(session *Session) map[SchemaField]any {
+	fields := map[SchemaField]any{
+		SessionSchemaTokenField:      session.Token,
+		SessionSchemaUserIDField:     session.UserID,
+		SessionSchemaCreatedAtField:  session.CreatedAt,
+		SessionSchemaExpiresAtField:  session.ExpiresAt,
+		SessionSchemaLastAccessField: session.LastAccess,
 	}
 
 	if session.Metadata != nil {
 		if metadataJSON, err := json.Marshal(session.Metadata); err == nil {
-			result[s.GetMetadataField()] = string(metadataJSON)
+			fields[SessionSchemaMetadataField] = string(metadataJSON)
 		}
 	}
 
-	return result
+	return fields
 }

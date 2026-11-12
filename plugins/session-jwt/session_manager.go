@@ -3,6 +3,7 @@ package sessionjwt
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -17,32 +18,42 @@ type jwtSessionManager struct {
 	plugin *sessionJWTPlugin
 }
 
-func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, auth *limen.AuthenticationResult, shortSession bool) (*limen.SessionResult, error) {
+func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, auth *limen.AuthenticationResult, opts ...limen.SessionCreateOption) (*limen.SessionResult, error) {
 	p := m.plugin
+	o := limen.ResolveSessionCreateOptions(opts...)
 
-	signed, jti, err := p.GenerateAccessToken(auth.User, nil)
+	sessionData, err := p.mergeSessionData(nil, o.Data)
 	if err != nil {
 		return nil, err
-	}
-
-	if !p.config.refreshTokenEnabled {
-		return p.buildSessionResult(signed, nil), nil
 	}
 
 	var expiresAt *time.Time
-	if shortSession {
-		shortDuration := min(p.config.refreshTokenDuration, 24*time.Hour)
-		exp := time.Now().Add(shortDuration)
+	switch {
+	case o.ExpiresIn > 0:
+		exp := time.Now().Add(o.ExpiresIn)
+		expiresAt = &exp
+	case o.ShortSession:
+		exp := time.Now().Add(min(p.config.refreshTokenDuration, 24*time.Hour))
 		expiresAt = &exp
 	}
 
+	signed, claims, err := p.generateAccessToken(auth.User, sessionData, expiresAt)
+	if err != nil {
+		return nil, err
+	}
+	session := p.claimsToSession(claims, signed, auth.User.ID)
+
+	if !p.config.refreshTokenEnabled {
+		return p.buildSessionResult(signed, session, nil), nil
+	}
+
 	family := generateJTI()
-	rt, err := p.CreateRefreshToken(ctx, auth.User.ID, jti, family, expiresAt, nil)
+	rt, err := p.CreateRefreshToken(ctx, auth.User.ID, claims.ID, family, expiresAt, sessionData)
 	if err != nil {
 		return nil, err
 	}
 
-	return p.buildSessionResult(signed, rt), nil
+	return p.buildSessionResult(signed, session, rt), nil
 }
 
 func (m *jwtSessionManager) ValidateSession(ctx context.Context, r *http.Request) (*limen.ValidatedSession, error) {
@@ -96,7 +107,18 @@ func (m *jwtSessionManager) RevokeSession(ctx context.Context, token string) err
 
 	claims := p.parseAccessTokenLenient(token)
 	if claims == nil || claims.ID == "" {
-		return nil
+		if !p.config.blacklistEnabled {
+			return p.DeleteRefreshToken(ctx, token)
+		}
+		rt, err := p.FindRefreshTokenByToken(ctx, token)
+		if errors.Is(err, ErrInvalidRefreshToken) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		_ = p.AddToBlacklist(ctx, rt.JWTID, rt.ExpiresAt)
+		return p.DeleteRefreshToken(ctx, rt.Token)
 	}
 
 	_ = p.deleteRefreshTokensByJTI(ctx, claims.ID)
@@ -112,15 +134,23 @@ func (m *jwtSessionManager) ListSessions(ctx context.Context, userID any) ([]lim
 		return nil, err
 	}
 
+	schema := m.plugin.core.Schema.Session
+	now := time.Now()
 	sessions := make([]limen.Session, 0, len(tokens))
 	for _, rt := range tokens {
-		sessions = append(sessions, limen.Session{
-			ID:        rt.ID,
-			Token:     rt.Token,
-			UserID:    rt.UserID,
-			CreatedAt: rt.CreatedAt,
-			ExpiresAt: rt.ExpiresAt,
-		})
+		if !rt.ExpiresAt.After(now) {
+			continue
+		}
+		data := map[string]any{
+			schema.GetIDField():         rt.ID,
+			schema.GetTokenField():      rt.Token,
+			schema.GetUserIDField():     rt.UserID,
+			schema.GetCreatedAtField():  rt.CreatedAt,
+			schema.GetExpiresAtField():  rt.ExpiresAt,
+			schema.GetLastAccessField(): rt.CreatedAt,
+		}
+		maps.Copy(data, rt.SessionData)
+		sessions = append(sessions, *schema.FromStorage(data).(*limen.Session))
 	}
 	return sessions, nil
 }
@@ -169,7 +199,7 @@ func (m *jwtSessionManager) UpdateSession(ctx context.Context, session *limen.Se
 	}
 
 	*session = *p.claimsToSession(newClaims, signed, session.UserID)
-	return p.buildSessionResult(signed, nil), nil
+	return p.buildSessionResult(signed, session, nil), nil
 }
 
 // UpdateSessions is a no-op: matching sessions would require decoding every
@@ -240,10 +270,10 @@ func encodeSessionData(sessionData map[string]any) (any, error) {
 	return string(b), nil
 }
 
-func (p *sessionJWTPlugin) buildSessionResult(jwtString string, rt *RefreshToken) *limen.SessionResult {
-	result := &limen.SessionResult{Token: jwtString}
+func (p *sessionJWTPlugin) buildSessionResult(jwtString string, session *limen.Session, rt *RefreshToken) *limen.SessionResult {
+	result := &limen.SessionResult{Token: jwtString, Session: session}
 	if rt != nil {
-		result.RefreshToken = encodeRefreshTokenValue(rt.Token, rt.Family)
+		result.RefreshToken = p.encodeRefreshTokenValue(rt.Token, rt.Family)
 	}
 	return result
 }

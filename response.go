@@ -2,6 +2,7 @@ package limen
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"strings"
 )
@@ -138,18 +139,27 @@ func (rs *Responder) SessionResponse(w http.ResponseWriter, r *http.Request, cor
 		return rs.Error(w, r, err)
 	}
 
+	extension := core.extendSessionResponse(r.Context(), result.User, sessionResult)
 	if rs.sessionTransformer != nil {
-		rs.handleSessionTransformer(w, r, result, sessionResult)
+		user := maps.Clone(result.User.Raw())
+		maps.Copy(user, extension.User)
+		rs.handleSessionTransformer(w, r, user, sessionResult)
 		return nil
 	}
 
-	return rs.JSON(w, r, http.StatusOK, map[string]any{
-		"user": core.SerializeModel(core.Schema.User, result.User),
-	})
+	user := core.SerializeModel(core.Schema.User, result.User)
+	maps.Copy(user, extension.User)
+	payload := map[string]any{"user": user}
+
+	if len(extension.Session) > 0 {
+		payload["session"] = extension.Session
+	}
+
+	return rs.JSON(w, r, http.StatusOK, payload)
 }
 
-func (rs *Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Request, result *AuthenticationResult, sessionResult *SessionResult) {
-	payload, err := rs.sessionTransformer(result.User.Raw(), sessionResult)
+func (rs *Responder) handleSessionTransformer(w http.ResponseWriter, r *http.Request, user map[string]any, sessionResult *SessionResult) {
+	payload, err := rs.sessionTransformer(user, sessionResult)
 	if err != nil {
 		rs.Error(w, r, err)
 		return

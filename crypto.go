@@ -1,12 +1,37 @@
 package limen
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"golang.org/x/crypto/chacha20poly1305"
 )
+
+func signValue(value string, secret []byte) string {
+	return value + "." + hmacSignature(value, secret)
+}
+
+func verifySignedValue(signed string, secret []byte) (string, bool) {
+	i := strings.LastIndex(signed, ".")
+	if i < 0 {
+		return "", false
+	}
+	value, signature := signed[:i], signed[i+1:]
+	if !hmac.Equal([]byte(signature), []byte(hmacSignature(value, secret))) {
+		return "", false
+	}
+	return value, true
+}
+
+func hmacSignature(value string, secret []byte) string {
+	mac := hmac.New(sha256.New, secret)
+	mac.Write([]byte(value))
+	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
 
 // Encrypt encrypts the plaintext using XChaCha20-Poly1305 with the provided key (32 bytes).
 func EncryptXChaCha(plaintext string, secret, additionalData []byte) (string, error) {

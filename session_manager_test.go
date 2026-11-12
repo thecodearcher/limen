@@ -27,7 +27,7 @@ func TestOpaqueSessionManager_CreateSession(t *testing.T) {
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: "a@b.com"}}
 
-	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, false)
+	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, result.Token)
 	assert.NotNil(t, result.Cookie)
@@ -42,13 +42,13 @@ func TestOpaqueSessionManager_CreateSession(t *testing.T) {
 func TestOpaqueSessionManager_CreateShortSession(t *testing.T) {
 	t.Parallel()
 
-	l := newTestLimenWithSessionConfig(t, WithSessionShortDuration(1*time.Hour))
+	l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithSessionShortDuration(1*time.Hour)))
 	userID := seedUser(t, l, "b@c.com")
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
 	auth := &AuthenticationResult{User: &User{ID: userID, Email: "b@c.com"}}
 
-	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, true)
+	result, err := l.core.SessionManager.CreateSession(context.Background(), req, auth, WithShortSession(true))
 	assert.NoError(t, err)
 	assert.NotEmpty(t, result.Token)
 
@@ -74,7 +74,8 @@ func TestOpaqueSessionManager_ValidateSession(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, validated)
 	assert.Equal(t, userID, validated.User.ID)
-	assert.Equal(t, sess.Token, validated.Session.Token)
+	stored, _ := l.core.VerifySignedValue(sess.Token)
+	assert.Equal(t, stored, validated.Session.Token)
 }
 
 func TestOpaqueSessionManager_ValidateSession_Expired(t *testing.T) {
@@ -95,7 +96,7 @@ func TestOpaqueSessionManager_ValidateSession_Expired(t *testing.T) {
 	require.NoError(t, err)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
-	req.AddCookie(&http.Cookie{Name: "limen_session", Value: "expired-token"})
+	req.AddCookie(&http.Cookie{Name: "limen_session", Value: l.core.SignValue("expired-token")})
 
 	_, err = l.core.SessionManager.ValidateSession(context.Background(), req)
 	assert.ErrorIs(t, err, ErrSessionExpired)
@@ -125,14 +126,28 @@ func TestOpaqueSessionManager_ValidateSession_NotFound(t *testing.T) {
 	}
 }
 
+func TestOpaqueSessionManager_ValidateSession_UnsignedToken(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	userID := seedUser(t, l, "unsigned@test.com")
+	sess := SeedTestSessionRecord(t, l, userID, "unsigned@test.com")
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
+	req.AddCookie(&http.Cookie{Name: "limen_session", Value: sess.Token})
+
+	_, err := l.core.SessionManager.ValidateSession(t.Context(), req)
+	assert.ErrorIs(t, err, ErrSessionNotFound)
+}
+
 func TestOpaqueSessionManager_ExtractToken_Bearer(t *testing.T) {
 	t.Parallel()
 
-	l := newTestLimenWithSessionConfig(t, WithBearerEnabled())
+	l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithBearerEnabled()))
 	sm := typedSessionManager(t, l)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
-	req.Header.Set("Authorization", "Bearer my-token-123")
+	req.Header.Set("Authorization", "Bearer "+l.core.SignValue("my-token-123"))
 
 	token, err := sm.extractToken(req)
 	assert.NoError(t, err)
@@ -142,12 +157,12 @@ func TestOpaqueSessionManager_ExtractToken_Bearer(t *testing.T) {
 func TestOpaqueSessionManager_ExtractToken_CookiePriority(t *testing.T) {
 	t.Parallel()
 
-	l := newTestLimenWithSessionConfig(t, WithBearerEnabled())
+	l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithBearerEnabled()))
 	sm := typedSessionManager(t, l)
 
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
-	req.AddCookie(&http.Cookie{Name: "limen_session", Value: "cookie-token"})
-	req.Header.Set("Authorization", "Bearer bearer-token")
+	req.AddCookie(&http.Cookie{Name: "limen_session", Value: l.core.SignValue("cookie-token")})
+	req.Header.Set("Authorization", "Bearer "+l.core.SignValue("bearer-token"))
 
 	token, err := sm.extractToken(req)
 	assert.NoError(t, err)
@@ -203,10 +218,44 @@ func TestOpaqueSessionManager_ListSessions(t *testing.T) {
 	assert.Len(t, sessions, 2)
 }
 
+func TestOpaqueSessionManager_ListSessions_SkipsExpired(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name      string
+		storeType StoreType
+	}{
+		{name: "database store", storeType: StoreTypeDatabase},
+		{name: "cache store", storeType: StoreTypeCache},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithSessionStoreType(tt.storeType)))
+			userID := seedUser(t, l, "expired@test.com")
+			live := SeedTestSessionRecord(t, l, userID, "expired@test.com")
+			past := time.Now().Add(-time.Hour)
+			require.NoError(t, typedSessionManager(t, l).store.Set(t.Context(), &Session{
+				Token:      "expired-token",
+				UserID:     userID,
+				CreatedAt:  past.Add(-time.Hour),
+				ExpiresAt:  past,
+				LastAccess: past,
+			}))
+
+			sessions, err := l.core.SessionManager.ListSessions(t.Context(), userID)
+			require.NoError(t, err)
+			require.Len(t, sessions, 1)
+			assert.Equal(t, live.Token, sessions[0].Token)
+		})
+	}
+}
+
 func TestResolveSessionPolicy_ShortSession(t *testing.T) {
 	t.Parallel()
 
-	l := newTestLimenWithSessionConfig(t, WithSessionShortDuration(1*time.Hour))
+	l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithSessionShortDuration(1*time.Hour)))
 	sm := typedSessionManager(t, l)
 
 	now := time.Now()
@@ -233,4 +282,130 @@ func TestResolveSessionPolicy_NormalSession(t *testing.T) {
 
 	policy := sm.resolveSessionPolicy(normalSession)
 	assert.Equal(t, 24*time.Hour, policy.UpdateAge)
+}
+
+const testSessionTagField SchemaField = "tag"
+
+func newSessionTagPlugin(t *testing.T) Plugin {
+	t.Helper()
+	return &sessionTagPlugin{}
+}
+
+type sessionTagPlugin struct {
+	testPlugin
+}
+
+func (p *sessionTagPlugin) Name() PluginName {
+	return "session-tag-test"
+}
+
+func (p *sessionTagPlugin) GetSchemas(schema *SchemaConfig) []SchemaIntrospector {
+	return []SchemaIntrospector{
+		NewSchemaDefinitionForExtension(CoreSchemaSessions, schema.Session,
+			WithSchemaField(testSessionTagField, ColumnTypeString, WithNullable(true)),
+		),
+	}
+}
+
+func TestOpaqueSessionManager_CreateSession_Data(t *testing.T) {
+	t.Parallel()
+
+	testData := []struct {
+		name      string
+		storeType StoreType
+	}{
+		{name: "database store", storeType: StoreTypeDatabase},
+		{name: "cache store", storeType: StoreTypeCache},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithSessionStoreType(tt.storeType)), newSessionTagPlugin(t))
+			userID := seedUser(t, l, "data@test.com")
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
+			auth := &AuthenticationResult{User: &User{ID: userID}}
+
+			result, err := l.core.SessionManager.CreateSession(t.Context(), req, auth, WithSessionData(map[SchemaField]any{
+				testSessionTagField: SessionValue{Internal: "internal", Client: "client"},
+			}))
+			require.NoError(t, err)
+
+			validateReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
+			validateReq.AddCookie(result.Cookie)
+			validated, err := l.core.SessionManager.ValidateSession(t.Context(), validateReq)
+			require.NoError(t, err)
+
+			tag, err := l.core.SessionManager.GetSessionData(t.Context(), validated.Session, testSessionTagField)
+			assert.NoError(t, err)
+			assert.Equal(t, "internal", tag)
+
+			sessions, err := l.core.SessionManager.ListSessions(t.Context(), userID)
+			require.NoError(t, err)
+			require.Len(t, sessions, 1)
+			listedTag, err := l.core.SessionManager.GetSessionData(t.Context(), &sessions[0], testSessionTagField)
+			assert.NoError(t, err)
+			assert.Equal(t, "internal", listedTag)
+		})
+	}
+}
+
+func TestOpaqueSessionManager_CreateSession_DataCannotOverrideCoreFields(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	userID := seedUser(t, l, "owner@test.com")
+	otherID := seedUser(t, l, "other@test.com")
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
+	auth := &AuthenticationResult{User: &User{ID: userID}}
+
+	result, err := l.core.SessionManager.CreateSession(t.Context(), req, auth, WithSessionData(map[SchemaField]any{
+		SessionSchemaUserIDField: otherID,
+	}))
+	require.NoError(t, err)
+
+	validateReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
+	validateReq.AddCookie(result.Cookie)
+	validated, err := l.core.SessionManager.ValidateSession(t.Context(), validateReq)
+	assert.NoError(t, err)
+	assert.Equal(t, userID, validated.User.ID)
+}
+
+func TestOpaqueSessionManager_CreateSession_ExpiresIn(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimenWithSessionConfig(t, NewDefaultSessionConfig(WithSessionShortDuration(1*time.Hour)))
+	userID := seedUser(t, l, "expires@test.com")
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
+	auth := &AuthenticationResult{User: &User{ID: userID}}
+
+	result, err := l.core.SessionManager.CreateSession(t.Context(), req, auth,
+		WithShortSession(true),
+		WithSessionExpiresIn(30*time.Minute),
+	)
+	require.NoError(t, err)
+
+	validateReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/me", http.NoBody)
+	validateReq.AddCookie(result.Cookie)
+	validated, err := l.core.SessionManager.ValidateSession(t.Context(), validateReq)
+	assert.NoError(t, err)
+	ttl := validated.Session.ExpiresAt.Sub(validated.Session.CreatedAt)
+	assert.InDelta(t, (30 * time.Minute).Seconds(), ttl.Seconds(), 1)
+}
+
+func TestOpaqueSessionManager_CreateSession_UnknownDataField(t *testing.T) {
+	t.Parallel()
+
+	l := newTestLimen(t)
+	userID := seedUser(t, l, "unknown@test.com")
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signin", http.NoBody)
+
+	_, err := l.core.SessionManager.CreateSession(t.Context(), req, &AuthenticationResult{User: &User{ID: userID}},
+		WithSessionData(map[SchemaField]any{"missing": "x"}),
+	)
+	assert.ErrorIs(t, err, ErrUnknownSessionField)
+
+	sessions, err := l.core.SessionManager.ListSessions(t.Context(), userID)
+	assert.NoError(t, err)
+	assert.Empty(t, sessions)
 }

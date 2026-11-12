@@ -1,5 +1,7 @@
 package limen
 
+import "context"
+
 // Plugin is the interface that all plugins must implement.
 type Plugin interface {
 	// Unique identifier for the plugin.
@@ -28,6 +30,28 @@ type SchemaProvider interface {
 // initialization and wires the session manager automatically.
 type SessionManagerProvider interface {
 	SessionManager() SessionManager
+}
+
+// SessionCreateGuard is an optional interface that plugins can implement
+// to reject a session before it is created. An error from BeforeSessionCreate
+// is returned by CreateSession.
+type SessionCreateGuard interface {
+	BeforeSessionCreate(ctx context.Context, auth *AuthenticationResult) error
+}
+
+// SessionExtension holds the fields a SessionResponseExtender adds to a session response.
+type SessionExtension struct {
+	// User fields are merged into the response's "user".
+	User map[string]any
+	// Session fields are merged into the response's "session".
+	Session map[string]any
+}
+
+// SessionResponseExtender is an optional interface that plugins can implement
+// to add fields to session responses. session is the session the response is
+// for, or nil when it is unknown.
+type SessionResponseExtender interface {
+	ExtendSessionResponse(ctx context.Context, user *User, session *Session) SessionExtension
 }
 
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.

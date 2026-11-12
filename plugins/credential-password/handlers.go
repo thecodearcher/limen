@@ -131,7 +131,7 @@ func (p *credentialPasswordHandlers) SignUpWithCredentialAndPassword(w http.Resp
 		v.Field("email").Required().Email()
 		v.Field("password").Required().String().Custom(func(value any, _ map[string]any) error {
 			password, _ := value.(string)
-			return p.plugin.validatePassword(password)
+			return p.plugin.ValidatePassword(password)
 		})
 		v.Field("username").RequiredWhen(p.isUsernameRequiredOnSignup).String().Custom(func(value any, _ map[string]any) error {
 			username, _ := value.(string)
@@ -210,7 +210,7 @@ func (p *credentialPasswordHandlers) ResetPassword(w http.ResponseWriter, r *htt
 		v.Field("token").Required()
 		v.Field("new_password").Required().Custom(func(value any, _ map[string]any) error {
 			newPassword, _ := value.(string)
-			return p.plugin.validatePassword(newPassword)
+			return p.plugin.ValidatePassword(newPassword)
 		})
 	})
 
@@ -234,7 +234,7 @@ func (p *credentialPasswordHandlers) ChangePassword(w http.ResponseWriter, r *ht
 		v.Field("current_password").Required()
 		v.Field("new_password").Required().Custom(func(value any, _ map[string]any) error {
 			newPassword, _ := value.(string)
-			return p.plugin.validatePassword(newPassword)
+			return p.plugin.ValidatePassword(newPassword)
 		})
 	})
 
@@ -280,7 +280,7 @@ func (p *credentialPasswordHandlers) SetPassword(w http.ResponseWriter, r *http.
 	body := limen.ValidateRequest(w, r, p.responder, func(v *limen.Validator) {
 		v.Field("new_password").Required().Custom(func(value any, _ map[string]any) error {
 			newPassword, _ := value.(string)
-			return p.plugin.validatePassword(newPassword)
+			return p.plugin.ValidatePassword(newPassword)
 		})
 	})
 

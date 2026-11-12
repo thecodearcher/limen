@@ -68,8 +68,8 @@ func TestListSessions(t *testing.T) {
 	userID := seedUser(t, l, "b@c.com")
 	handlers := newTestHandlersFromLimen(t, l)
 
-	sess1 := seedSession(t, l, userID, "b@c.com")
-	sess2 := seedSession(t, l, userID, "b@c.com")
+	sess1 := SeedTestSessionRecord(t, l, userID, "b@c.com")
+	sess2 := SeedTestSessionRecord(t, l, userID, "b@c.com")
 
 	user := &User{ID: userID, Email: "b@c.com"}
 	validatedSession := &ValidatedSession{
