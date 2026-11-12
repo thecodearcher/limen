@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createAuthClient, LimenError } from "../src";
+import { createAuthClient, defineClientPlugin, defineRoutes, LimenError, route } from "../src";
 
 /** A fetch impl that never resolves but rejects when its signal aborts — like real fetch. */
 function hangingImpl(): typeof fetch {
@@ -104,5 +104,32 @@ describe("fetcher — per-call init", () => {
     await auth.sessions(undefined, { headers: { "X-Test": "override" } });
 
     expect(seen?.get("X-Test")).toBe("override");
+  });
+});
+
+describe("fetcher — query", () => {
+  it("sends an object query value as name[key] params", async () => {
+    let seen = "";
+    const impl = ((url: RequestInfo | URL) => {
+      seen = String(url);
+      return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+    }) as typeof fetch;
+    const items = defineClientPlugin({
+      id: "items",
+      routes: defineRoutes(
+        route<{ perPage: number; filter: Record<string, string> }, unknown[]>()({ method: "GET", path: "/items" }),
+      ),
+    });
+    const auth = createAuthClient({
+      baseURL: "http://localhost:8080",
+      plugins: [items],
+      fetchOptions: { impl, timeout: 0 },
+      crossTabSync: false,
+      refetchOnWindowFocus: false,
+    });
+
+    await auth.items({ perPage: 10, filter: { plan: "pro" } });
+
+    expect(Object.fromEntries(new URL(seen).searchParams)).toEqual({ per_page: "10", "filter[plan]": "pro" });
   });
 });
