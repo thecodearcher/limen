@@ -5,7 +5,7 @@ import { defineClientPlugin, defineRoutes, defineStores } from "../src/define-pl
 import type { SessionState } from "../src/session-store";
 import { sessionStore } from "../src/session-store";
 import { effect, storeRef } from "../src/stores";
-import type { PrettyUserFields, Session } from "../src/types";
+import type { PrettySessionFields, PrettyUserFields, Session } from "../src/types";
 import { mockFetch, settle, type MockReply, type Recorded } from "./helpers";
 
 const signedIn: Session = { user: { id: "u1", email: "ada@example.com", emailVerifiedAt: null } };
@@ -19,7 +19,7 @@ function setup<const Plugins extends Parameters<typeof createAuthClient>[0]["plu
     baseURL: "http://localhost:8080",
     plugins,
     fetchOptions: { impl },
-    initialSession: signedIn as Session<PrettyUserFields<Plugins, unknown>>,
+    initialSession: signedIn as Session<PrettyUserFields<Plugins, unknown>, PrettySessionFields<Plugins>>,
     crossTabSync: false,
     refetchOnWindowFocus: false,
   });

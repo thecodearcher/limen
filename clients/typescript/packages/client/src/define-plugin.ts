@@ -13,6 +13,7 @@ export type RunRoute = <I, O>(route: RouteDescriptor<I, O>, input: I) => Promise
  */
 export type PluginSchema = {
   user?: object;
+  session?: object;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- keeps RouteContext<any> assignment-compatible under AnyClientPlugin

@@ -8,19 +8,20 @@ import (
 )
 
 type LimenCore struct {
-	config         *Config
-	baseURL        string
-	fullBaseURL    string // baseURL + HTTP.basePath
-	db             DatabaseAdapter
-	cacheStore     CacheAdapter
-	DBAction       *DatabaseActionHelper
-	Schema         *SchemaConfig
-	SessionManager SessionManager
-	cookies        *cookieManager
-	schemaResolver *SchemaResolver
-	plugins        map[PluginName]Plugin
-	sessionGuards  []SessionCreateGuard
-	secret         []byte
+	config           *Config
+	baseURL          string
+	fullBaseURL      string // baseURL + HTTP.basePath
+	db               DatabaseAdapter
+	cacheStore       CacheAdapter
+	DBAction         *DatabaseActionHelper
+	Schema           *SchemaConfig
+	SessionManager   SessionManager
+	cookies          *cookieManager
+	schemaResolver   *SchemaResolver
+	plugins          map[PluginName]Plugin
+	sessionGuards    []SessionCreateGuard
+	sessionExtenders []SessionResponseExtender
+	secret           []byte
 }
 
 func (c *LimenCore) getPublicIDConfig(schema Schema) (SchemaName, *PublicIDConfig, bool) {
@@ -206,6 +207,23 @@ func (c *LimenCore) CreateSession(ctx context.Context, r *http.Request, w http.R
 
 	opts = append([]SessionCreateOption{WithShortSession(c.cookies.checkIsShortSession(r))}, opts...)
 	return c.SessionManager.CreateSession(ctx, r, auth, opts...)
+}
+
+func (c *LimenCore) extendSessionResponse(ctx context.Context, user *User, sessionResult *SessionResult) SessionExtension {
+	var session *Session
+	if sessionResult != nil && sessionResult.Session != nil {
+		session = sessionResult.Session
+	} else if current, err := GetCurrentSessionFromCtx(ctx); err == nil {
+		session = current.Session
+	}
+
+	merged := SessionExtension{User: map[string]any{}, Session: map[string]any{}}
+	for _, extender := range c.sessionExtenders {
+		extension := extender.ExtendSessionResponse(ctx, user, session)
+		maps.Copy(merged.User, extension.User)
+		maps.Copy(merged.Session, extension.Session)
+	}
+	return merged
 }
 
 // RotateSession revokes the caller's current session (or all of the user's

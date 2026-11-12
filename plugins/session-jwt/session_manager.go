@@ -37,22 +37,23 @@ func (m *jwtSessionManager) CreateSession(ctx context.Context, r *http.Request, 
 		expiresAt = &exp
 	}
 
-	signed, jti, err := p.generateAccessToken(auth.User, sessionData, expiresAt)
+	signed, claims, err := p.generateAccessToken(auth.User, sessionData, expiresAt)
 	if err != nil {
 		return nil, err
 	}
+	session := p.claimsToSession(claims, signed, auth.User.ID)
 
 	if !p.config.refreshTokenEnabled {
-		return p.buildSessionResult(signed, nil), nil
+		return p.buildSessionResult(signed, session, nil), nil
 	}
 
 	family := generateJTI()
-	rt, err := p.CreateRefreshToken(ctx, auth.User.ID, jti, family, expiresAt, sessionData)
+	rt, err := p.CreateRefreshToken(ctx, auth.User.ID, claims.ID, family, expiresAt, sessionData)
 	if err != nil {
 		return nil, err
 	}
 
-	return p.buildSessionResult(signed, rt), nil
+	return p.buildSessionResult(signed, session, rt), nil
 }
 
 func (m *jwtSessionManager) ValidateSession(ctx context.Context, r *http.Request) (*limen.ValidatedSession, error) {
@@ -198,7 +199,7 @@ func (m *jwtSessionManager) UpdateSession(ctx context.Context, session *limen.Se
 	}
 
 	*session = *p.claimsToSession(newClaims, signed, session.UserID)
-	return p.buildSessionResult(signed, nil), nil
+	return p.buildSessionResult(signed, session, nil), nil
 }
 
 // UpdateSessions is a no-op: matching sessions would require decoding every
@@ -269,8 +270,8 @@ func encodeSessionData(sessionData map[string]any) (any, error) {
 	return string(b), nil
 }
 
-func (p *sessionJWTPlugin) buildSessionResult(jwtString string, rt *RefreshToken) *limen.SessionResult {
-	result := &limen.SessionResult{Token: jwtString}
+func (p *sessionJWTPlugin) buildSessionResult(jwtString string, session *limen.Session, rt *RefreshToken) *limen.SessionResult {
+	result := &limen.SessionResult{Token: jwtString, Session: session}
 	if rt != nil {
 		result.RefreshToken = p.encodeRefreshTokenValue(rt.Token, rt.Family)
 	}

@@ -110,6 +110,9 @@ export type PluginModelFields<Plugins extends readonly unknown[], M extends keyo
   { [K in keyof Plugins]: ModelFieldsOf<Plugins[K], M> }[number]
 >;
 
+/** All plugin-contributed `session` fields. */
+export type InferSessionFields<Plugins extends readonly unknown[]> = PluginModelFields<Plugins, "session">;
+
 /** A consumer's `TFields` widened with all plugin-contributed `user` fields. */
 export type InferUserFields<Plugins extends readonly unknown[], TFields> = User<TFields> &
   PluginModelFields<Plugins, "user">;
@@ -138,7 +141,7 @@ export type PluginStoresOf<Plugins extends readonly unknown[]> = UnionToIntersec
 
 /** The stores the core owns. Session carries the plugin-enriched user shape. */
 export type CoreStores<Plugins extends readonly unknown[], TFields> = {
-  session: SessionState<Prettify<InferUserFields<Plugins, TFields>>>;
+  session: SessionState<Prettify<InferUserFields<Plugins, TFields>>, Prettify<InferSessionFields<Plugins>>>;
 };
 
 /** Every store on a client, as the values they hold. */

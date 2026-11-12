@@ -27,5 +27,24 @@ export function defaultSessionParse<F = unknown>(raw: unknown): Session<F> | fal
   if (typeof userRaw !== "object" || userRaw === null || Array.isArray(userRaw)) {
     return false;
   }
-  return { user: normalizeUser<F>(userRaw as Record<string, unknown>) };
+  const user = normalizeUser<F>(userRaw as Record<string, unknown>);
+  const sessionRaw = (raw as Record<string, unknown>)["session"];
+  if (typeof sessionRaw !== "object" || sessionRaw === null || Array.isArray(sessionRaw)) {
+    return { user };
+  }
+  return { user, session: camelizeDeep(sessionRaw) as Record<never, never> };
+}
+
+function camelizeDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(camelizeDeep);
+  }
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, inner] of Object.entries(value)) {
+    out[toCamelCaseKey(key)] = camelizeDeep(inner);
+  }
+  return out;
 }

@@ -73,12 +73,14 @@ func (m *opaqueSessionManager) CreateSession(ctx context.Context, request *http.
 	token := generateCryptoSecureRandomString()
 	clock := time.Now()
 	expiresAt := clock.Add(duration)
-	if err := m.storeSession(ctx, request, authResult.User.ID, token, clock, expiresAt, data); err != nil {
+	session, err := m.storeSession(ctx, request, authResult.User.ID, token, clock, expiresAt, data)
+	if err != nil {
 		return nil, fmt.Errorf("failed to store session: %w", err)
 	}
 
 	result := m.newSessionResult(token, expiresAt)
 	result.ShortSession = &o.ShortSession
+	result.Session = session
 	return result, nil
 }
 
@@ -208,7 +210,7 @@ func (m *opaqueSessionManager) newSessionResult(token string, expiresAt time.Tim
 	return result
 }
 
-func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, clock, expiresAt time.Time, data map[SchemaField]any) error {
+func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.Request, userID any, token string, clock, expiresAt time.Time, data map[SchemaField]any) (*Session, error) {
 	session := &Session{
 		Token:      token,
 		UserID:     userID,
@@ -222,7 +224,12 @@ func (m *opaqueSessionManager) storeSession(ctx context.Context, request *http.R
 	}
 
 	maps.Copy(data, m.core.Schema.Session.storageFields(session))
-	return m.store.Set(ctx, data)
+	if err := m.store.Set(ctx, data); err != nil {
+		return nil, err
+	}
+
+	session.raw, _ = m.core.Schema.Session.sessionColumns(data)
+	return session, nil
 }
 
 func (m *opaqueSessionManager) extractToken(request *http.Request) (string, error) {

@@ -1,12 +1,15 @@
 package limen
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestResponder(t *testing.T) *Responder {
@@ -99,6 +102,63 @@ func TestToLimenError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ToLimenError(tt.err)
 			assert.Equal(t, tt.want, result.Status())
+		})
+	}
+}
+
+type sessionExtenderPlugin struct {
+	testPlugin
+}
+
+func (p *sessionExtenderPlugin) ExtendSessionResponse(_ context.Context, _ *User, session *Session) SessionExtension {
+	extension := SessionExtension{User: map[string]any{"tag": "extended"}}
+	if session != nil {
+		extension.Session = map[string]any{"token": session.Token}
+	}
+	return extension
+}
+
+func TestResponder_SessionResponse_Extends(t *testing.T) {
+	t.Parallel()
+
+	transformer := WithHTTPSessionTransformer(func(user map[string]any, _ *SessionResult) (map[string]any, error) {
+		return map[string]any{"user": map[string]any{"tag": user["tag"]}}, nil
+	})
+
+	testData := []struct {
+		name          string
+		opts          []HTTPConfigOption
+		sessionResult *SessionResult
+		wantToken     string
+	}{
+		{name: "current session", wantToken: "current"},
+		{name: "issued session", sessionResult: &SessionResult{Session: &Session{Token: "issued"}}, wantToken: "issued"},
+		{name: "session transformer", opts: []HTTPConfigOption{transformer}},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			l := newTestLimen(t, &sessionExtenderPlugin{})
+			user, err := l.core.DBAction.FindUserByID(t.Context(), seedUser(t, l, "ext@test.com"))
+			require.NoError(t, err)
+			cfg := NewDefaultHTTPConfig(tt.opts...)
+			rs := newResponder(cfg, newCookieManager(cfg.cookieConfig, testSecret), false)
+			ctx := context.WithValue(t.Context(), contextKeyActiveSession{}, &ValidatedSession{User: user, Session: &Session{Token: "current"}})
+			req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/", http.NoBody)
+			w := httptest.NewRecorder()
+
+			require.NoError(t, rs.SessionResponse(w, req, l.core, &AuthenticationResult{User: user}, tt.sessionResult))
+
+			var body struct {
+				User    map[string]any `json:"user"`
+				Session map[string]any `json:"session"`
+			}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+			assert.Equal(t, "extended", body.User["tag"])
+			if tt.wantToken != "" {
+				assert.Equal(t, tt.wantToken, body.Session["token"])
+			}
 		})
 	}
 }

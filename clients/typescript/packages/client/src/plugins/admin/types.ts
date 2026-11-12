@@ -28,6 +28,11 @@ export type AdminUserWithRoles<TFields = unknown> = AdminUser<TFields> & {
   permissions: string[];
 };
 
+/** The fields the admin plugin adds to `session`. `impersonatedBy` is set while an admin impersonates the user. */
+export type AdminSessionFields<TFields = unknown> = {
+  impersonatedBy?: AdminUser<TFields>;
+};
+
 export type AdminRole = {
   name: string;
   permissions: Record<string, string[]>;

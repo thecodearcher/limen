@@ -23,7 +23,7 @@ export type ActiveSession = {
 /**
  * Core routes available on every client.
  */
-export function coreClientPlugin<TFields = unknown>() {
+export function coreClientPlugin<TFields = unknown, TSession = Record<never, never>>() {
   const routes = defineRoutes(
     route<void, ActiveSession[]>()({
       method: "GET",
@@ -39,7 +39,7 @@ export function coreClientPlugin<TFields = unknown>() {
       path: "/revoke-sessions",
       clearSession: true,
     }),
-    route<VerifyEmailInput, string | Session<TFields>>()({
+    route<VerifyEmailInput, string | Session<TFields, TSession>>()({
       method: "POST",
       path: "/verify-email",
       parseSession: true,
@@ -65,16 +65,18 @@ export function coreClientPlugin<TFields = unknown>() {
        * `error`). Use `getSession()` when you need an awaited server re-check, such
        * as route guards or SSR revalidation after `initialSession`.
        */
-      getSession: async (): Promise<Session<TFields> | null> => {
+      getSession: async (): Promise<Session<TFields, TSession> | null> => {
         await ctx.refetchSession();
         const state = ctx.store.$state.get();
         if (state.error) {
           throw state.error;
         }
-        return state.data as Session<TFields> | null;
+        return state.data as Session<TFields, TSession> | null;
       },
     }),
   });
 }
 
-export type CoreContribution<TFields = unknown> = InferPluginContribution<ReturnType<typeof coreClientPlugin<TFields>>>;
+export type CoreContribution<TFields = unknown, TSession = Record<never, never>> = InferPluginContribution<
+  ReturnType<typeof coreClientPlugin<TFields, TSession>>
+>;

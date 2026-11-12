@@ -107,6 +107,22 @@ func (p *adminPlugin) Initialize(core *limen.LimenCore) error {
 	return nil
 }
 
+func (p *adminPlugin) ExtendSessionResponse(ctx context.Context, user *limen.User, session *limen.Session) limen.SessionExtension {
+	roles, err := p.GetUserRoles(ctx, user)
+	if err != nil {
+		roles = nil
+	}
+	extension := limen.SessionExtension{User: serializeRoles(roles)}
+
+	if !p.config.impersonationEnabled || session == nil {
+		return extension
+	}
+	if impersonator := p.findImpersonator(ctx, session); impersonator != nil {
+		extension.Session = map[string]any{"impersonated_by": p.serializeUser(impersonator)}
+	}
+	return extension
+}
+
 func (p *adminPlugin) BeforeSessionCreate(ctx context.Context, auth *limen.AuthenticationResult) error {
 	if !p.config.bansEnabled {
 		return nil

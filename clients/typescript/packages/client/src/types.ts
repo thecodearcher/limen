@@ -1,7 +1,7 @@
 import type { ReadableAtom } from "nanostores";
 import type { AnyClientPlugin } from "./define-plugin";
 import type { FetcherFetchOptions } from "./fetcher";
-import type { CombinedClientContributions, InferUserFields, StoresOf } from "./infer";
+import type { CombinedClientContributions, InferSessionFields, InferUserFields, StoresOf } from "./infer";
 import type { PluginOverrides } from "./plugin";
 import type { CoreContribution } from "./routes";
 import type { Prettify } from "./type-utils";
@@ -22,7 +22,7 @@ export type CreateAuthClientOptions<Plugins extends readonly AnyClientPlugin[], 
    * when the body is a session, or `false` when it is not. `false` leaves the
    * store unchanged on a route call;
    */
-  parseSession?: ParseSession<PrettyUserFields<Plugins, TFields>>;
+  parseSession?: ParseSession<PrettyUserFields<Plugins, TFields>, PrettySessionFields<Plugins>>;
   /**
    * How the SDK navigates the browser when a flow hands control to an external
    * page (e.g. an OAuth provider's authorization URL). Defaults to
@@ -48,7 +48,7 @@ export type CreateAuthClientOptions<Plugins extends readonly AnyClientPlugin[], 
    * avoid a hydration flash. When provided, lazy hydration is skipped until you
    * call `getSession()` or the store revalidates.
    */
-  initialSession?: Session<PrettyUserFields<Plugins, TFields>> | null;
+  initialSession?: Session<PrettyUserFields<Plugins, TFields>, PrettySessionFields<Plugins>> | null;
   /**
    * Keep session state in sync across browser tabs.
    * Enabled by default in browsers. Set `false` to disable.
@@ -65,6 +65,8 @@ export type PrettyUserFields<Plugins extends readonly AnyClientPlugin[], TFields
   InferUserFields<Plugins, TFields>
 >;
 
+export type PrettySessionFields<Plugins extends readonly AnyClientPlugin[]> = Prettify<InferSessionFields<Plugins>>;
+
 /** Each store exposed on the client under a `$` prefix, read-only. */
 export type StoreAtoms<Stores> = {
   readonly [K in keyof Stores & string as `$${K}`]: ReadableAtom<Stores[K]>;
@@ -75,7 +77,7 @@ export type AuthClient<Plugins extends readonly AnyClientPlugin[], TFields = unk
     readonly baseURL: string;
     readonly basePath: string;
   } & StoreAtoms<StoresOf<Plugins, TFields>> &
-    CoreContribution<PrettyUserFields<Plugins, TFields>> &
+    CoreContribution<PrettyUserFields<Plugins, TFields>, PrettySessionFields<Plugins>> &
     CombinedClientContributions<Plugins>
 >;
 
@@ -94,8 +96,14 @@ export type User<TFields = unknown> = {
   emailVerifiedAt: string | null;
 } & TFields;
 
-export type Session<TFields = unknown> = {
+/**
+ * A session-bearing response. `session` holds fields about the session itself,
+ * such as who is impersonating, and is present only when the server sends it.
+ * `TSession` types the fields plugins declare.
+ */
+export type Session<TFields = unknown, TSession = Record<never, never>> = {
   user: User<TFields>;
+  session?: TSession;
 };
 
 /**
@@ -140,7 +148,9 @@ export type EnvelopeConfig = {
   fields?: EnvelopeFields;
 };
 
-export type ParseSession<TFields = unknown> = (raw: unknown) => Session<TFields> | false;
+export type ParseSession<TFields = unknown, TSession = Record<never, never>> = (
+  raw: unknown,
+) => Session<TFields, TSession> | false;
 
 export type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
 

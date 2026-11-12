@@ -274,6 +274,44 @@ func TestImpersonationHandlers(t *testing.T) {
 	assert.Negative(t, cookies[plugin.config.adminSessionCookieName].MaxAge)
 }
 
+func TestImpersonationHandlers_SessionImpersonatedBy(t *testing.T) {
+	t.Parallel()
+
+	l, plugin := newTestAdminPluginWithPublicIDs(t)
+	admin := seedAdmin(t, l, plugin, "admin@test.com")
+	target := limen.SeedTestUser(t, l, "target@test.com")
+	publicID, ok := plugin.core.EncodePublicID(plugin.core.Schema.User, target)
+	require.True(t, ok)
+	adminCookie := limen.SeedTestSession(t, l, admin.ID, admin.Email).Cookie
+
+	impersonate := serveWithCookies(t, l, http.MethodPost, "/auth/admin/users/"+publicID+"/impersonate", adminCookie)
+	require.Equal(t, http.StatusOK, impersonate.Code, impersonate.Body.String())
+	impersonationCookie := responseCookies(impersonate)[adminCookie.Name]
+	require.NotNil(t, impersonationCookie)
+
+	testData := []struct {
+		name     string
+		response *httptest.ResponseRecorder
+		want     any
+	}{
+		{name: "impersonate response", response: impersonate, want: admin.Email},
+		{name: "impersonation session", response: serveWithCookies(t, l, http.MethodGet, "/auth/me", impersonationCookie), want: admin.Email},
+		{name: "admin session", response: serveWithCookies(t, l, http.MethodGet, "/auth/me", adminCookie), want: nil},
+	}
+	for _, tt := range testData {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, http.StatusOK, tt.response.Code, tt.response.Body.String())
+			var body struct {
+				Session struct {
+					ImpersonatedBy map[string]any `json:"impersonated_by"`
+				} `json:"session"`
+			}
+			require.NoError(t, json.Unmarshal(tt.response.Body.Bytes(), &body))
+			assert.Equal(t, tt.want, body.Session.ImpersonatedBy["email"])
+		})
+	}
+}
+
 func TestListSessionsHandler_HidesImpersonationSessions(t *testing.T) {
 	t.Parallel()
 

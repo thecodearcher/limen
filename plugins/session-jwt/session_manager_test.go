@@ -90,7 +90,11 @@ func TestJWTSessionManager_CreateSession_Data(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "client", claims.Session[string(testSessionTagField)])
 
-	rawRefresh, _, _ := plugin.parseRefreshTokenValue(result.RefreshToken)
+	resultTag, err := core.SessionManager.GetSessionData(t.Context(), result.Session, testSessionTagField)
+	require.NoError(t, err)
+	assert.Equal(t, "client", resultTag)
+
+	rawRefresh, family, _ := plugin.parseRefreshTokenValue(result.RefreshToken)
 	rt, err := plugin.FindRefreshTokenByToken(t.Context(), rawRefresh)
 	require.NoError(t, err)
 	assert.Equal(t, "client", rt.SessionData[string(testSessionTagField)])
@@ -101,6 +105,12 @@ func TestJWTSessionManager_CreateSession_Data(t *testing.T) {
 	listedTag, err := core.SessionManager.GetSessionData(t.Context(), &sessions[0], testSessionTagField)
 	assert.NoError(t, err)
 	assert.Equal(t, "client", listedTag)
+
+	refreshed, _, err := plugin.performRefresh(t.Context(), rawRefresh, family)
+	require.NoError(t, err)
+	refreshedTag, err := core.SessionManager.GetSessionData(t.Context(), refreshed.Session, testSessionTagField)
+	require.NoError(t, err)
+	assert.Equal(t, "client", refreshedTag)
 }
 
 func TestJWTSessionManager_RevokeSession_ListedToken(t *testing.T) {

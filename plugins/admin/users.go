@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"time"
 
@@ -399,14 +400,20 @@ func (p *adminPlugin) serializeUsersWithRoles(users []*UserWithRoles) []map[stri
 }
 
 func (p *adminPlugin) serializeUserWithRoles(user *UserWithRoles) map[string]any {
-	names := make([]string, 0, len(user.Roles))
-	for _, role := range user.Roles {
+	body := p.serializeUser(user.User)
+	maps.Copy(body, serializeRoles(user.Roles))
+	return body
+}
+
+func serializeRoles(roles []access.Role) map[string]any {
+	names := make([]string, 0, len(roles))
+	for _, role := range roles {
 		names = append(names, role.Name())
 	}
 	slices.Sort(names)
 
-	body := p.serializeUser(user.User)
-	body["roles"] = names
-	body["permissions"] = access.MergeRolePermissions(user.Roles...).Specs()
-	return body
+	return map[string]any{
+		"roles":       names,
+		"permissions": access.MergeRolePermissions(roles...).Specs(),
+	}
 }

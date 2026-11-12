@@ -56,6 +56,14 @@ func (p *adminPlugin) impersonatorID(session *limen.Session) any {
 	return p.core.Schema.NormalizeIDValue(session.Raw()[column])
 }
 
+func (p *adminPlugin) findImpersonator(ctx context.Context, session *limen.Session) *limen.User {
+	impersonators, err := p.findImpersonators(ctx, []limen.Session{*session})
+	if err != nil {
+		return nil
+	}
+	return impersonators[p.impersonatorID(session)]
+}
+
 func (p *adminPlugin) findImpersonators(ctx context.Context, sessions []limen.Session) (map[any]*limen.User, error) {
 	var ids []any
 	for _, session := range sessions {

@@ -4,7 +4,7 @@ import { sessionStore } from "../../session-store";
 import { effect } from "../../stores";
 import { resolveDefaultStorage } from "../bearer";
 import { type AdminRoutes, buildBanRoutes, buildCoreRoutes, buildImpersonationRoutes } from "./routes";
-import type { AdminPluginConfig } from "./types";
+import type { AdminPluginConfig, AdminSessionFields } from "./types";
 
 const DEFAULT_IMPERSONATOR_STORAGE_KEY = "limen.admin.impersonator";
 
@@ -27,7 +27,10 @@ export function adminPlugin<
     id: "admin",
     basePath: "/admin",
     routes,
-    schema: schema<{ user: { roles: string[]; permissions: string[] } }>(),
+    schema: schema<{
+      user: { roles: string[]; permissions: string[] };
+      session: AdminSessionFields<TFields>;
+    }>(),
     effects:
       stash === null
         ? []
@@ -44,6 +47,7 @@ export function adminPlugin<
 export type {
   AdminPluginConfig,
   AdminRole,
+  AdminSessionFields,
   AdminUser,
   AdminUserWithRoles,
   BanFields,

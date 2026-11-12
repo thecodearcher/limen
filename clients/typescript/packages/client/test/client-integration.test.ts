@@ -32,6 +32,15 @@ describe("createAuthClient — session effects", () => {
     expect(auth.$session.get().data?.user.id).toBe("u1");
   });
 
+  it("parses nested session fields into camelCase", async () => {
+    const body = { ...userBody, session: { impersonated_by: { id: "a1", email_verified_at: null } } };
+    const { auth } = setup(() => ({ body }));
+
+    const session = await auth.signIn.credential({ credential: "ada@example.com", password: "pw" });
+
+    expect(session.session).toEqual({ impersonatedBy: { id: "a1", emailVerifiedAt: null } });
+  });
+
   it("signout clears the session store", async () => {
     const { auth } = setup(() => ({ body: userBody }));
     await auth.signIn.credential({ credential: "ada@example.com", password: "pw" });

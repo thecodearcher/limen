@@ -24,10 +24,14 @@ type LimenClaims struct {
 }
 
 func (p *sessionJWTPlugin) GenerateAccessToken(user *limen.User, sessionData map[string]any) (string, string, error) {
-	return p.generateAccessToken(user, sessionData, nil)
+	signed, claims, err := p.generateAccessToken(user, sessionData, nil)
+	if err != nil {
+		return "", "", err
+	}
+	return signed, claims.ID, nil
 }
 
-func (p *sessionJWTPlugin) generateAccessToken(user *limen.User, sessionData map[string]any, sessionExpiresAt *time.Time) (string, string, error) {
+func (p *sessionJWTPlugin) generateAccessToken(user *limen.User, sessionData map[string]any, sessionExpiresAt *time.Time) (string, *LimenClaims, error) {
 	claims := LimenClaims{
 		RegisteredClaims: p.newRegisteredClaims(sessionExpiresAt),
 		Session:          sessionData,
@@ -43,7 +47,11 @@ func (p *sessionJWTPlugin) generateAccessToken(user *limen.User, sessionData map
 		claims.Custom = p.config.customClaims(user)
 	}
 
-	return p.signClaims(claims)
+	signed, _, err := p.signClaims(claims)
+	if err != nil {
+		return "", nil, err
+	}
+	return signed, &claims, nil
 }
 
 // reissueAccessToken mints a fresh token carrying the prior token's identity
@@ -154,24 +162,25 @@ func (p *sessionJWTPlugin) performRefresh(ctx context.Context, rawRefreshToken s
 		return nil, nil, fmt.Errorf("session-jwt: user not found: %w", err)
 	}
 
-	signed, jti, err := p.generateAccessToken(user, rt.SessionData, &rt.ExpiresAt)
+	signed, claims, err := p.generateAccessToken(user, rt.SessionData, &rt.ExpiresAt)
 	if err != nil {
 		return nil, nil, err
 	}
+	session := p.claimsToSession(claims, signed, user.ID)
 
 	if p.config.refreshTokenRotation {
-		newRT, err := p.RotateRefreshToken(ctx, rt, jti)
+		newRT, err := p.RotateRefreshToken(ctx, rt, claims.ID)
 		if err != nil {
 			return nil, nil, err
 		}
-		return p.buildSessionResult(signed, newRT), user, nil
+		return p.buildSessionResult(signed, session, newRT), user, nil
 	}
 
-	if err := p.updateRefreshTokenJWTID(ctx, rt.Token, jti); err != nil {
+	if err := p.updateRefreshTokenJWTID(ctx, rt.Token, claims.ID); err != nil {
 		return nil, nil, err
 	}
 
-	return p.buildSessionResult(signed, rt), user, nil
+	return p.buildSessionResult(signed, session, rt), user, nil
 }
 
 // parseAccessTokenLenient parses a JWT verifying the signature but tolerating

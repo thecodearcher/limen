@@ -116,6 +116,8 @@ type SessionResult struct {
 	// ExtraCookies holds additional cookies that session managers or plugins need to
 	// deliver alongside the main session cookie (e.g. refresh tokens).
 	ExtraCookies []*http.Cookie `json:"-"`
+	// Session is the session the result was issued for, when the session manager provides it.
+	Session *Session `json:"-"`
 }
 
 // SessionStore defines the interface for session storage backends.

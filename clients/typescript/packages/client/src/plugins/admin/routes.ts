@@ -7,6 +7,7 @@ import { tokensStore } from "../bearer/token-store";
 import type {
   AdminPluginConfig,
   AdminRole,
+  AdminSessionFields,
   AdminUser,
   AdminUserWithRoles,
   BanUserInput,
@@ -123,7 +124,7 @@ export function buildBanRoutes<TFields>() {
 
 export function buildImpersonationRoutes<TFields>(stash: BearerStorage) {
   return defineRoutes(
-    route<UserIdInput, Session<TFields>>()({
+    route<UserIdInput, Session<TFields, AdminSessionFields<TFields>>>()({
       method: "POST",
       path: "/users/:id/impersonate",
       as: "admin.impersonate",
@@ -137,7 +138,7 @@ export function buildImpersonationRoutes<TFields>(stash: BearerStorage) {
         if (session !== false) {
           ctx.setSession(session);
         }
-        return session as Session<TFields>;
+        return session as Session<TFields, AdminSessionFields<TFields>>;
       },
     }),
     route<void, void>()({
