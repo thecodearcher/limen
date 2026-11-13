@@ -1,5 +1,11 @@
 # limen-auth
 
+## 0.2.2
+
+### Patch Changes
+
+- 307b36a: add support for admin plugin
+
 ## 0.2.1
 
 ### Patch Changes
