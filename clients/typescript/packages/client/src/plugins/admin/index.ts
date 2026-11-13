@@ -13,13 +13,13 @@ export function adminPlugin<
   TFields = unknown,
 >(config?: Config) {
   const stash =
-    config?.impersonation === true
-      ? (config.storage ?? resolveDefaultStorage(config.storageKey ?? DEFAULT_IMPERSONATOR_STORAGE_KEY))
+    config?.impersonation !== false
+      ? (config?.storage ?? resolveDefaultStorage(config?.storageKey ?? DEFAULT_IMPERSONATOR_STORAGE_KEY))
       : null;
 
   const routes = [
     ...buildCoreRoutes<TFields>(),
-    ...(config?.bans === true ? buildBanRoutes<TFields>() : []),
+    ...(config?.bans !== false ? buildBanRoutes<TFields>() : []),
     ...(stash !== null ? buildImpersonationRoutes<TFields>(stash) : []),
   ] as unknown as AdminRoutes<Config, TFields>;
 

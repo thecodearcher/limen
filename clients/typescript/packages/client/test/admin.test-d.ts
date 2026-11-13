@@ -2,17 +2,17 @@ import { expectTypeOf, test } from "vitest";
 import { createAuthClient } from "../src";
 import { adminPlugin, type AdminUser } from "../src/plugins/admin";
 
-test("ban and impersonation routes exist only when enabled", () => {
-  const base = createAuthClient({ baseURL: "http://localhost:8080", plugins: [adminPlugin()] });
-  expectTypeOf(base.admin).not.toHaveProperty("banUser");
-  expectTypeOf(base.admin).not.toHaveProperty("impersonate");
-
-  const full = createAuthClient({
-    baseURL: "http://localhost:8080",
-    plugins: [adminPlugin({ bans: true, impersonation: true })],
-  });
+test("ban and impersonation routes exist unless disabled", () => {
+  const full = createAuthClient({ baseURL: "http://localhost:8080", plugins: [adminPlugin()] });
   expectTypeOf(full.admin).toHaveProperty("banUser");
   expectTypeOf(full.admin).toHaveProperty("impersonate");
+
+  const base = createAuthClient({
+    baseURL: "http://localhost:8080",
+    plugins: [adminPlugin({ bans: false, impersonation: false })],
+  });
+  expectTypeOf(base.admin).not.toHaveProperty("banUser");
+  expectTypeOf(base.admin).not.toHaveProperty("impersonate");
 });
 
 test("TFields types the users in admin responses", () => {
