@@ -2,9 +2,9 @@ import type { SortablePaginationInput, User } from "../../types";
 import type { BearerStorage } from "../bearer";
 
 export type AdminPluginConfig = {
-  /** Mount the ban routes. Enable it when the server runs with `WithBans(true)`. */
+  /** Mount the ban routes. Defaults to `true`. Set `false` when the server runs with `WithBans(false)`. */
   bans?: boolean;
-  /** Mount the impersonation routes. Enable it when the server runs with `WithImpersonation(true)`. */
+  /** Mount the impersonation routes. Defaults to `true`. Set `false` when the server runs with `WithImpersonation(false)`. */
   impersonation?: boolean;
   /**
    * Where the admin's bearer tokens are kept while impersonating. Defaults to

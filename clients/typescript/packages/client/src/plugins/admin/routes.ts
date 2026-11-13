@@ -167,6 +167,6 @@ type ImpersonationRoutes<TFields> = ReturnType<typeof buildImpersonationRoutes<T
 
 export type AdminRoutes<Config extends AdminPluginConfig, TFields> = readonly [
   ...CoreRoutes<TFields>,
-  ...(Config["bans"] extends true ? BanRoutes<TFields> : []),
-  ...(Config["impersonation"] extends true ? ImpersonationRoutes<TFields> : []),
+  ...(Config["bans"] extends false ? [] : BanRoutes<TFields>),
+  ...(Config["impersonation"] extends false ? [] : ImpersonationRoutes<TFields>),
 ];
