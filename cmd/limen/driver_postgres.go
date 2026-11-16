@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/thecodearcher/limen"
@@ -17,6 +18,13 @@ type postgresDriver struct {
 
 func NewPostgresDriver() Driver {
 	return &postgresDriver{}
+}
+
+// QuoteIdentifier defers to pgx, which is already this driver's connection
+// library, rather than re-deriving PostgreSQL's quoting rules. Beyond doubling
+// embedded quotes it also strips NUL bytes, which PostgreSQL rejects outright.
+func (d *postgresDriver) QuoteIdentifier(name string) string {
+	return pgx.Identifier{name}.Sanitize()
 }
 
 func (d *postgresDriver) Name() string {
@@ -182,9 +190,13 @@ func (d *postgresDriver) FormatDefaultValue(defaultValue string) string {
 }
 
 func (d *postgresDriver) DropIndexSQL(tableName, indexName string) string {
-	return fmt.Sprintf("DROP INDEX IF EXISTS %s", indexName)
+	return fmt.Sprintf("DROP INDEX IF EXISTS %s", d.QuoteIdentifier(indexName))
 }
 
 func (d *postgresDriver) DropForeignKeySQL(tableName, constraintName string) string {
-	return fmt.Sprintf("DROP CONSTRAINT %s", constraintName)
+	return fmt.Sprintf("DROP CONSTRAINT %s", d.QuoteIdentifier(constraintName))
+}
+
+func (d *postgresDriver) DropColumnSQL(tableName, columnName string) string {
+	return fmt.Sprintf("DROP COLUMN %s", d.QuoteIdentifier(columnName))
 }

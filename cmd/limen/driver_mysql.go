@@ -19,6 +19,24 @@ func NewMySQLDriver() Driver {
 	return &mysqlDriver{}
 }
 
+// mysqlQuoteChar is MySQL's and MariaDB's identifier quote. It is accepted in
+// every sql_mode, including ANSI_QUOTES, where " also becomes an identifier
+// quote.
+const mysqlQuoteChar = "`"
+
+// QuoteIdentifier quotes a table, column, index or constraint name, doubling
+// any embedded backtick so the result stays a single identifier. It mirrors
+// adapters/sql's quoteIdent, since the generator and the runtime adapter must
+// agree on the name a table actually has.
+//
+// Hand-rolled because go-sql-driver/mysql exports no equivalent of pgx's
+// Identifier.Sanitize.
+func (d *mysqlDriver) QuoteIdentifier(name string) string {
+	return mysqlQuoteChar +
+		strings.ReplaceAll(name, mysqlQuoteChar, mysqlQuoteChar+mysqlQuoteChar) +
+		mysqlQuoteChar
+}
+
 func (d *mysqlDriver) Name() string {
 	return string(DriverMySQL)
 }
@@ -133,9 +151,13 @@ func (d *mysqlDriver) FormatDefaultValue(defaultValue string) string {
 }
 
 func (d *mysqlDriver) DropIndexSQL(tableName, indexName string) string {
-	return fmt.Sprintf("DROP INDEX %s ON %s", indexName, tableName)
+	return fmt.Sprintf("DROP INDEX %s ON %s", d.QuoteIdentifier(indexName), d.QuoteIdentifier(tableName))
 }
 
 func (d *mysqlDriver) DropForeignKeySQL(tableName, constraintName string) string {
-	return fmt.Sprintf("DROP FOREIGN KEY %s", constraintName)
+	return fmt.Sprintf("DROP FOREIGN KEY %s", d.QuoteIdentifier(constraintName))
+}
+
+func (d *mysqlDriver) DropColumnSQL(tableName, columnName string) string {
+	return fmt.Sprintf("DROP COLUMN %s", d.QuoteIdentifier(columnName))
 }
