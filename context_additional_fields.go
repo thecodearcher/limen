@@ -13,6 +13,7 @@ type Operation uint8
 const (
 	OperationCreate Operation = iota
 	OperationUpdate
+	OperationDelete
 )
 
 type AdditionalFieldsFunc func(ctx *AdditionalFieldsContext) (map[string]any, error)

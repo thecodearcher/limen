@@ -67,6 +67,7 @@ func New(config *Config) (*Limen, error) {
 
 	// Initialize plugins
 	var smProvider PluginName
+	var databaseHooks []DatabaseHook
 	for _, plugin := range config.Plugins {
 		if err := plugin.Initialize(core); err != nil {
 			return nil, fmt.Errorf("failed to initialize plugin %s: %w", plugin.Name(), err)
@@ -81,6 +82,10 @@ func New(config *Config) (*Limen, error) {
 			core.sessionExtenders = append(core.sessionExtenders, e)
 		}
 
+		if p, ok := plugin.(DatabaseHookProvider); ok {
+			databaseHooks = append(databaseHooks, p.DatabaseHooks()...)
+		}
+
 		if sp, ok := plugin.(SessionManagerProvider); ok {
 			if smProvider != "" {
 				return nil, fmt.Errorf("multiple session manager plugins: %s and %s", smProvider, plugin.Name())
@@ -88,6 +93,12 @@ func New(config *Config) (*Limen, error) {
 			core.SessionManager = sp.SessionManager()
 			smProvider = plugin.Name()
 		}
+	}
+
+	databaseHooks = append(databaseHooks, config.DatabaseHooks...)
+	core.databaseHooks, err = groupDatabaseHooks(databaseHooks, discoveredSchemas)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database hooks: %w", err)
 	}
 
 	limen.core = core

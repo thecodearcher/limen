@@ -54,6 +54,12 @@ type SessionResponseExtender interface {
 	ExtendSessionResponse(ctx context.Context, user *User, session *Session) SessionExtension
 }
 
+// DatabaseHookProvider is an optional interface that plugins can implement
+// to run hooks around database writes.
+type DatabaseHookProvider interface {
+	DatabaseHooks() []DatabaseHook
+}
+
 // PluginHTTPConfig is the configuration for the plugin's HTTP surface.
 type PluginHTTPConfig struct {
 	// The base path where the plugin's routes will be mounted.
