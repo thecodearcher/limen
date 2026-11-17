@@ -93,3 +93,50 @@ func groupDatabaseHooks(hooks []DatabaseHook, schemas map[SchemaName]SchemaDefin
 	}
 	return grouped, nil
 }
+
+type contextKeyDatabaseHookNested struct{}
+
+func (core *LimenCore) databaseHooksFor(hc *DatabaseHookContext, before bool) []DatabaseHook {
+	if hc.Context.Value(contextKeyDatabaseHookNested{}) != nil {
+		return nil
+	}
+	var matched []DatabaseHook
+	for _, hooks := range [][]DatabaseHook{core.databaseHooks[AnySchema], core.databaseHooks[hc.Schema.GetSchemaName()]} {
+		for _, hook := range hooks {
+			if hook.Before == before && hook.Operation == hc.Operation {
+				matched = append(matched, hook)
+			}
+		}
+	}
+	return matched
+}
+
+func (core *LimenCore) runBeforeHooks(hc *DatabaseHookContext) error {
+	return runDatabaseHooks(hc, core.databaseHooksFor(hc, true))
+}
+
+func (core *LimenCore) runAfterHooks(hc *DatabaseHookContext, result DatabaseResult) error {
+	hooks := core.databaseHooksFor(hc, false)
+	if len(hooks) == 0 {
+		return nil
+	}
+	hc.Result = &result
+	return runDatabaseHooks(hc, hooks)
+}
+
+func runDatabaseHooks(hc *DatabaseHookContext, hooks []DatabaseHook) error {
+	if len(hooks) == 0 {
+		return nil
+	}
+	callerCtx := hc.Context
+	hc.Context = context.WithValue(callerCtx, contextKeyDatabaseHookNested{}, true)
+	hc.Request = getAdditionalFieldsContext(callerCtx).request
+	defer func() { hc.Context = callerCtx }()
+
+	for _, hook := range hooks {
+		if err := hook.Run(hc); err != nil {
+			return err
+		}
+	}
+	return nil
+}

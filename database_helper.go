@@ -119,9 +119,21 @@ func (core *LimenCore) CreateWithResult(ctx context.Context, schema Schema, data
 		return nil, err
 	}
 
-	db := core.getDB(ctx)
-	result, err := db.Create(ctx, schema.GetTableName(), payload)
+	_, result, err := core.insert(ctx, schema, payload)
 	return &result, err
+}
+
+func (core *LimenCore) insert(ctx context.Context, schema Schema, payload map[string]any) (*DatabaseHookContext, DatabaseResult, error) {
+	hc := &DatabaseHookContext{Context: ctx, Schema: schema, Operation: OperationCreate, Payload: payload}
+	if err := core.runBeforeHooks(hc); err != nil {
+		return hc, DatabaseResult{}, err
+	}
+
+	result, err := core.getDB(ctx).Create(ctx, schema.GetTableName(), hc.Payload)
+	if err != nil {
+		return hc, result, err
+	}
+	return hc, result, core.runAfterHooks(hc, result)
 }
 
 // CreateAndReturn inserts data and returns the stored row, located by the unique lookupColumns set on the model.
@@ -135,15 +147,15 @@ func (core *LimenCore) CreateAndReturn(ctx context.Context, schema Schema, data 
 		return nil, err
 	}
 
-	db := core.getDB(ctx)
-	if _, err := db.Create(ctx, schema.GetTableName(), payload); err != nil {
+	hc, _, err := core.insert(ctx, schema, payload)
+	if err != nil {
 		return nil, err
 	}
 
 	conditions := make([]Where, 0, len(lookupColumns))
 	for _, field := range lookupColumns {
 		col := schema.GetField(field)
-		conditions = append(conditions, Eq(col, payload[col]))
+		conditions = append(conditions, Eq(col, hc.Payload[col]))
 	}
 
 	return core.FindOne(ctx, schema, conditions, nil)
@@ -198,10 +210,17 @@ func (core *LimenCore) UpdateWithResult(ctx context.Context, schema Schema, data
 	applyUpdatedAtTimestamp(schema, payload, false)
 
 	conditions = applySoftDeleteFilter(schema, conditions)
-	db := core.getDB(ctx)
 
-	result, err := db.Update(ctx, schema.GetTableName(), conditions, payload)
-	return &result, err
+	hc := &DatabaseHookContext{Context: ctx, Schema: schema, Operation: OperationUpdate, Payload: payload, Conditions: conditions}
+	if err := core.runBeforeHooks(hc); err != nil {
+		return nil, err
+	}
+
+	result, err := core.getDB(ctx).Update(ctx, schema.GetTableName(), hc.Conditions, hc.Payload)
+	if err != nil {
+		return &result, err
+	}
+	return &result, core.runAfterHooks(hc, result)
 }
 
 func (core *LimenCore) buildUpdatePayload(ctx context.Context, schema Schema, data any, options *updateOptions) (map[string]any, error) {
@@ -355,18 +374,23 @@ func (core *LimenCore) DeleteWithResult(ctx context.Context, schema Schema, cond
 		return nil, err
 	}
 
-	db := core.getDB(ctx)
-	// if there are conditions, we update the soft delete field to the current time
-	// otherwise we delete the record directly
-	if schema.GetSoftDeleteField() != "" {
-		result, err := db.Update(ctx, schema.GetTableName(), conditions, map[string]any{
-			schema.GetSoftDeleteField(): time.Now(),
-		})
-		return &result, err
+	softDeleteField := schema.GetSoftDeleteField()
+	hc := &DatabaseHookContext{Context: ctx, Schema: schema, Operation: OperationDelete, Conditions: conditions, SoftDelete: softDeleteField != ""}
+	if err := core.runBeforeHooks(hc); err != nil {
+		return nil, err
 	}
 
-	result, err := db.Delete(ctx, schema.GetTableName(), conditions)
-	return &result, err
+	db := core.getDB(ctx)
+	var result DatabaseResult
+	if hc.SoftDelete {
+		result, err = db.Update(ctx, schema.GetTableName(), hc.Conditions, map[string]any{softDeleteField: time.Now()})
+	} else {
+		result, err = db.Delete(ctx, schema.GetTableName(), hc.Conditions)
+	}
+	if err != nil {
+		return &result, err
+	}
+	return &result, core.runAfterHooks(hc, result)
 }
 
 func (core *LimenCore) FindMany(ctx context.Context, schema Schema, conditions []Where) ([]Model, error) {

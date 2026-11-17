@@ -34,6 +34,18 @@ func seedSession(t *testing.T, l *Limen, userID any, email string) *SessionResul
 // Core-specific helpers (not shared with plugins)
 // ---------------------------------------------------------------------------
 
+func newTestLimenFrom(t *testing.T, config *Config) *Limen {
+	t.Helper()
+	if config.Database == nil {
+		config.Database = newTestMemoryAdapter(t)
+	}
+	config.BaseURL = "http://localhost:8080"
+	config.Secret = testSecret
+	l, err := New(config)
+	require.NoError(t, err)
+	return l
+}
+
 func newTestLimenWithSessionConfig(t *testing.T, session *sessionConfig, plugins ...Plugin) *Limen {
 	t.Helper()
 
