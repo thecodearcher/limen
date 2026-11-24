@@ -901,7 +901,7 @@ func TestDatabaseHooks_RequestIsSetInsideHandler(t *testing.T) {
 		return nil
 	})}})
 
-	req := httptest.NewRequest(http.MethodPost, "/signup", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/signup", http.NoBody)
 	ctx := withAdditionalFieldsContext(req.Context(), req, httptest.NewRecorder())
 	require.NoError(t, l.core.DBAction.CreateUser(ctx, &User{Email: "a@example.com"}, nil))
 	assert.Same(t, req, seen)
