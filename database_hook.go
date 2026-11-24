@@ -121,6 +121,13 @@ func (core *LimenCore) runAfterHooks(hc *DatabaseHookContext, result DatabaseRes
 		return nil
 	}
 	hc.Result = &result
+	if queue, ok := hc.Context.Value(contextKeyAfterHooks{}).(*[]func(context.Context) error); ok {
+		*queue = append(*queue, func(ctx context.Context) error {
+			hc.Context = ctx
+			return runDatabaseHooks(hc, hooks)
+		})
+		return nil
+	}
 	return runDatabaseHooks(hc, hooks)
 }
 
