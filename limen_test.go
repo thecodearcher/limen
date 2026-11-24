@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func noopDatabaseHook(*DatabaseHookContext) error { return nil }
+
 func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -35,6 +37,47 @@ func TestNew(t *testing.T) {
 			},
 			wantErr: true,
 			errMsg:  "invalid configuration: database adapter is required",
+		},
+		{
+			name: "database hooks on known schemas",
+			config: &Config{
+				Database: newTestMemoryAdapter(t),
+				Secret:   testSecret,
+				DatabaseHooks: []DatabaseHook{
+					AfterDelete(AnySchema, noopDatabaseHook),
+					BeforeUpdate(CoreSchemaSessions, noopDatabaseHook),
+				},
+			},
+		},
+		{
+			name: "database hook on unknown schema",
+			config: &Config{
+				Database:      newTestMemoryAdapter(t),
+				Secret:        testSecret,
+				DatabaseHooks: []DatabaseHook{AfterCreate("profiles", noopDatabaseHook)},
+			},
+			wantErr: true,
+			errMsg:  `unknown schema "profiles"`,
+		},
+		{
+			name: "database hook without run",
+			config: &Config{
+				Database:      newTestMemoryAdapter(t),
+				Secret:        testSecret,
+				DatabaseHooks: []DatabaseHook{BeforeCreate(CoreSchemaUsers, nil)},
+			},
+			wantErr: true,
+			errMsg:  "no Run function",
+		},
+		{
+			name: "database hook with unsupported operation",
+			config: &Config{
+				Database:      newTestMemoryAdapter(t),
+				Secret:        testSecret,
+				DatabaseHooks: []DatabaseHook{{Schema: CoreSchemaUsers, Operation: Operation(42), Run: noopDatabaseHook}},
+			},
+			wantErr: true,
+			errMsg:  "unsupported operation",
 		},
 	}
 

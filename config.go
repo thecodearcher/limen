@@ -9,6 +9,7 @@ import (
 type Config struct {
 	BaseURL        string
 	Database       DatabaseAdapter
+	DatabaseHooks  []DatabaseHook
 	CacheStore     CacheAdapter
 	CacheKeyPrefix string
 	Plugins        []Plugin

@@ -21,6 +21,7 @@ type LimenCore struct {
 	plugins          map[PluginName]Plugin
 	sessionGuards    []SessionCreateGuard
 	sessionExtenders []SessionResponseExtender
+	databaseHooks    map[SchemaName][]DatabaseHook
 	secret           []byte
 }
 
