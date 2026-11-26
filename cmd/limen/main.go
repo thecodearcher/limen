@@ -74,6 +74,12 @@ func main() {
 								Aliases:  []string{"c"},
 								Required: true,
 							},
+							&cli.StringFlag{
+								Name:    "format",
+								Usage:   "SQL format name (golang-migrate, goose)",
+								Aliases: []string{"f"},
+								Value:   "golang-migrate",
+							},
 						},
 						Action: runMigrateGenerate,
 					},
@@ -126,6 +132,7 @@ func runMigrateGenerate(ctx context.Context, cmd *cli.Command) error {
 	outputPath := cmd.String("output")
 	driverName := cmd.String("driver")
 	dsn := cmd.String("dsn")
+	sqlFormat := cmd.String("format")
 
 	config, err := loadConfig(schemasPath)
 	if err != nil {
@@ -139,6 +146,18 @@ func runMigrateGenerate(ctx context.Context, cmd *cli.Command) error {
 
 	if dsn == "" {
 		return fmt.Errorf("dsn is required")
+	}
+
+	var sqlFileWriter SqlFileWriter
+	switch sqlFormat {
+	case "golang-migrate":
+		sqlFileWriter = &GolangMigrateCompatibleSqlWriter{}
+	case "goose":
+		sqlFileWriter = &GooseCompatibleSqlWriter{}
+	}
+
+	if sqlFileWriter == nil {
+		return fmt.Errorf("unsupported format")
 	}
 
 	var migrations []Migration
@@ -162,18 +181,9 @@ func runMigrateGenerate(ctx context.Context, cmd *cli.Command) error {
 			continue
 		}
 
-		upFile := filepath.Join(outputPath, fmt.Sprintf("%s.up.sql", migration.Version))
-		downFile := filepath.Join(outputPath, fmt.Sprintf("%s.down.sql", migration.Version))
-
-		if err := os.WriteFile(upFile, []byte(migration.UpSQL), 0644); err != nil {
-			return fmt.Errorf("error writing migration file: %w", err)
+		if err := sqlFileWriter.WriteSqlFile(outputPath, migration); err != nil {
+			return err
 		}
-
-		if err := os.WriteFile(downFile, []byte(migration.DownSQL), 0644); err != nil {
-			return fmt.Errorf("error writing migration file: %w", err)
-		}
-
-		fmt.Printf("Generated migration: %s\n", migration.Version)
 	}
 
 	fmt.Println("\nTo apply these migrations, use any other migration tool that supports SQL files like goose, golang-migrate, etc. Or apply them manually.")
